@@ -7,22 +7,17 @@ const GatewayRegistry = artifacts.require("GatewayRegistry");
 
 const RenERC20LogicV1 = artifacts.require("RenERC20LogicV1");
 
-const GatewayLogicV1 = artifacts.require("GatewayLogicV1");
+const MintGatewayLogicV1 = artifacts.require("MintGatewayLogicV1");
 
-const BTCGateway = artifacts.require("BTCGateway");
-const RenBTC = artifacts.require("RenBTC");
-
-const ZECGateway = artifacts.require("ZECGateway");
-const RenZEC = artifacts.require("RenZEC");
-
-const BCHGateway = artifacts.require("BCHGateway");
-const RenBCH = artifacts.require("RenBCH");
+const MintGatewayProxy = artifacts.require("MintGatewayProxy");
+const RenERC20Proxy = artifacts.require("RenERC20Proxy");
 
 const BasicAdapter = artifacts.require("BasicAdapter");
 const RenProxyAdmin = artifacts.require("RenProxyAdmin");
 
 const networks = require("./networks.js");
 const { encodeCallData } = require("./encode");
+const { sha256, keccak256 } = require("ethereumjs-util");
 
 /**
  * @dev In order to specify what contracts to re-deploy, update `networks.js`.
@@ -51,18 +46,15 @@ module.exports = async function (deployer, network) {
     network = network.replace("-fork", "");
 
     const addresses = networks[network] || {};
-    const config = networks[network] ? networks[network].config : networks.config;
+    const config = { ...networks.config, ...networks[network].config };
+    console.log(config);
     const mintAuthority = config.mintAuthority || contractOwner;
+    const governanceAddress = config.governanceAddress || contractOwner;
     const feeRecipient = config.feeRecipient || contractOwner;
+    const chainName = config.chainName;
 
-    BTCGateway.address = addresses.BTCGateway || "";
-    ZECGateway.address = addresses.ZECGateway || "";
-    BCHGateway.address = addresses.BCHGateway || "";
     GatewayRegistry.address = addresses.GatewayRegistry || "";
-    GatewayLogicV1.address = addresses.GatewayLogicV1 || "";
-    RenZEC.address = addresses.renZEC || "";
-    RenBCH.address = addresses.renBCH || "";
-    RenBTC.address = addresses.renBTC || "";
+    MintGatewayLogicV1.address = addresses.MintGatewayLogicV1 || "";
     BasicAdapter.address = addresses.BasicAdapter || "";
     RenERC20LogicV1.address = addresses.RenERC20LogicV1 || "";
     RenProxyAdmin.address = addresses.RenProxyAdmin || "";
@@ -118,12 +110,12 @@ module.exports = async function (deployer, network) {
         actionCount++;
     }
 
-    if (!GatewayLogicV1.address) {
-        deployer.logger.log(`Deploying GatewayLogicV1 logic`);
-        await deployer.deploy(GatewayLogicV1);
+    if (!MintGatewayLogicV1.address) {
+        deployer.logger.log(`Deploying MintGatewayLogicV1 logic`);
+        await deployer.deploy(MintGatewayLogicV1);
         actionCount++;
     }
-    const gatewayLogic = await GatewayLogicV1.at(GatewayLogicV1.address);
+    const gatewayLogic = await MintGatewayLogicV1.at(MintGatewayLogicV1.address);
 
     // Initialize GatewayLogic so others can't.
     if (Ox(await gatewayLogic.owner()) === Ox(NULL)) {
@@ -141,89 +133,132 @@ module.exports = async function (deployer, network) {
 
     const chainID = await web3.eth.net.getId();
 
-    for (const [Token, Gateway, name, decimals, minimumBurnAmount] of [
-        [RenBTC, BTCGateway, "BTC", 8, config.renBTCMinimumBurnAmount],
-        [RenZEC, ZECGateway, "ZEC", 8, config.renZECMinimumBurnAmount],
-        [RenBCH, BCHGateway, "BCH", 8, config.renBCHMinimumBurnAmount],
-    ]) {
-        const symbol = `${config.tokenPrefix}${name}`;
-        deployer.logger.log(`Handling ${symbol}`);
+    for (const asset of addresses.assets) {
+        let { symbol, decimals, token, gateway } = asset;
+        const prefixedSymbol = `${config.tokenPrefix}${symbol}`;
+        deployer.logger.log(`Handling ${prefixedSymbol} (decimals: ${decimals}, token: ${token}, gateway: ${gateway})`);
 
-        if (!Token.address) {
-            deployer.logger.log(`Deploying ${symbol} proxy`);
-            await deployer.deploy(Token);
-            const tokenProxy = await Token.at(Token.address);
+        if (!token) {
+            deployer.logger.log(`Deploying ${prefixedSymbol} proxy`);
+            await deployer.deploy(RenERC20Proxy);
+            token = RenERC20Proxy.address;
+        }
+        const tokenInstance = await RenERC20LogicV1.at(token);
+        let tokenInitialized = true;
+        try {
+            await tokenInstance.symbol.call();
+        } catch (error) {
+            tokenInitialized = false;
+        }
+
+        if (!tokenInitialized) {
+            const tokenProxy = await RenERC20Proxy.at(token);
             await tokenProxy.initialize(RenERC20LogicV1.address, renProxyAdmin.address, encodeCallData(
                 web3,
                 "initialize",
                 ["uint256", "address", "uint256", "string", "string", "string", "uint8"],
-                [chainID, contractOwner, "1000000000000000000", "1", symbol, symbol, decimals])
+                [chainID, contractOwner, "1000000000000000000", "1", prefixedSymbol, prefixedSymbol, decimals])
             );
             actionCount++;
         }
-        const token = await RenERC20LogicV1.at(Token.address);
 
-        const tokenProxyLogic = await renProxyAdmin.getProxyImplementation(Token.address);
+        const tokenProxyLogic = await renProxyAdmin.getProxyImplementation(token);
         if (Ox(tokenProxyLogic) !== Ox(RenERC20LogicV1.address)) {
-            deployer.logger.log(`${symbol} is pointing to out-dated RenERC20Logic.`);
-            await renProxyAdmin.upgrade(Token.address, RenERC20LogicV1.address);
+            deployer.logger.log(`${prefixedSymbol} is pointing to out-dated RenERC20Logic.`);
+            await renProxyAdmin.upgrade(token, RenERC20LogicV1.address);
             actionCount++;
         }
 
-        if (!Gateway.address) {
-            deployer.logger.log(`Deploying ${symbol} Gateway proxy`);
-            await deployer.deploy(Gateway);
-            const tokenProxy = await Gateway.at(Gateway.address);
-            await tokenProxy.initialize(GatewayLogicV1.address, renProxyAdmin.address, encodeCallData(
+        if (!gateway) {
+            deployer.logger.log(`Deploying ${prefixedSymbol} Gateway proxy`);
+            await deployer.deploy(MintGatewayProxy);
+            gateway = MintGatewayProxy.address;
+        }
+        const gatewayInstance = await MintGatewayLogicV1.at(gateway);
+        let gatewayInitialized = true;
+        try {
+            // Try to fetch a value.
+            await gatewayInstance.token.call();
+        } catch (error) {
+            gatewayInitialized = false;
+        }
+        if (!gatewayInitialized) {
+            deployer.logger.log(`Initializing ${prefixedSymbol} Gateway proxy`);
+            const mintGatewayProxy = await MintGatewayProxy.at(gateway);
+            await mintGatewayProxy.initialize(MintGatewayLogicV1.address, renProxyAdmin.address, encodeCallData(
                 web3,
                 "initialize",
                 ["address", "address", "address", "uint16", "uint16", "uint256"],
                 [
-                    Token.address,
+                    token,
                     feeRecipient,
                     mintAuthority,
                     config.mintFee,
                     config.burnFee,
-                    minimumBurnAmount,
+                    0,
                 ])
             );
             actionCount++;
         }
-        const tokenGateway = await GatewayLogicV1.at(Gateway.address);
 
-        const gatewayProxyLogic = await renProxyAdmin.getProxyImplementation(tokenGateway.address);
-        if (Ox(gatewayProxyLogic) !== Ox(GatewayLogicV1.address)) {
-            deployer.logger.log(`${symbol} gateway is pointing to out-dated GatewayLogic.`);
-            await renProxyAdmin.upgrade.write(tokenGateway.address, GatewayLogicV1.address);
+        const MintGatewayProxyLogic = await renProxyAdmin.getProxyImplementation(gatewayInstance.address);
+        if (Ox(MintGatewayProxyLogic) !== Ox(MintGatewayLogicV1.address)) {
+            deployer.logger.log(`${prefixedSymbol} gateway is pointing to out-dated GatewayLogic.`);
+            await renProxyAdmin.upgrade(gatewayInstance.address, MintGatewayLogicV1.address);
             actionCount++;
         }
 
-        const gatewayMintAuthority = await tokenGateway.mintAuthority.call();
+        const selectorHash = (await gatewayInstance.selectorHash.call()).toLowerCase();
+        const selector = `${symbol}/to${chainName}`;
+        const expectedSelectorHash = "0x" + keccak256(selector).toString("hex").toLowerCase();
+        // const selectorBytes = Buffer.concat([Buffer.from([0, 0, 0, selector.length]), Buffer.from(selector)]);
+        // const expectedSelectorHash = "0x" + sha256(selectorBytes).toString("hex").toLowerCase();
+        if (selectorHash !== expectedSelectorHash) {
+            deployer.logger.log(`Updating selector hash from ${selectorHash} to ${expectedSelectorHash}`);
+            await gatewayInstance.updateSelectorHash(expectedSelectorHash);
+            actionCount++;
+        }
+
+        const actualMintFee = parseInt((await gatewayInstance.mintFee()).toString(), 10);
+        if (actualMintFee !== config.mintFee) {
+            deployer.logger.log(`Updating mint fee from ${actualMintFee} to ${config.mintFee}`);
+            await gatewayInstance.updateMintFee(config.mintFee);
+            actionCount++;
+        }
+
+        const actualBurnFee = parseInt((await gatewayInstance.burnFee()).toString(), 10);
+        if (actualBurnFee !== config.burnFee) {
+            deployer.logger.log(`Updating burn fee from ${actualBurnFee} to ${config.burnFee}`);
+            await gatewayInstance.updateBurnFee(config.burnFee);
+            actionCount++;
+        }
+
+        const gatewayMintAuthority = await gatewayInstance.mintAuthority.call();
         if (Ox(gatewayMintAuthority) !== Ox(mintAuthority)) {
-            deployer.logger.log(`Updating mint authority in ${symbol} Gateway. Was ${gatewayMintAuthority}, now is ${mintAuthority}`);
-            await tokenGateway.updateMintAuthority(mintAuthority);
+            deployer.logger.log(`Updating mint authority in ${prefixedSymbol} Gateway. Was ${gatewayMintAuthority}, now is ${mintAuthority}`);
+            await gatewayInstance.updateMintAuthority(mintAuthority);
             actionCount++;
         }
 
-        const tokenOwner = await token.owner.call();
-        if (Ox(tokenOwner) !== Ox(tokenGateway.address)) {
-            deployer.logger.log(`Transferring ${symbol} ownership`);
+        const tokenOwner = await tokenInstance.owner.call();
+        if (Ox(tokenOwner) !== Ox(gatewayInstance.address)) {
+            deployer.logger.log(`Transferring ${prefixedSymbol} ownership`);
 
             if (Ox(tokenOwner) === Ox(contractOwner)) {
-                await token.transferOwnership(tokenGateway.address);
+                await tokenInstance.transferOwnership(gatewayInstance.address);
 
                 // Update token's Gateway contract
-                deployer.logger.log(`Claiming ${symbol} ownership in Gateway`);
-                await tokenGateway.claimTokenOwnership();
+                deployer.logger.log(`Claiming ${prefixedSymbol} ownership in Gateway`);
+                await gatewayInstance.claimTokenOwnership();
             } else {
-                deployer.logger.log(`Transferring token ownership from ${tokenOwner} to new ${symbol} Gateway`);
-                const oldGateway = await Gateway.at(tokenOwner);
-                await oldGateway.transferTokenOwnership(tokenGateway.address);
+                deployer.logger.log(`Transferring token ownership from ${tokenOwner} to new ${prefixedSymbol} Gateway`);
+                const oldGateway = await MintGatewayProxy.at(tokenOwner);
+                await oldGateway.transferTokenOwnership(gatewayInstance.address);
                 // This will also call claim, but we try anyway because older
                 // contracts didn't:
                 try {
                     // Claim ownership
-                    await tokenGateway.claimTokenOwnership();
+                    await gatewayInstance.claimTokenOwnership();
                 } catch (error) {
                     console.error(error);
                 }
@@ -239,25 +274,63 @@ module.exports = async function (deployer, network) {
         //     actionCount++;
         // }
 
-        const registered = await registry.getGatewayByToken.call(Token.address);
-        if (Ox(registered) === Ox(NULL) || Ox(registered) !== Ox(Gateway.address)) {
+        const registered = await registry.getGatewayByToken.call(token);
+        if (Ox(registered) === Ox(NULL) || Ox(registered) !== Ox(gateway)) {
             const otherRegistration = (await registry.getGatewayBySymbol.call(symbol));
+            const otherToken = (await registry.getTokenBySymbol.call(symbol));
             if (Ox(otherRegistration) === Ox(NULL)) {
-                deployer.logger.log(`Registering ${symbol} Gateway`);
-                await registry.setGateway(name, Token.address, Gateway.address);
+                deployer.logger.log(`Registering ${prefixedSymbol} Gateway`);
+                await registry.setGateway(symbol, token, gateway);
             } else {
-                deployer.logger.log(`Updating registered ${symbol} Gateway (was ${otherRegistration})`);
-                await registry.updateGateway(Token.address, Gateway.address);
+                deployer.logger.log(`Updating registered ${prefixedSymbol} Gateway (was ${otherRegistration})`);
+                if (Ox(token) === Ox(otherToken)) {
+                    await registry.updateGateway(token, gateway);
+                } else {
+                    await registry.removeGateway(symbol)
+                    await registry.setGateway(symbol, token, gateway);
+                }
             }
             actionCount++;
         }
 
-        const currentFeeRecipient = await tokenGateway.feeRecipient.call();
+        const currentFeeRecipient = await gatewayInstance.feeRecipient.call();
         if (Ox(feeRecipient) !== Ox(currentFeeRecipient)) {
-            deployer.logger.log(`Updating fee recipient for ${symbol} Gateway. Was ${Ox(currentFeeRecipient)}, now is ${Ox(feeRecipient)}`);
-            await tokenGateway.updateFeeRecipient(feeRecipient);
+            deployer.logger.log(`Updating fee recipient for ${prefixedSymbol} Gateway. Was ${Ox(currentFeeRecipient)}, now is ${Ox(feeRecipient)}`);
+            await gatewayInstance.updateFeeRecipient(feeRecipient);
             actionCount++;
         }
+
+        const currentGatewayOwner = await gatewayInstance.owner();
+        if (Ox(currentGatewayOwner) !== Ox(governanceAddress)) {
+            deployer.logger.log(`Transferring ownership of ${prefixedSymbol} Gateway. Was ${Ox(currentGatewayOwner)}, now is ${Ox(governanceAddress)}`);
+            await gatewayInstance.transferOwnership(governanceAddress);
+            actionCount++;
+        }
+
+        console.log(`
+        { // ${prefixedSymbol}
+            symbol: "${symbol}",
+            decimals: ${decimals},
+            token: "${token}",
+            gateway: "${gateway}",
+        }
+        `);
+    }
+
+    // Update RenProxyAdmin's owner.
+    const currentProxyAdminOwner = await renProxyAdmin.owner();
+    if (Ox(currentProxyAdminOwner) !== Ox(governanceAddress)) {
+        deployer.logger.log(`Transferring ownership of ProxyAdmin. Was ${Ox(currentProxyAdminOwner)}, now is ${Ox(governanceAddress)}`);
+        await renProxyAdmin.transferOwnership(governanceAddress);
+        actionCount++;
+    }
+
+    // Update GatewayRegistry's owner.
+    const currentGatewayRegistryOwner = await registry.owner();
+    if (Ox(currentGatewayRegistryOwner) !== Ox(governanceAddress)) {
+        deployer.logger.log(`Transferring ownership of GatewayRegistry. Was ${Ox(currentGatewayRegistryOwner)}, now is ${Ox(governanceAddress)}`);
+        await registry.transferOwnership(governanceAddress);
+        actionCount++;
     }
 
     deployer.logger.log(`Performed ${actionCount} updates.`);
@@ -271,18 +344,6 @@ module.exports = async function (deployer, network) {
         BasicAdapter: "${BasicAdapter.address}",
 
         RenERC20LogicV1: "${RenERC20LogicV1.address}",
-        GatewayLogicV1: "${GatewayLogicV1.address}",
-
-        // BTC
-        renBTC: "${RenBTC.address}",
-        BTCGateway: "${BTCGateway.address}",
-
-        // ZEC
-        renZEC: "${RenZEC.address}",
-        ZECGateway: "${ZECGateway.address}",
-
-        // BCH
-        renBCH: "${RenBCH.address}",
-        BCHGateway: "${BCHGateway.address}",`
-    );
+        MintGatewayLogicV1: "${MintGatewayLogicV1.address}",
+    `);
 }

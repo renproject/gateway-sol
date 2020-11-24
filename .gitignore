@@ -6,6 +6,7 @@ yarn-error.log*
 
 # Build / test artifacts
 coverage
+build
 dist
 coverageEnv
 coverage.json
@@ -26,7 +27,6 @@ coverage.json
 scTopics
 allFiredEvents
 in_complete_tests
-build/development
 local_*
 bindings.go
 types

@@ -85,22 +85,6 @@ contract RenERC20LogicV1 is
 }
 
 /* solium-disable-next-line no-empty-blocks */
-// contract RenERC20Proxy is InitializableAdminUpgradeabilityProxy {}
-
-/// @dev The following are not necessary for deploying renBTC or renZEC contracts,
-/// but are used to track deployments.
-
-/* solium-disable-next-line no-empty-blocks */
-contract RenBTC is InitializableAdminUpgradeabilityProxy {
-
-}
-
-/* solium-disable-next-line no-empty-blocks */
-contract RenZEC is InitializableAdminUpgradeabilityProxy {
-
-}
-
-/* solium-disable-next-line no-empty-blocks */
-contract RenBCH is InitializableAdminUpgradeabilityProxy {
+contract RenERC20Proxy is InitializableAdminUpgradeabilityProxy {
 
 }

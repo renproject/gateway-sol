@@ -1,4 +1,4 @@
-# `⚖️ gateway-sol`
+# `⛩️ gateway-sol`
 
 Ren gateway contracts written in Solidity
 
@@ -44,7 +44,7 @@ open ./coverage/index.html
 Add a `.env`, filling in the mnemonic and Infura key:
 
 ```sh
-MNEMONIC_KOVAN="..."
+MNEMONIC_TESTNET="..."
 MNEMONIC_MAINNET="..."
 INFURA_KEY="..."
 ```

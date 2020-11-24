@@ -41,15 +41,31 @@ contract GatewayStateV1 {
     uint256 public nextN = 0;
 }
 
+contract GatewayStateV2 {
+    struct Burn {
+        uint256 _blocknumber;
+        bytes _to;
+        uint256 _amount;
+        // Optional
+        string _chain;
+        bytes _payload;
+    }
+
+    mapping(uint256 => Burn) internal burns;
+
+    bytes32 public selectorHash;
+}
+
 /// @notice Gateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
-contract GatewayLogicV1 is
+contract MintGatewayLogicV1 is
     Initializable,
     Claimable,
     CanReclaimTokens,
     IGateway,
-    GatewayStateV1
+    GatewayStateV1,
+    GatewayStateV2
 {
     using SafeMath for uint256;
 
@@ -58,7 +74,7 @@ contract GatewayLogicV1 is
         address indexed _to,
         uint256 _amount,
         uint256 indexed _n,
-        bytes32 indexed _signedMessageHash
+        bytes32 indexed _nHash
     );
     event LogBurn(
         bytes _to,
@@ -71,7 +87,7 @@ contract GatewayLogicV1 is
     modifier onlyOwnerOrMintAuthority() {
         require(
             msg.sender == mintAuthority || msg.sender == owner(),
-            "Gateway: caller is not the owner or mint authority"
+            "MintGateway: caller is not the owner or mint authority"
         );
         _;
     }
@@ -102,6 +118,13 @@ contract GatewayLogicV1 is
         updateFeeRecipient(_feeRecipient);
     }
 
+    /// @param _selectorHash Hash of the token and chain selector.
+    ///        The hash should calculated from
+    ///        `SHA256(4 bytes of selector length, selector)`
+    function updateSelectorHash(bytes32 _selectorHash) public onlyOwner {
+        selectorHash = _selectorHash;
+    }
+
     // Public functions ////////////////////////////////////////////////////////
 
     /// @notice Claims ownership of the token passed in to the constructor.
@@ -112,7 +135,7 @@ contract GatewayLogicV1 is
     }
 
     /// @notice Allow the owner to update the owner of the RenERC20 token.
-    function transferTokenOwnership(GatewayLogicV1 _nextTokenOwner)
+    function transferTokenOwnership(MintGatewayLogicV1 _nextTokenOwner)
         public
         onlyOwner
     {
@@ -131,7 +154,7 @@ contract GatewayLogicV1 is
         // returned by ecrecover for an invalid signature.
         require(
             _nextMintAuthority != address(0),
-            "Gateway: mintAuthority cannot be set to address zero"
+            "MintGateway: mintAuthority cannot be set to address zero"
         );
         mintAuthority = _nextMintAuthority;
         emit LogMintAuthorityUpdated(mintAuthority);
@@ -154,7 +177,7 @@ contract GatewayLogicV1 is
         // 'mint' and 'burn' will fail if the feeRecipient is 0x0
         require(
             _nextFeeRecipient != address(0x0),
-            "Gateway: fee recipient cannot be 0x0"
+            "MintGateway: fee recipient cannot be 0x0"
         );
 
         feeRecipient = _nextFeeRecipient;
@@ -191,23 +214,23 @@ contract GatewayLogicV1 is
         bytes memory _sig
     ) public returns (uint256) {
         // Verify signature
-        bytes32 signedMessageHash = hashForSignature(
+        bytes32 sigHash = hashForSignature(
             _pHash,
             _amountUnderlying,
             msg.sender,
             _nHash
         );
         require(
-            status[signedMessageHash] == false,
-            "Gateway: nonce hash already spent"
+            status[sigHash] == false,
+            "MintGateway: nonce hash already spent"
         );
-        if (!verifySignature(signedMessageHash, _sig)) {
+        if (!verifySignature(sigHash, _sig)) {
             // Return a detailed string containing the hash and recovered
             // signer. This is somewhat costly but is only run in the revert
             // branch.
             revert(
                 String.add8(
-                    "Gateway: invalid signature. pHash: ",
+                    "MintGateway: invalid signature. pHash: ",
                     String.fromBytes32(_pHash),
                     ", amount: ",
                     String.fromUint(_amountUnderlying),
@@ -218,7 +241,7 @@ contract GatewayLogicV1 is
                 )
             );
         }
-        status[signedMessageHash] = true;
+        status[sigHash] = true;
 
         uint256 amountScaled = token.fromUnderlying(_amountUnderlying);
 
@@ -228,7 +251,7 @@ contract GatewayLogicV1 is
         );
         uint256 receivedAmountScaled = amountScaled.sub(
             absoluteFeeScaled,
-            "Gateway: fee exceeds amount"
+            "MintGateway: fee exceeds amount"
         );
 
         // Mint amount minus the fee
@@ -240,12 +263,7 @@ contract GatewayLogicV1 is
         uint256 receivedAmountUnderlying = token.toUnderlying(
             receivedAmountScaled
         );
-        emit LogMint(
-            msg.sender,
-            receivedAmountUnderlying,
-            nextN,
-            signedMessageHash
-        );
+        emit LogMint(msg.sender, receivedAmountUnderlying, nextN, _nHash);
         nextN += 1;
 
         return receivedAmountScaled;
@@ -264,13 +282,13 @@ contract GatewayLogicV1 is
     function burn(bytes memory _to, uint256 _amount) public returns (uint256) {
         // The recipient must not be empty. Better validation is possible,
         // but would need to be customized for each destination ledger.
-        require(_to.length != 0, "Gateway: to address is empty");
+        require(_to.length != 0, "MintGateway: to address is empty");
 
         // Calculate fee, subtract it from amount being burnt.
         uint256 fee = _amount.mul(burnFee).div(BIPS_DENOMINATOR);
         uint256 amountAfterFee = _amount.sub(
             fee,
-            "Gateway: fee exceeds amount"
+            "MintGateway: fee exceeds amount"
         );
 
         // If the scaled token can represent more precision than the underlying
@@ -286,23 +304,55 @@ contract GatewayLogicV1 is
             // Must be strictly greater, to that the release transaction is of
             // at least one unit.
             amountAfterFeeUnderlying > minimumBurnAmount,
-            "Gateway: amount is less than the minimum burn amount"
+            "MintGateway: amount is less than the minimum burn amount"
         );
 
         emit LogBurn(_to, amountAfterFeeUnderlying, nextN, _to);
+        bytes memory payload;
+        GatewayStateV2.burns[nextN] = Burn({
+            _blocknumber: block.number,
+            _to: _to,
+            _amount: amountAfterFeeUnderlying,
+            _chain: "",
+            _payload: payload
+        });
+
         nextN += 1;
 
         return amountAfterFeeUnderlying;
     }
 
+    function getBurn(uint256 _n)
+        public
+        view
+        returns (
+            uint256 _blocknumber,
+            bytes memory _to,
+            uint256 _amount,
+            // Optional
+            string memory _chain,
+            bytes memory _payload
+        )
+    {
+        Burn memory burnStruct = GatewayStateV2.burns[_n];
+        require(burnStruct._to.length > 0, "MintGateway: burn not found");
+        return (
+            burnStruct._blocknumber,
+            burnStruct._to,
+            burnStruct._amount,
+            burnStruct._chain,
+            burnStruct._payload
+        );
+    }
+
     /// @notice verifySignature checks the the provided signature matches the provided
     /// parameters.
-    function verifySignature(bytes32 _signedMessageHash, bytes memory _sig)
+    function verifySignature(bytes32 _sigHash, bytes memory _sig)
         public
         view
         returns (bool)
     {
-        return mintAuthority == ECDSA.recover(_signedMessageHash, _sig);
+        return mintAuthority == ECDSA.recover(_sigHash, _sig);
     }
 
     /// @notice hashForSignature hashes the parameters so that they can be signed.
@@ -313,27 +363,11 @@ contract GatewayLogicV1 is
         bytes32 _nHash
     ) public view returns (bytes32) {
         return
-            keccak256(abi.encode(_pHash, _amount, address(token), _to, _nHash));
+            keccak256(abi.encode(_pHash, _amount, selectorHash, _to, _nHash));
     }
 }
 
 /* solium-disable-next-line no-empty-blocks */
-// contract GatewayProxy is InitializableAdminUpgradeabilityProxy {}
-
-/// @dev The following duplicates are not necessary for deploying BTCGateway or
-/// ZECGateway contracts, but are used to track deployments.
-
-/* solium-disable-next-line no-empty-blocks */
-contract BTCGateway is InitializableAdminUpgradeabilityProxy {
-
-}
-
-/* solium-disable-next-line no-empty-blocks */
-contract ZECGateway is InitializableAdminUpgradeabilityProxy {
-
-}
-
-/* solium-disable-next-line no-empty-blocks */
-contract BCHGateway is InitializableAdminUpgradeabilityProxy {
+contract MintGatewayProxy is InitializableAdminUpgradeabilityProxy {
 
 }

@@ -7,8 +7,8 @@ import { Account } from "web3-eth-accounts";
 import { keccak256 } from "web3-utils";
 
 import {
-    GatewayLogicV1Instance,
     GatewayRegistryInstance,
+    MintGatewayLogicV1Instance,
     RenERC20LogicV1Instance,
     StandaloneERC20Instance,
 } from "../types/truffle-contracts";
@@ -29,12 +29,12 @@ const GatewayRegistry = artifacts.require("GatewayRegistry");
 const BTCGateway = artifacts.require("BTCGateway");
 const RenBTC = artifacts.require("RenBTC");
 const RenERC20LogicV1 = artifacts.require("RenERC20LogicV1");
-const GatewayLogicV1 = artifacts.require("GatewayLogicV1");
+const MintGatewayLogicV1 = artifacts.require("MintGatewayLogicV1");
 
 contract(
     "Gateway",
     ([owner, feeRecipient, user, malicious, proxyGovernanceAddress]) => {
-        let btcGateway: GatewayLogicV1Instance;
+        let btcGateway: MintGatewayLogicV1Instance;
         let renbtc: RenERC20LogicV1Instance;
 
         // We generate a new account so that we have access to its private key for
@@ -148,10 +148,10 @@ contract(
                         "hex",
                     );
 
-                    btcGateway = await deployProxy<GatewayLogicV1Instance>(
+                    btcGateway = await deployProxy<MintGatewayLogicV1Instance>(
                         web3,
                         BTCGateway,
-                        GatewayLogicV1,
+                        MintGatewayLogicV1,
                         proxyGovernanceAddress,
                         [
                             { type: "address", value: renbtc.address },
@@ -249,7 +249,7 @@ contract(
                 };
 
                 const mintTest = async (
-                    gateway: GatewayLogicV1Instance,
+                    gateway: MintGatewayLogicV1Instance,
                     value: number | BN,
                     n?: string,
                 ): Promise<[string, string, BN]> => {
@@ -340,7 +340,7 @@ contract(
                 };
 
                 const burnTest = async (
-                    gateway: GatewayLogicV1Instance,
+                    gateway: MintGatewayLogicV1Instance,
                     value: number | BN,
                     btcAddress?: string,
                     n?: string,
@@ -688,13 +688,15 @@ contract(
                 });
 
                 describe("upgrading gateway", () => {
-                    let newGateway: GatewayLogicV1Instance;
+                    let newGateway: MintGatewayLogicV1Instance;
 
                     it("can upgrade the gateway", async () => {
-                        newGateway = await deployProxy<GatewayLogicV1Instance>(
+                        newGateway = await deployProxy<
+                            MintGatewayLogicV1Instance
+                        >(
                             web3,
                             BTCGateway,
-                            GatewayLogicV1,
+                            MintGatewayLogicV1,
                             proxyGovernanceAddress,
                             [
                                 { type: "address", value: renbtc.address },
@@ -1093,11 +1095,11 @@ contract(
                         ).should.equal(btcGateway.address);
 
                         const newBtcGateway = await deployProxy<
-                            GatewayLogicV1Instance
+                            MintGatewayLogicV1Instance
                         >(
                             web3,
                             BTCGateway,
-                            GatewayLogicV1,
+                            MintGatewayLogicV1,
                             proxyGovernanceAddress,
                             [
                                 { type: "address", value: renbtc.address },

@@ -103,7 +103,7 @@ module.exports = {
         MintGatewayLogicV1: "0x4a144820A415bDfa0030937608743CAE1d392029",
 
         assets: [
-            { // testFIL
+            { // renFIL
                 symbol: "FIL",
                 decimals: 18,
                 token: "0xD5147bc8e386d91Cc5DBE72099DAC6C9b99276F5",
@@ -139,7 +139,7 @@ module.exports = {
         },
     },
 
-    testnetVDot3: {
+    devnetVDot3: {
         RenProxyAdmin: "0x967dfcB47448bdb4556501726c24b397B3156DD9",
 
         GatewayRegistry: "0x1CAD87e16b56815d6a0b4Cd91A6639eae86Fc53A",
@@ -205,11 +205,11 @@ module.exports = {
             feeRecipient: "", // defaults to deployer
             mintAuthority: "0x0d72570ea72626bcd049f43ced062e1ce67e616d", // defaults to deployer
 
-            tokenPrefix: "test",
+            tokenPrefix: "dev",
         },
     },
 
-    devnetVDot3: {
+    testnetVDot3: {
         RenProxyAdmin: "0xC9401b34c8d5F2ff203D4221aebcc46A81b52fe3",
 
         GatewayRegistry: "0xcF9F36668ad5b28B336B248a67268AFcF1ECbdbF",
@@ -275,7 +275,7 @@ module.exports = {
             feeRecipient: "", // defaults to deployer
             mintAuthority: "0xbb8c61159153d8a6ffd555584d1ac77fd57feca7", // defaults to deployer
 
-            tokenPrefix: "dev",
+            tokenPrefix: "test",
         },
     },
 

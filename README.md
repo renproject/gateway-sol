@@ -68,3 +68,7 @@ Run the following (replacing the network and contract name):
 ```sh
 NETWORK=mainnet yarn run verify Contract1 Contract2
 ```
+
+For contracts that use a Proxy, you then need to go to the Etherscan page, select "More Options" and then "Is this a proxy?":
+
+![image](https://user-images.githubusercontent.com/2221955/110889473-4c881900-8342-11eb-8c50-0fd09c4e239a.png)

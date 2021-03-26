@@ -1,4 +1,4 @@
-pragma solidity ^0.5.16;
+pragma solidity ^0.5.17;
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
@@ -54,6 +54,8 @@ contract GatewayStateV2 {
     mapping(uint256 => Burn) internal burns;
 
     bytes32 public selectorHash;
+
+    address public _legacy_mintAuthority = address(0x01);
 }
 
 /// @notice Gateway handles verifying mint and burn requests. A mintAuthority
@@ -125,6 +127,10 @@ contract MintGatewayLogicV1 is
         selectorHash = _selectorHash;
     }
 
+    function updateSymbol(string memory symbol) public onlyOwner {
+        token.updateSymbol(symbol);
+    }
+
     // Public functions ////////////////////////////////////////////////////////
 
     /// @notice Claims ownership of the token passed in to the constructor.
@@ -143,9 +149,9 @@ contract MintGatewayLogicV1 is
         _nextTokenOwner.claimTokenOwnership();
     }
 
-    /// @notice Allow the owner to update the fee recipient.
+    /// @notice Allow the owner to update the mint authority.
     ///
-    /// @param _nextMintAuthority The address to start paying fees to.
+    /// @param _nextMintAuthority The new mint authority address.
     function updateMintAuthority(address _nextMintAuthority)
         public
         onlyOwnerOrMintAuthority
@@ -158,6 +164,22 @@ contract MintGatewayLogicV1 is
         );
         mintAuthority = _nextMintAuthority;
         emit LogMintAuthorityUpdated(mintAuthority);
+    }
+
+    /// @notice Allow the owner to update the legacy mint authority.
+    ///
+    /// @param _nextMintAuthority The new legacy mint authority address.
+    function _legacy_updateMintAuthority(address _nextMintAuthority)
+        public
+        onlyOwner
+    {
+        // The mint authority should not be set to 0, which is the result
+        // returned by ecrecover for an invalid signature.
+        require(
+            _nextMintAuthority != address(0),
+            "MintGateway: mintAuthority cannot be set to address zero"
+        );
+        _legacy_mintAuthority = _nextMintAuthority;
     }
 
     /// @notice Allow the owner to update the minimum burn amount.
@@ -213,18 +235,31 @@ contract MintGatewayLogicV1 is
         bytes32 _nHash,
         bytes memory _sig
     ) public returns (uint256) {
-        // Verify signature
-        bytes32 sigHash = hashForSignature(
-            _pHash,
-            _amountUnderlying,
-            msg.sender,
-            _nHash
-        );
+        // Calculate the hash signed by RenVM.
+        bytes32 sigHash =
+            hashForSignature(_pHash, _amountUnderlying, msg.sender, _nHash);
+
+        // Calculate the v0.2 signature hash for backwards-compatibility.
+        bytes32 legacySigHash =
+            _legacy_hashForSignature(
+                _pHash,
+                _amountUnderlying,
+                msg.sender,
+                _nHash
+            );
+
+        // Check that neither signature has been redeemed.
         require(
-            status[sigHash] == false,
+            status[sigHash] == false && status[legacySigHash] == false,
             "MintGateway: nonce hash already spent"
         );
-        if (!verifySignature(sigHash, _sig)) {
+
+        // If both signatures fail verification, throw an error. If any one of
+        // them passed the verification, continue.
+        if (
+            !verifySignature(sigHash, _sig) &&
+            !_legacy_verifySignature(legacySigHash, _sig)
+        ) {
             // Return a detailed string containing the hash and recovered
             // signer. This is somewhat costly but is only run in the revert
             // branch.
@@ -241,18 +276,24 @@ contract MintGatewayLogicV1 is
                 )
             );
         }
+
+        // Update the status for both signature hashes. This is to ensure that
+        // legacy signatures can't be re-redeemed if `updateSelectorHash` is
+        // ever called - thus changing the result of `sigHash` but not
+        // `legacySigHash`.
         status[sigHash] = true;
+        status[legacySigHash] = true;
 
         uint256 amountScaled = token.fromUnderlying(_amountUnderlying);
 
         // Mint `amount - fee` for the recipient and mint `fee` for the minter
-        uint256 absoluteFeeScaled = amountScaled.mul(mintFee).div(
-            BIPS_DENOMINATOR
-        );
-        uint256 receivedAmountScaled = amountScaled.sub(
-            absoluteFeeScaled,
-            "MintGateway: fee exceeds amount"
-        );
+        uint256 absoluteFeeScaled =
+            amountScaled.mul(mintFee).div(BIPS_DENOMINATOR);
+        uint256 receivedAmountScaled =
+            amountScaled.sub(
+                absoluteFeeScaled,
+                "MintGateway: fee exceeds amount"
+            );
 
         // Mint amount minus the fee
         token.mint(msg.sender, receivedAmountScaled);
@@ -260,9 +301,8 @@ contract MintGatewayLogicV1 is
         token.mint(feeRecipient, absoluteFeeScaled);
 
         // Emit a log with a unique identifier 'n'.
-        uint256 receivedAmountUnderlying = token.toUnderlying(
-            receivedAmountScaled
-        );
+        uint256 receivedAmountUnderlying =
+            token.toUnderlying(receivedAmountScaled);
         emit LogMint(msg.sender, receivedAmountUnderlying, nextN, _nHash);
         nextN += 1;
 
@@ -286,10 +326,8 @@ contract MintGatewayLogicV1 is
 
         // Calculate fee, subtract it from amount being burnt.
         uint256 fee = _amount.mul(burnFee).div(BIPS_DENOMINATOR);
-        uint256 amountAfterFee = _amount.sub(
-            fee,
-            "MintGateway: fee exceeds amount"
-        );
+        uint256 amountAfterFee =
+            _amount.sub(fee, "MintGateway: fee exceeds amount");
 
         // If the scaled token can represent more precision than the underlying
         // token, the difference is lost. This won't exceed 1 sat, so is
@@ -345,8 +383,8 @@ contract MintGatewayLogicV1 is
         );
     }
 
-    /// @notice verifySignature checks the the provided signature matches the provided
-    /// parameters.
+    /// @notice verifySignature checks the the provided signature matches the
+    /// provided parameters.
     function verifySignature(bytes32 _sigHash, bytes memory _sig)
         public
         view
@@ -355,7 +393,22 @@ contract MintGatewayLogicV1 is
         return mintAuthority == ECDSA.recover(_sigHash, _sig);
     }
 
-    /// @notice hashForSignature hashes the parameters so that they can be signed.
+    /// @notice verifySignature checks the the provided signature matches the
+    /// provided parameters.
+    function _legacy_verifySignature(bytes32 _sigHash, bytes memory _sig)
+        public
+        view
+        returns (bool)
+    {
+        // require(
+        //     _legacy_mintAuthority != address(0x0),
+        //     "MintGateway: legacy mintAuthority not set"
+        // );
+        return _legacy_mintAuthority == ECDSA.recover(_sigHash, _sig);
+    }
+
+    /// @notice hashForSignature hashes the parameters so that they can be
+    /// signed.
     function hashForSignature(
         bytes32 _pHash,
         uint256 _amount,
@@ -364,6 +417,18 @@ contract MintGatewayLogicV1 is
     ) public view returns (bytes32) {
         return
             keccak256(abi.encode(_pHash, _amount, selectorHash, _to, _nHash));
+    }
+
+    /// @notice _legacy_hashForSignature calculates the signature hash used by
+    /// the 0.2 version of RenVM. It's kept here for backwards-compatibility.
+    function _legacy_hashForSignature(
+        bytes32 _pHash,
+        uint256 _amount,
+        address _to,
+        bytes32 _nHash
+    ) public view returns (bytes32) {
+        return
+            keccak256(abi.encode(_pHash, _amount, address(token), _to, _nHash));
     }
 }
 

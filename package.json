@@ -44,7 +44,7 @@
         "hash.js": "^1.1.7",
         "npmignore": "^0.2.0",
         "patch-package": "^6.2.1",
-        "solc": "^0.5.16",
+        "solc": "^0.5.17",
         "solidity-coverage": "^0.7.2",
         "truffle": "^5.1.51",
         "truffle-hdwallet-provider": "^1.0.17",
@@ -60,7 +60,7 @@
         "web3-utils": "^2.0.0-alpha"
     },
     "resolutions": {
-        "solc": "0.5.16",
+        "solc": "0.5.17",
         "sol-merger": "1.1.1"
     },
     "prettier": {

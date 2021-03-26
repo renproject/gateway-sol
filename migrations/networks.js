@@ -526,63 +526,63 @@ module.exports = {
     },
 
     fantomDevnet: {
-        RenProxyAdmin: "",
+        RenProxyAdmin: "0xf1DA6f4A594553335EdeA6B1203a4B590c752E32",
 
-        GatewayRegistry: "",
-        BasicAdapter: "",
+        GatewayRegistry: "0xD881213F5ABF783d93220e6bD3Cc21706A8dc1fC",
+        BasicAdapter: "0xD087b0540e172553c12DEEeCDEf3dFD21Ec02066",
 
-        RenERC20LogicV1: "",
-        MintGatewayLogicV1: "",
+        RenERC20LogicV1: "0xB5072BE373a120d81c728e908Ed0710968fC247f",
+        MintGatewayLogicV1: "0x5e3c8B0F7229f1F1873267B6811465fEF73d53CA",
 
         assets: [
             {
                 // devBTC
                 symbol: "BTC",
                 decimals: 8,
-                token: "",
-                gateway: ""
+                token: "0x880Ad65DC5B3F33123382416351Eef98B4aAd7F1",
+                gateway: "0x29Aa535b65b9C9A08bEdEbA8F9398aAf4832F98b"
             },
             {
                 // devZEC
                 symbol: "ZEC",
                 decimals: 8,
-                token: "",
-                gateway: ""
+                token: "0xEF685D1D44EA983927D9F8D67F77894fAEC92FCF",
+                gateway: "0xF9fAE250B8dda539B9AFfEb606C8e2631976413E"
             },
             {
                 // devBCH
                 symbol: "BCH",
                 decimals: 8,
-                token: "",
-                gateway: ""
+                token: "0x6662449d05312Afe0Ca147Db6Eb155641077883F",
+                gateway: "0x42c72B4090Ed0627c85ED878f699B2dB254beECa"
             },
             {
                 // devDGB
                 symbol: "DGB",
                 decimals: 8,
-                token: "",
-                gateway: ""
+                token: "0x799709491B1A26B867450bc68aC0d10979884aae",
+                gateway: "0x6268002A734EDcDe6c2111ae339E0D92B1ED2Bfa"
             },
             {
                 // devDOGE
                 symbol: "DOGE",
                 decimals: 8,
-                token: "",
-                gateway: ""
+                token: "0xc96884276D70a1176b2fe102469348d224B0A1fa",
+                gateway: "0x7352e7244899b7Cb5d803CC02741c8910d3B75de"
             },
             {
                 // devFIL
                 symbol: "FIL",
                 decimals: 18,
-                token: "",
-                gateway: ""
+                token: "0x0E1B161b33dE8E56B917f4735AfC26d5cf760c0C",
+                gateway: "0x1156663dFab56A9BAdd844e12eDD69eC96Dd0eFb"
             },
             {
                 // devLUNA
                 symbol: "LUNA",
                 decimals: 6,
-                token: "",
-                gateway: ""
+                token: "0x59fE85a45D2ecBDB1499dab315A109De8E4e2DAd",
+                gateway: "0xA0b04e9D8B883626769Ac23aF4fb019e34B944C4"
             }
         ],
 

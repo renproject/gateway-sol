@@ -525,5 +525,78 @@ module.exports = {
         }
     },
 
+    fantomDevnet: {
+        RenProxyAdmin: "",
+
+        GatewayRegistry: "",
+        BasicAdapter: "",
+
+        RenERC20LogicV1: "",
+        MintGatewayLogicV1: "",
+
+        assets: [
+            {
+                // devBTC
+                symbol: "BTC",
+                decimals: 8,
+                token: "",
+                gateway: ""
+            },
+            {
+                // devZEC
+                symbol: "ZEC",
+                decimals: 8,
+                token: "",
+                gateway: ""
+            },
+            {
+                // devBCH
+                symbol: "BCH",
+                decimals: 8,
+                token: "",
+                gateway: ""
+            },
+            {
+                // devDGB
+                symbol: "DGB",
+                decimals: 8,
+                token: "",
+                gateway: ""
+            },
+            {
+                // devDOGE
+                symbol: "DOGE",
+                decimals: 8,
+                token: "",
+                gateway: ""
+            },
+            {
+                // devFIL
+                symbol: "FIL",
+                decimals: 18,
+                token: "",
+                gateway: ""
+            },
+            {
+                // devLUNA
+                symbol: "LUNA",
+                decimals: 6,
+                token: "",
+                gateway: ""
+            }
+        ],
+
+        config: {
+            ...config,
+            governanceAddress: "", // defaults to deployer
+            feeRecipient: "",
+            mintAuthority: "0x1A5650DAd360803ea7912b7a0a747446b554a5BE",
+
+            runUpgrade: false,
+
+            tokenPrefix: "dev"
+        }
+    },
+
     config
 };

@@ -6,9 +6,9 @@ import { ecsign, keccak256 } from "ethereumjs-util";
 import {
     BTCGatewayInstance,
     GatewayRegistryInstance,
-    MintGatewayLogicV1Instance,
+    MintGatewayLogicV2Instance,
     RenERC20LogicV1Instance,
-    VestingInstance,
+    VestingInstance
 } from "../types/truffle-contracts";
 import { deployProxy, increaseTime, Ox, randomBytes } from "./helper/testUtils";
 
@@ -17,12 +17,12 @@ const GatewayRegistry = artifacts.require("GatewayRegistry");
 const RenBTC = artifacts.require("RenBTC");
 const RenERC20LogicV1 = artifacts.require("RenERC20LogicV1");
 const Vesting = artifacts.require("Vesting");
-const MintGatewayLogicV1 = artifacts.require("MintGatewayLogicV1");
+const MintGatewayLogicV2 = artifacts.require("MintGatewayLogicV2");
 
 contract.skip(
     "Vesting",
     ([owner, feeRecipient, beneficiary, proxyGovernanceAddress]) => {
-        let btcGateway: MintGatewayLogicV1Instance;
+        let btcGateway: MintGatewayLogicV2Instance;
         let renbtc: RenERC20LogicV1Instance;
         let vesting: VestingInstance;
         let registry: GatewayRegistryInstance;
@@ -48,15 +48,15 @@ contract.skip(
                     { type: "string", value: "1" },
                     { type: "string", value: "renBTC" },
                     { type: "string", value: "renBTC" },
-                    { type: "uint8", value: 8 },
+                    { type: "uint8", value: 8 }
                 ],
-                { from: owner },
+                { from: owner }
             );
 
-            btcGateway = await deployProxy<MintGatewayLogicV1Instance>(
+            btcGateway = await deployProxy<MintGatewayLogicV2Instance>(
                 web3,
                 BTCGateway,
-                MintGatewayLogicV1,
+                MintGatewayLogicV2,
                 proxyGovernanceAddress,
                 [
                     { type: "address", value: renbtc.address },
@@ -64,9 +64,9 @@ contract.skip(
                     { type: "address", value: mintAuthority.address },
                     { type: "uint16", value: mintFees.toNumber() },
                     { type: "uint16", value: burnFees.toNumber() },
-                    { type: "uint256", value: 10000 },
+                    { type: "uint256", value: 10000 }
                 ],
-                { from: owner },
+                { from: owner }
             );
             await renbtc.transferOwnership(btcGateway.address);
             await btcGateway.claimTokenOwnership();
@@ -75,7 +75,7 @@ contract.skip(
             await registry.setGateway(
                 "BTC",
                 renbtc.address,
-                btcGateway.address,
+                btcGateway.address
             );
 
             // Setup the contracts for testing
@@ -94,24 +94,24 @@ contract.skip(
                 const pHash = keccak256(
                     rawEncode(
                         ["address", "uint256", "uint16"],
-                        [beneficiary, startTime, duration],
-                    ),
+                        [beneficiary, startTime, duration]
+                    )
                 ).toString("hex");
 
                 const hashForSignature = await btcGateway.hashForSignature.call(
                     Ox(pHash),
                     amount.toNumber(),
                     vesting.address,
-                    nHash,
+                    nHash
                 );
                 const sig = ecsign(
                     Buffer.from(hashForSignature.slice(2), "hex"),
-                    privKey,
+                    privKey
                 );
                 const sigString = Ox(
                     `${sig.r.toString("hex")}${sig.s.toString(
-                        "hex",
-                    )}${sig.v.toString(16)}`,
+                        "hex"
+                    )}${sig.v.toString(16)}`
                 );
 
                 // User should have no schedules prior to adding.
@@ -126,7 +126,7 @@ contract.skip(
                     // Required
                     amount,
                     nHash,
-                    sigString,
+                    sigString
                 );
             };
 
@@ -135,11 +135,11 @@ contract.skip(
 
                 const schedule = await vesting.schedules.call(beneficiary);
                 (schedule as any).startTime.should.bignumber.not.equal(
-                    new BN(0),
+                    new BN(0)
                 );
                 (schedule as any).amount.should.bignumber.equal(amountAfterFee);
                 (schedule as any).duration.should.bignumber.equal(
-                    new BN(duration),
+                    new BN(duration)
                 );
             });
 
@@ -154,7 +154,7 @@ contract.skip(
 
             it("can check claimable amount", async () => {
                 let claimable = await vesting.calculateClaimable.call(
-                    beneficiary,
+                    beneficiary
                 );
                 claimable[0].should.bignumber.equal(new BN(0));
                 claimable[1].should.bignumber.equal(new BN(0));
@@ -169,7 +169,7 @@ contract.skip(
                     await increaseTime(month);
 
                     claimable = await vesting.calculateClaimable.call(
-                        beneficiary,
+                        beneficiary
                     );
                     claimable[0].should.bignumber.equal(new BN(i));
                     claimable[1].should.bignumber.equal(amountClaimable(i));
@@ -183,7 +183,7 @@ contract.skip(
                 await increaseTime(month * 3);
 
                 let claimable = await vesting.calculateClaimable.call(
-                    beneficiary,
+                    beneficiary
                 );
                 claimable[0].should.bignumber.equal(new BN(3));
                 claimable[1].should.bignumber.equal(amountClaimable(3));
@@ -196,7 +196,7 @@ contract.skip(
                 claimable = await vesting.calculateClaimable.call(beneficiary);
                 claimable[0].should.bignumber.equal(new BN(duration - 3));
                 claimable[1].should.bignumber.equal(
-                    amountAfterFee.sub(amountClaimable(3)),
+                    amountAfterFee.sub(amountClaimable(3))
                 );
 
                 await vesting.claim(beneficiary, { from: beneficiary });
@@ -213,11 +213,11 @@ contract.skip(
                 await increaseTime(month * duration * 10);
 
                 const claimable = await vesting.calculateClaimable.call(
-                    beneficiary,
+                    beneficiary
                 );
                 claimable[0].should.bignumber.equal(new BN(duration));
                 claimable[1].should.bignumber.equal(amountAfterFee);
             });
         });
-    },
+    }
 );

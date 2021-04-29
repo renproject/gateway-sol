@@ -35,7 +35,8 @@ const Network = {
         gas: 1229470,
         // gas: 300000,
         gasPrice: 54 * GWEI,
-        networkCheckTimeout: 10000
+        networkCheckTimeout: 10000,
+        confirmations: 0
     },
 
     EthKovan: {
@@ -48,7 +49,8 @@ const Network = {
         network_id: 42,
         // gas: 6721975,
         // gasPrice: 6.5 * GWEI,
-        networkCheckTimeout: 10000
+        networkCheckTimeout: 10000,
+        confirmations: 0
     },
 
     EthRinkeby: {
@@ -61,7 +63,8 @@ const Network = {
         network_id: 4,
         // gas: 6721975,
         // gasPrice: 6.5 * GWEI,
-        networkCheckTimeout: 10000
+        networkCheckTimeout: 10000,
+        confirmations: 0
     },
 
     BscMainnet: {
@@ -73,7 +76,8 @@ const Network = {
             ),
         network_id: 56,
         // gas: 30000000,
-        networkCheckTimeout: 10000
+        networkCheckTimeout: 10000,
+        confirmations: 0
     },
 
     BscTestnet: {
@@ -85,7 +89,8 @@ const Network = {
             ),
         network_id: 97,
         // gas: 30000000,
-        networkCheckTimeout: 10000
+        networkCheckTimeout: 10000,
+        confirmations: 0
     },
 
     CeloTestnet: {
@@ -108,7 +113,8 @@ const Network = {
         },
         network_id: 44787,
         // gas: 30000000,
-        networkCheckTimeout: 10000
+        networkCheckTimeout: 10000,
+        confirmations: 0
     },
 
     FantomTestnet: {
@@ -121,7 +127,8 @@ const Network = {
         network_id: 0xfa2,
         // gas: 6721975,
         // gasPrice: 6.5 * GWEI,
-        networkCheckTimeout: 10000
+        networkCheckTimeout: 10000,
+        confirmations: 0
     }
 };
 

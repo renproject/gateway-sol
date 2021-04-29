@@ -25,3 +25,16 @@ index d85ce09..1d34ab2 100644
          }
  
          // If the signature is valid (and not malleable), return the signer address
+diff --git a/node_modules/@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Detailed.sol b/node_modules/@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Detailed.sol
+index 24f6be4..44c6ebc 100644
+--- a/node_modules/@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Detailed.sol
++++ b/node_modules/@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Detailed.sol
+@@ -8,7 +8,7 @@ import "./IERC20.sol";
+  */
+ contract ERC20Detailed is Initializable, IERC20 {
+     string private _name;
+-    string private _symbol;
++    string internal _symbol;
+     uint8 private _decimals;
+ 
+     /**

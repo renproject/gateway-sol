@@ -311,7 +311,7 @@ module.exports = async function(deployer, network) {
         // const expectedSelectorHash = "0x" + sha256(selectorBytes).toString("hex").toLowerCase();
         if (selectorHash !== expectedSelectorHash) {
             deployer.logger.log(
-                `Updating selector hash from ${selectorHash} to ${expectedSelectorHash}`
+                `Updating selector hash from ${selectorHash} to ${expectedSelectorHash} ($selector)`
             );
             await gatewayInstance.updateSelectorHash(expectedSelectorHash);
             actionCount++;

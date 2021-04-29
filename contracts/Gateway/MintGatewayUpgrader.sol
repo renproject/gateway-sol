@@ -15,26 +15,25 @@ import "../libraries/CanReclaimTokens.sol";
 import "./MintGateway.sol";
 import "../Governance/RenProxyAdmin.sol";
 
-/* solium-disable-next-line no-empty-blocks */
 contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
     RenProxyAdmin renProxyAdmin;
-    MintGatewayLogicV1 gatewayLogic;
+    MintGatewayLogicV2 newGatewayLogic;
     address previousAdminOwner;
     address newMintAuthority;
 
     constructor(
         RenProxyAdmin _renProxyAdmin,
-        MintGatewayLogicV1 _gatewayLogic,
+        MintGatewayLogicV2 _newGatewayLogic,
         address _newMintAuthority
     ) public {
         Ownable.initialize(msg.sender);
         renProxyAdmin = _renProxyAdmin;
-        gatewayLogic = _gatewayLogic;
+        newGatewayLogic = _newGatewayLogic;
         previousAdminOwner = renProxyAdmin.owner();
         newMintAuthority = _newMintAuthority;
     }
 
-    function upgrade(MintGatewayLogicV1 gatewayInstance, bytes32 selectorHash)
+    function upgrade(MintGatewayLogicV2 gatewayInstance, bytes32 selectorHash)
         public
         onlyOwner
     {
@@ -50,19 +49,19 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
         address previousGatewayOwner = gatewayInstance.owner();
         gatewayInstance.claimOwnership();
 
+        // Update implementation.
         renProxyAdmin.upgrade(
             AdminUpgradeabilityProxy(
                 // Cast gateway instance to payable address
                 address(uint160(address(gatewayInstance)))
             ),
-            address(gatewayLogic)
+            address(newGatewayLogic)
         );
 
-        // Update mint authorities.
+        // Update mint authorities and selector hash.
         address legacyMintAuthority = gatewayInstance.mintAuthority();
         gatewayInstance.updateMintAuthority(newMintAuthority);
         gatewayInstance._legacy_updateMintAuthority(legacyMintAuthority);
-
         gatewayInstance.updateSelectorHash(selectorHash);
 
         // require(
@@ -102,10 +101,10 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
             "Expected nextN to not change."
         );
 
-        gatewayInstance.transferOwnership(previousGatewayOwner);
+        gatewayInstance.directTransferOwnership(previousGatewayOwner);
     }
 
     function done() public onlyOwner {
-        renProxyAdmin.transferOwnership(previousAdminOwner);
+        renProxyAdmin.directTransferOwnership(previousAdminOwner);
     }
 }

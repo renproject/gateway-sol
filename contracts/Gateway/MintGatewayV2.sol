@@ -10,38 +10,9 @@ import "../libraries/String.sol";
 import "./RenERC20.sol";
 import "./interfaces/IGateway.sol";
 import "../libraries/CanReclaimTokens.sol";
+import "./MintGatewayV1.sol";
 
-contract GatewayStateV1 {
-    uint256 constant BIPS_DENOMINATOR = 10000;
-    uint256 public minimumBurnAmount;
-
-    /// @notice Each Gateway is tied to a specific RenERC20 token.
-    RenERC20LogicV1 public token;
-
-    /// @notice The mintAuthority is an address that can sign mint requests.
-    address public mintAuthority;
-
-    /// @dev feeRecipient is assumed to be an address (or a contract) that can
-    /// accept erc20 payments it cannot be 0x0.
-    /// @notice When tokens are mint or burnt, a portion of the tokens are
-    /// forwarded to a fee recipient.
-    address public feeRecipient;
-
-    /// @notice The mint fee in bips.
-    uint16 public mintFee;
-
-    /// @notice The burn fee in bips.
-    uint16 public burnFee;
-
-    /// @notice Each signature can only be seen once.
-    mapping(bytes32 => bool) public status;
-
-    // LogMint and LogBurn contain a unique `n` that identifies
-    // the mint or burn event.
-    uint256 public nextN = 0;
-}
-
-contract GatewayStateV2 {
+contract MintGatewayStateV2 {
     struct Burn {
         uint256 _blocknumber;
         bytes _to;
@@ -57,7 +28,7 @@ contract GatewayStateV2 {
 
     // Initialize to 0x1 because 0x0 is the default value returned by `recover`
     // when it encounters an error.
-    address public _legacy_mintAuthority = address(0x01);
+    address public _legacy_mintAuthority;
 }
 
 /// @notice Gateway handles verifying mint and burn requests. A mintAuthority
@@ -68,8 +39,8 @@ contract MintGatewayLogicV2 is
     Claimable,
     CanReclaimTokens,
     IGateway,
-    GatewayStateV1,
-    GatewayStateV2
+    MintGatewayStateV1,
+    MintGatewayStateV2
 {
     using SafeMath for uint256;
 
@@ -178,12 +149,6 @@ contract MintGatewayLogicV2 is
         public
         onlyOwner
     {
-        // The mint authority should not be set to 0, which is the result
-        // returned by ecrecover for an invalid signature.
-        require(
-            _nextMintAuthority != address(0),
-            "MintGateway: mintAuthority cannot be set to address zero"
-        );
         _legacy_mintAuthority = _nextMintAuthority;
     }
 
@@ -303,7 +268,9 @@ contract MintGatewayLogicV2 is
         // Mint amount minus the fee
         token.mint(msg.sender, receivedAmountScaled);
         // Mint the fee
-        token.mint(feeRecipient, absoluteFeeScaled);
+        if (absoluteFeeScaled > 0) {
+            token.mint(feeRecipient, absoluteFeeScaled);
+        }
 
         // Emit a log with a unique identifier 'n'.
         uint256 receivedAmountUnderlying =
@@ -341,7 +308,9 @@ contract MintGatewayLogicV2 is
 
         // Burn the whole amount, and then re-mint the fee.
         token.burn(msg.sender, _amount);
-        token.mint(feeRecipient, fee);
+        if (fee > 0) {
+            token.mint(feeRecipient, fee);
+        }
 
         require(
             // Must be strictly greater, to that the release transaction is of
@@ -355,7 +324,7 @@ contract MintGatewayLogicV2 is
         // Store burn so that it can be looked up instead of relying on event
         // logs.
         bytes memory payload;
-        GatewayStateV2.burns[nextN] = Burn({
+        MintGatewayStateV2.burns[nextN] = Burn({
             _blocknumber: block.number,
             _to: _to,
             _amount: amountAfterFeeUnderlying,
@@ -380,7 +349,7 @@ contract MintGatewayLogicV2 is
             bytes memory _payload
         )
     {
-        Burn memory burnStruct = GatewayStateV2.burns[_n];
+        Burn memory burnStruct = MintGatewayStateV2.burns[_n];
         require(burnStruct._to.length > 0, "MintGateway: burn not found");
         return (
             burnStruct._blocknumber,
@@ -408,10 +377,10 @@ contract MintGatewayLogicV2 is
         view
         returns (bool)
     {
-        // require(
-        //     _legacy_mintAuthority != address(0x0),
-        //     "MintGateway: legacy mintAuthority not set"
-        // );
+        require(
+            _legacy_mintAuthority != address(0x0),
+            "MintGateway: legacy mintAuthority not set"
+        );
         return _legacy_mintAuthority == ECDSA.recover(_sigHash, _sig);
     }
 

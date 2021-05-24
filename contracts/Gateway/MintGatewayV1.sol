@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
@@ -11,7 +11,7 @@ import "./RenERC20.sol";
 import "./interfaces/IGateway.sol";
 import "../libraries/CanReclaimTokens.sol";
 
-contract GatewayStateV1 {
+contract MintGatewayStateV1 {
     uint256 constant BIPS_DENOMINATOR = 10000;
     uint256 public minimumBurnAmount;
 
@@ -44,12 +44,12 @@ contract GatewayStateV1 {
 /// @notice Gateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
-contract GatewayLogicV1 is
+contract MintGatewayLogicV1 is
     Initializable,
     Claimable,
     CanReclaimTokens,
     IGateway,
-    GatewayStateV1
+    MintGatewayStateV1
 {
     using SafeMath for uint256;
 
@@ -112,7 +112,7 @@ contract GatewayLogicV1 is
     }
 
     /// @notice Allow the owner to update the owner of the RenERC20 token.
-    function transferTokenOwnership(GatewayLogicV1 _nextTokenOwner)
+    function transferTokenOwnership(MintGatewayLogicV1 _nextTokenOwner)
         public
         onlyOwner
     {

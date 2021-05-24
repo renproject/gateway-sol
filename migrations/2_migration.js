@@ -35,6 +35,8 @@ const { sha256, keccak256 } = require("ethereumjs-util");
  * @param {string} network
  */
 module.exports = async function(deployer, network) {
+    return;
+
     const contractOwner = (await web3.eth.getAccounts())[0];
 
     const balance = web3.utils.fromWei(
@@ -61,11 +63,11 @@ module.exports = async function(deployer, network) {
     console.log(config);
     const mintAuthority = config.mintAuthority || contractOwner;
 
-    GatewayRegistry.address = addresses.GatewayRegistry || "";
+    // GatewayRegistry.address = addresses.GatewayRegistry || "";
     MintGatewayLogicV2.address = addresses.MintGatewayLogicV2 || "";
-    BasicAdapter.address = addresses.BasicAdapter || "";
-    RenERC20LogicV1.address = addresses.RenERC20LogicV1 || "";
-    RenProxyAdmin.address = addresses.RenProxyAdmin || "";
+    // BasicAdapter.address = addresses.BasicAdapter || "";
+    // RenERC20LogicV1.address = addresses.RenERC20LogicV1 || "";
+    // RenProxyAdmin.address = addresses.RenProxyAdmin || "";
 
     let actionCount = 0;
 
@@ -101,22 +103,24 @@ module.exports = async function(deployer, network) {
         mintAuthority
     );
 
+    await renProxyAdmin.transferOwnership(upgrader.address);
+
     for (const asset of addresses.assets) {
         let { gateway } = asset;
+        console.log(gateway, asset);
 
         const gatewayInstance = await MintGatewayLogicV2.at(gateway);
         await gatewayInstance.transferOwnership(upgrader.address);
-        await renProxyAdmin.transferOwnership(upgrader.address);
         try {
             await upgrader.upgrade(
                 gatewayInstance.address,
                 expectedSelectorHash
             );
             await gatewayInstance.claimOwnership();
-            await upgrader.done();
         } catch (error) {
-            await upgrader.done();
-            throw error;
+            console.error(error);
         }
     }
+
+    await upgrader.done();
 };

@@ -12,7 +12,7 @@ import "./RenERC20.sol";
 import "./interfaces/IGateway.sol";
 import "../libraries/CanReclaimTokens.sol";
 
-import "./MintGateway.sol";
+import "./MintGatewayV2.sol";
 import "../Governance/RenProxyAdmin.sol";
 
 contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
@@ -37,7 +37,6 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
         public
         onlyOwner
     {
-        // uint256 BIPS_DENOMINATOR = gatewayInstance.BIPS_DENOMINATOR();
         uint256 minimumBurnAmount = gatewayInstance.minimumBurnAmount();
         RenERC20LogicV1 token = gatewayInstance.token();
         address mintAuthority = gatewayInstance.mintAuthority();
@@ -64,10 +63,6 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
         gatewayInstance._legacy_updateMintAuthority(legacyMintAuthority);
         gatewayInstance.updateSelectorHash(selectorHash);
 
-        // require(
-        //     gatewayInstance.BIPS_DENOMINATOR() == BIPS_DENOMINATOR,
-        //     "Expected BIPS_DENOMINATOR to not change."
-        // );
         require(
             gatewayInstance.minimumBurnAmount() == minimumBurnAmount,
             "Expected minimumBurnAmount to not change."
@@ -101,10 +96,10 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
             "Expected nextN to not change."
         );
 
-        gatewayInstance.directTransferOwnership(previousGatewayOwner);
+        gatewayInstance._directTransferOwnership(previousGatewayOwner);
     }
 
     function done() public onlyOwner {
-        renProxyAdmin.directTransferOwnership(previousAdminOwner);
+        renProxyAdmin.transferOwnership(previousAdminOwner);
     }
 }

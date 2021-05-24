@@ -13,14 +13,61 @@ const config = {
 // > utils.toChecksumAddress(utils.pubToAddress("... public key ...", true).toString("hex"))
 
 module.exports = {
+    development: {
+        RenProxyAdmin: "",
+
+        GatewayRegistry: "",
+        BasicAdapter: "",
+        GenericAdapter: "",
+
+        RenERC20LogicV1: "",
+        MintGatewayLogicV2: "",
+
+        assets: [
+            {
+                //  renBTC
+                symbol: "BTC",
+                decimals: 8,
+                token: "",
+                gateway: ""
+            },
+            {
+                // renZEC
+                symbol: "ZEC",
+                decimals: 8,
+                token: "",
+                gateway: ""
+            },
+            {
+                // renBCH
+                symbol: "BCH",
+                decimals: 8,
+                token: "",
+                gateway: ""
+            }
+        ],
+
+        config: {
+            ...config,
+            governanceAddress: "", // defaults to deployer
+            feeRecipient: "",
+            mintAuthority: "",
+
+            tokenPrefix: "dev"
+        }
+    },
+
     mainnet: {
         RenProxyAdmin: "0xDf1D8eD27C54bBE5833320cf5a19fd9E73530145",
 
         GatewayRegistry: "0xe80d347DF1209a76DD9d2319d62912ba98C54DDD",
         BasicAdapter: "0x32666B64e9fD0F44916E1378Efb2CFa3B3B96e80",
+        GenericAdapter: "",
 
         RenERC20LogicV1: "0xe2d6cCAC3EE3A21AbF7BeDBE2E107FfC0C037e80",
-        GatewayStateV1: "0x402ec534BaF9e8Dd2968c57fDea368f3856460d6",
+        MintGatewayLogicV1: "0x402ec534BaF9e8Dd2968c57fDea368f3856460d6",
+        MintGatewayLogicV2: "0x1A562822F99d11E8F993f6BCdA86277123CE22B4",
+        MintGatewayUpgrader: "0x13773093Cdad89e8e1615f581a37c7eeaBb04804",
 
         assets: [
             {
@@ -61,9 +108,10 @@ module.exports = {
 
         GatewayRegistry: "0x557e211EC5fc9a6737d2C6b7a1aDe3e0C11A8D5D",
         BasicAdapter: "0x7DDFA2e5435027f6e13Ca8Db2f32ebd5551158Bb",
+        GenericAdapter: "",
 
         RenERC20LogicV1: "0xCe77c29b479bDF510f39bc4A2e43B0E4344fAB0f",
-        GatewayStateV1: "0x1AE08E8D4CF6CEF8c6e32d32Eb4BD3954425E44b",
+        MintGatewayLogicV2: "0x1AE08E8D4CF6CEF8c6e32d32Eb4BD3954425E44b",
 
         assets: [
             {
@@ -135,9 +183,10 @@ module.exports = {
 
         GatewayRegistry: "0x5F051E588f39D95bc6c1742f6FA98B103aa0E5c8",
         BasicAdapter: "0xFABDB1F53Ef8B080332621cBc9F820a39e7A1B83",
+        GenericAdapter: "",
 
         RenERC20LogicV1: "0xE121991B5DAB075E33C30E5C36EB5FFa9B2Af1A4",
-        GatewayStateV2: "0xc5d60337c6f3c4afbc9f151165d85969b4696cfa",
+        MintGatewayLogicV2: "0xc5d60337c6f3c4afbc9f151165d85969b4696cfa",
 
         assets: [
             {
@@ -210,9 +259,10 @@ module.exports = {
 
         GatewayRegistry: "0x503670EC851C55EC1aCFB5230192da921467a24e",
         BasicAdapter: "0xAe65b0f676313Fd715F29D07538d1dc8557f2b1A",
+        GenericAdapter: "",
 
         RenERC20LogicV1: "0xa074139a4975318E7c011783031504D1C177F8cA",
-        GatewayStateV2: "0x4a144820A415bDfa0030937608743CAE1d392029",
+        MintGatewayLogicV2: "0x4a144820A415bDfa0030937608743CAE1d392029",
 
         assets: [
             {
@@ -260,9 +310,10 @@ module.exports = {
 
         GatewayRegistry: "0x21C482f153D0317fe85C60bE1F7fa079019fcEbD",
         BasicAdapter: "0xAC23817f7E9Ec7EB6B7889BDd2b50e04a44470c5",
+        GenericAdapter: "",
 
         RenERC20LogicV1: "0x3799006a87FDE3CCFC7666B3E6553B03ED341c2F",
-        GatewayStateV2: "0x6b8bB175c092DE7d81860B18DB360B734A2598e0",
+        MintGatewayLogicV2: "0x6b8bB175c092DE7d81860B18DB360B734A2598e0",
 
         assets: [
             {
@@ -332,9 +383,10 @@ module.exports = {
 
         GatewayRegistry: "0x87e83f957a2F3A2E5Fe16d5C6B22e38FD28bdc06",
         BasicAdapter: "0x105435a9b0f375B179e5e43A16228C04F01Fb2ee",
+        GenericAdapter: "",
 
         RenERC20LogicV1: "0x29Aa535b65b9C9A08bEdEbA8F9398aAf4832F98b",
-        GatewayStateV2: "0x2011F921dA099687387E194C4DDf5D4413ac681A",
+        MintGatewayLogicV2: "0x2011F921dA099687387E194C4DDf5D4413ac681A",
 
         assets: [
             {
@@ -407,9 +459,10 @@ module.exports = {
 
         GatewayRegistry: "0x838F881876f53a772D2F8E2f8aa2e4a996431495",
         BasicAdapter: "0x7de1253A8da6620351ec477b38BdC6a55FCd0f85",
+        GenericAdapter: "",
 
         RenERC20LogicV1: "0xD83c880037eabfe01cCF4B0E0e8464686CE23e70",
-        GatewayStateV2: "0x77Aa76F7fdC7B465d0C279f0515eF1Ed07F1eC95",
+        MintGatewayLogicV2: "0x77Aa76F7fdC7B465d0C279f0515eF1Ed07F1eC95",
 
         assets: [
             {
@@ -486,9 +539,10 @@ module.exports = {
 
         GatewayRegistry: "0xD881213F5ABF783d93220e6bD3Cc21706A8dc1fC",
         BasicAdapter: "0xD087b0540e172553c12DEEeCDEf3dFD21Ec02066",
+        GenericAdapter: "",
 
         RenERC20LogicV1: "0xB5072BE373a120d81c728e908Ed0710968fC247f",
-        GatewayStateV2: "0x5e3c8B0F7229f1F1873267B6811465fEF73d53CA",
+        MintGatewayLogicV2: "0x5e3c8B0F7229f1F1873267B6811465fEF73d53CA",
 
         assets: [
             {
@@ -530,9 +584,10 @@ module.exports = {
 
         GatewayRegistry: "0xD881213F5ABF783d93220e6bD3Cc21706A8dc1fC",
         BasicAdapter: "0xD087b0540e172553c12DEEeCDEf3dFD21Ec02066",
+        GenericAdapter: "",
 
         RenERC20LogicV1: "0xB5072BE373a120d81c728e908Ed0710968fC247f",
-        GatewayStateV2: "0x5e3c8B0F7229f1F1873267B6811465fEF73d53CA",
+        MintGatewayLogicV2: "0x5e3c8B0F7229f1F1873267B6811465fEF73d53CA",
 
         assets: [
             {

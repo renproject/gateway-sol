@@ -8,10 +8,12 @@ const GatewayRegistry = artifacts.require("GatewayRegistry");
 const RenERC20LogicV1 = artifacts.require("RenERC20LogicV1");
 
 const MintGatewayLogicV1 = artifacts.require("MintGatewayLogicV1");
+const MintGatewayLogicV2 = artifacts.require("MintGatewayLogicV2");
 
 const MintGatewayProxy = artifacts.require("MintGatewayProxy");
 const RenERC20Proxy = artifacts.require("RenERC20Proxy");
 
+const GenericAdapter = artifacts.require("GenericAdapter");
 const BasicAdapter = artifacts.require("BasicAdapter");
 const RenProxyAdmin = artifacts.require("RenProxyAdmin");
 
@@ -57,7 +59,7 @@ module.exports = async function(deployer, network) {
     network = network.replace("-fork", "");
 
     const addresses = networks[network] || {};
-    const config = { ...networks.config, ...networks[network].config };
+    const config = { ...networks.config, ...addresses.config };
     console.log(config);
     const mintAuthority = config.mintAuthority || contractOwner;
     const governanceAddress = config.governanceAddress || contractOwner;
@@ -66,7 +68,9 @@ module.exports = async function(deployer, network) {
 
     GatewayRegistry.address = addresses.GatewayRegistry || "";
     MintGatewayLogicV1.address = addresses.MintGatewayLogicV1 || "";
+    MintGatewayLogicV2.address = addresses.MintGatewayLogicV2 || "";
     BasicAdapter.address = addresses.BasicAdapter || "";
+    // GenericAdapter.address = addresses.GenericAdapter || "";
     RenERC20LogicV1.address = addresses.RenERC20LogicV1 || "";
     RenProxyAdmin.address = addresses.RenProxyAdmin || "";
 
@@ -90,6 +94,18 @@ module.exports = async function(deployer, network) {
         actionCount++;
     }
     const registry = await GatewayRegistry.at(GatewayRegistry.address);
+
+    // if (!GenericAdapter.address) {
+    //     deployer.logger.log(`Deploying GenericAdapter`);
+    //     await deployer.deploy(GenericAdapter, registry.address);
+    //     actionCount++;
+    // }
+
+    // await deployer.deploy(
+    //     GaslessWithUniswap,
+    //     GenericAdapter.address,
+    //     "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+    // );
 
     // const protocolGatewayRegistry = await protocol.gatewayRegistry.call();
     // if (Ox(protocolGatewayRegistry) !== Ox(registry.address)) {
@@ -126,13 +142,13 @@ module.exports = async function(deployer, network) {
         actionCount++;
     }
 
-    if (!MintGatewayLogicV1.address) {
-        deployer.logger.log(`Deploying MintGatewayLogicV1 logic`);
-        await deployer.deploy(MintGatewayLogicV1);
+    if (!MintGatewayLogicV2.address) {
+        deployer.logger.log(`Deploying MintGatewayLogicV2 logic`);
+        await deployer.deploy(MintGatewayLogicV2);
         actionCount++;
     }
-    const gatewayLogic = await MintGatewayLogicV1.at(
-        MintGatewayLogicV1.address
+    const gatewayLogic = await MintGatewayLogicV2.at(
+        MintGatewayLogicV2.address
     );
 
     // Initialize GatewayLogic so others can't.
@@ -144,7 +160,7 @@ module.exports = async function(deployer, network) {
 
     const chainID = await web3.eth.net.getId();
 
-    for (const asset of addresses.assets) {
+    for (const asset of addresses.assets || []) {
         let { symbol, decimals, token, gateway } = asset;
         const prefixedSymbol = `${config.tokenPrefix}${symbol}`;
         deployer.logger.log(

@@ -31,10 +31,10 @@ const Network = {
                 `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`
             ),
         network_id: 1,
-        // gas: 3000000,
-        gas: 1229470,
+        gas: 4000000,
+        // gas: 1229470,
         // gas: 300000,
-        gasPrice: 54 * GWEI,
+        gasPrice: 50 * GWEI,
         networkCheckTimeout: 10000,
         confirmations: 0
     },

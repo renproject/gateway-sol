@@ -2469,6 +2469,19 @@ ethereumjs-util@6.2.0, ethereumjs-util@^6.0.0:
     rlp "^2.2.3"
     secp256k1 "^3.0.1"
 
+ethereumjs-util@6.2.1:
+  version "6.2.1"
+  resolved "https://registry.yarnpkg.com/ethereumjs-util/-/ethereumjs-util-6.2.1.tgz#fcb4e4dd5ceacb9d2305426ab1a5cd93e3163b69"
+  integrity sha512-W2Ktez4L01Vexijrm5EB6w7dg4n/TgpoYU4avuT5T3Vmnw/eCRtiBrJfQYS/DCSvDIOLn2k57GcHdeBcgVxAqw==
+  dependencies:
+    "@types/bn.js" "^4.11.3"
+    bn.js "^4.11.0"
+    create-hash "^1.1.2"
+    elliptic "^6.5.2"
+    ethereum-cryptography "^0.1.3"
+    ethjs-util "0.1.6"
+    rlp "^2.2.3"
+
 ethereumjs-util@^5.0.0:
   version "5.2.0"
   resolved "https://registry.yarnpkg.com/ethereumjs-util/-/ethereumjs-util-5.2.0.tgz#3e0c0d1741471acf1036052d048623dee54ad642"
@@ -2998,16 +3011,14 @@ ganache-cli@6.9.0:
     source-map-support "0.5.12"
     yargs "13.2.4"
 
-ganache-cli@^6.9.1:
-  version "6.10.1"
-  resolved "https://registry.yarnpkg.com/ganache-cli/-/ganache-cli-6.10.1.tgz#6e083a92dba204d649c43d8823152bb9e2219807"
-  integrity sha512-3lpBxILtJBxkNVo+U8ad2qbkzB6nZ53gXhXH6NiS0Pauqur86rGbhXz6fNASjBosZm9iJ8Nr71fJd331QODFkQ==
+ganache-cli@^6.12.2:
+  version "6.12.2"
+  resolved "https://registry.yarnpkg.com/ganache-cli/-/ganache-cli-6.12.2.tgz#c0920f7db0d4ac062ffe2375cb004089806f627a"
+  integrity sha512-bnmwnJDBDsOWBUP8E/BExWf85TsdDEFelQSzihSJm9VChVO1SHp94YXLP5BlA4j/OTxp0wR4R1Tje9OHOuAJVw==
   dependencies:
-    ethereumjs-util "6.1.0"
+    ethereumjs-util "6.2.1"
     source-map-support "0.5.12"
     yargs "13.2.4"
-  optionalDependencies:
-    scrypt "6.0.3"
 
 get-caller-file@^2.0.1:
   version "2.0.5"
@@ -4405,7 +4416,7 @@ msal@^1.0.2:
   dependencies:
     tslib "^1.9.3"
 
-nan@^2.0.8, nan@^2.13.2:
+nan@^2.13.2:
   version "2.14.1"
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.14.1.tgz#d7be34dfa3105b91494c3147089315eff8874b01"
   integrity sha512-isWHgVjnFjh2x2yuJ/tj3JbwoHu3UC2dX5G/88Cm24yB6YopVgxvBObDY7n5xW6ExmFhJpSEQqFPvq9zaXc8Jw==
@@ -5423,13 +5434,6 @@ scrypt-js@^3.0.0, scrypt-js@^3.0.1:
   dependencies:
     scryptsy "^2.1.0"
     semver "^6.3.0"
-
-scrypt@6.0.3:
-  version "6.0.3"
-  resolved "https://registry.yarnpkg.com/scrypt/-/scrypt-6.0.3.tgz#04e014a5682b53fa50c2d5cce167d719c06d870d"
-  integrity sha1-BOAUpWgrU/pQwtXM4WfXGcBthw0=
-  dependencies:
-    nan "^2.0.8"
 
 scryptsy@2.1.0, scryptsy@^2.1.0:
   version "2.1.0"

@@ -5,48 +5,27 @@ import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777Recipient.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777.sol";
 
 import "../interfaces/IGateway.sol";
 import "../interfaces/IGatewayRegistry.sol";
+import "./IERC1155/IERC1155.sol";
+import "./IERC1155/IERC1155Receiver.sol";
 
-contract GenericAdapter is Ownable, IERC721Receiver {
+contract GenericAdapter is
+    Ownable,
+    IERC721Receiver,
+    IERC777Recipient,
+    IERC1155Receiver
+{
     using SafeMath for uint256;
 
-    IGatewayRegistry registry;
+    IGatewayRegistry public registry;
 
     constructor(IGatewayRegistry _registry) public {
         Ownable.initialize(msg.sender);
         registry = _registry;
-    }
-
-    function arbitraryCall(address _contract, bytes calldata _contractParams)
-        internal
-    {
-        (bool success, bytes memory result) = _contract.call(_contractParams);
-        if (!success) {
-            // Check if the call result was too short to be a revert reason.
-            if (result.length < 68) {
-                revert(
-                    "GenericAdapter: contract call failed without revert reason"
-                );
-            }
-            // Return the call's revert reason.
-            assembly {
-                let ptr := mload(0x40)
-                let size := returndatasize
-                returndatacopy(ptr, 0, size)
-                revert(ptr, size)
-            }
-        }
-    }
-
-    // Allow the owner to recover tokens and collectibles stuck in the contract.
-    // This contract is not meant to hold funds.
-    function _recover(address _contract, bytes calldata _contractParams)
-        public
-        onlyOwner
-    {
-        arbitraryCall(_contract, _contractParams);
     }
 
     function directMint(
@@ -78,7 +57,7 @@ contract GenericAdapter is Ownable, IERC721Receiver {
             );
 
         IERC20 token = registry.getTokenBySymbol(_symbol);
-        token.transfer(_account, _amount.sub(_submitterFee));
+        token.transfer(_account, amount.sub(_submitterFee));
 
         // Pay fee as last step.
         if (_submitterFee > 0) {
@@ -105,6 +84,40 @@ contract GenericAdapter is Ownable, IERC721Receiver {
         address previousAccount = currentAccount;
         currentAccount = _account;
 
+        // Split up to work around stack-too-deep errors.
+        // The function body is spread across the following three functions:
+        // * _genericCallInner,
+        // * _returnReceivedTokens,
+        // * _mintAndCall
+        _genericCallInner(
+            _symbol,
+            _account,
+            _contract,
+            _contractParams,
+            _refundTokens,
+            _submitterFee,
+            _amount,
+            _nHash,
+            _sig
+        );
+
+        // Reset `currentAccount`.
+        currentAccount = previousAccount;
+    }
+
+    function _genericCallInner(
+        // Payload
+        string memory _symbol,
+        address _account,
+        address _contract,
+        bytes memory _contractParams,
+        IERC20[] memory _refundTokens,
+        uint256 _submitterFee,
+        // Required
+        uint256 _amount,
+        bytes32 _nHash,
+        bytes memory _sig
+    ) internal {
         // Allow the account to submit without a fee.
         if (_account == msg.sender) {
             _submitterFee = 0;
@@ -123,26 +136,26 @@ contract GenericAdapter is Ownable, IERC721Receiver {
                 )
             );
 
-        // Call `mint` on the Gateway contract.
-        uint256 amount =
-            registry.getGatewayBySymbol(_symbol).mint(
-                payloadHash,
-                _amount,
-                _nHash,
-                _sig
-            );
+        _mintAndCall(
+            payloadHash,
+            _symbol,
+            _contract,
+            _contractParams,
+            _submitterFee,
+            _amount,
+            _nHash,
+            _sig
+        );
 
+        _returnReceivedTokens(_symbol, _refundTokens, _submitterFee);
+    }
+
+    function _returnReceivedTokens(
+        string memory _symbol,
+        IERC20[] memory _refundTokens,
+        uint256 _submitterFee
+    ) internal {
         IERC20 token = registry.getTokenBySymbol(_symbol);
-
-        // Approval the amount excluding the fee.
-        uint256 oldApproval = token.allowance(address(this), _contract);
-        token.approve(_contract, oldApproval.add(_amount.sub(_submitterFee)));
-
-        // Call contract with the contract parameters.
-        arbitraryCall(_contract, _contractParams);
-
-        // Revoke approval.
-        token.approve(_contract, oldApproval);
 
         // The user must specify which tokens may potentially be recieved during
         // the contract call. Note that if one of the matched refund tokens
@@ -162,30 +175,139 @@ contract GenericAdapter is Ownable, IERC721Receiver {
             token.transfer(currentAccount, tokenBalance.sub(_submitterFee));
         }
 
+        // Remain any remaining ETH balance.
+        uint256 ethBalance = address(this).balance;
+        if (ethBalance > 0) {
+            (bool success, ) = currentAccount.call.value(ethBalance)("");
+            require(success);
+        }
+
         // Pay fee as last step.
         if (_submitterFee > 0) {
             token.transfer(msg.sender, _submitterFee);
         }
+    }
 
-        // Reset `currentAccount`.
-        currentAccount = previousAccount;
+    function _mintAndCall(
+        bytes32 payloadHash,
+        string memory _symbol,
+        address _contract,
+        bytes memory _contractParams,
+        uint256 _submitterFee,
+        uint256 _amount,
+        bytes32 _nHash,
+        bytes memory _sig
+    ) internal {
+        // Call `mint` on the Gateway contract.
+        uint256 amount =
+            registry.getGatewayBySymbol(_symbol).mint(
+                payloadHash,
+                _amount,
+                _nHash,
+                _sig
+            );
 
-        // Return the result of the arbitrary contract call.
-        return result;
+        IERC20 token = registry.getTokenBySymbol(_symbol);
+
+        // Approval the amount excluding the fee.
+        uint256 oldApproval = token.allowance(address(this), _contract);
+        token.approve(_contract, oldApproval.add(amount.sub(_submitterFee)));
+
+        // Call contract with the contract parameters.
+        arbitraryCall(_contract, _contractParams);
+
+        // Revoke approval.
+        token.approve(_contract, oldApproval);
     }
 
     function onERC721Received(
         address,
         address,
         uint256 tokenId,
-        bytes
+        bytes memory data
     ) public returns (bytes4) {
         // Forward on to current account.
         IERC721(msg.sender).safeTransferFrom(
             address(this),
             currentAccount,
-            tokenId
+            tokenId,
+            data
         );
         return this.onERC721Received.selector;
+    }
+
+    function tokensReceived(
+        address,
+        address,
+        address,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory
+    ) public {
+        IERC777(msg.sender).send(currentAccount, amount, userData);
+    }
+
+    function onERC1155Received(
+        address,
+        address,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) external returns (bytes4) {
+        IERC1155(msg.sender).safeTransferFrom(
+            address(this),
+            currentAccount,
+            id,
+            value,
+            data
+        );
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external returns (bytes4) {
+        IERC1155(msg.sender).safeBatchTransferFrom(
+            address(this),
+            currentAccount,
+            ids,
+            values,
+            data
+        );
+        return this.onERC1155BatchReceived.selector;
+    }
+
+    // Allow the owner to recover tokens and collectibles stuck in the contract.
+    // This contract is not meant to hold funds.
+    function _recover(address _contract, bytes calldata _contractParams)
+        external
+        onlyOwner
+    {
+        arbitraryCall(_contract, _contractParams);
+    }
+
+    function arbitraryCall(address _contract, bytes memory _contractParams)
+        internal
+    {
+        (bool success, bytes memory result) = _contract.call(_contractParams);
+        if (!success) {
+            // Check if the call result was too short to be a revert reason.
+            if (result.length < 68) {
+                revert(
+                    "GenericAdapter: contract call failed without revert reason"
+                );
+            }
+            // Return the call's revert reason.
+            assembly {
+                let ptr := mload(0x40)
+                let size := returndatasize
+                returndatacopy(ptr, 0, size)
+                revert(ptr, size)
+            }
+        }
     }
 }

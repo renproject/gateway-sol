@@ -1,5 +1,5 @@
 {
-    "name": "@renproject/sol",
+    "name": "@renproject/gateway-sol",
     "version": "1.0.0",
     "repository": "https://github.io/renproject/gateway-sol",
     "scripts": {

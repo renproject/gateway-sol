@@ -38,3 +38,13 @@ index 24f6be4..44c6ebc 100644
      uint8 private _decimals;
  
      /**
+diff --git a/node_modules/@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol b/node_modules/@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol
+index bf5245f..fa0348e 100644
+--- a/node_modules/@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol
++++ b/node_modules/@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol
+@@ -1,4 +1,4 @@
+-pragma solidity ^0.5.0;
++pragma solidity >=0.5.0;
+ 
+ /**
+  * @dev Interface of the ERC20 standard as defined in the EIP. Does not include

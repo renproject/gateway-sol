@@ -1,6 +1,5 @@
 pragma solidity ^0.5.17;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC721/IERC721Receiver.sol";
@@ -10,6 +9,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC777/IERC777.
 
 import "../interfaces/IGateway.sol";
 import "../interfaces/IGatewayRegistry.sol";
+import "../interfaces/IERC20Standard.sol";
 import "./IERC1155/IERC1155.sol";
 import "./IERC1155/IERC1155Receiver.sol";
 
@@ -56,7 +56,7 @@ contract GenericAdapter is
                 _sig
             );
 
-        IERC20 token = registry.getTokenBySymbol(_symbol);
+        IERC20Standard token = registry.getTokenBySymbol(_symbol);
         token.transfer(_account, amount.sub(_submitterFee));
 
         // Pay fee as last step.
@@ -74,7 +74,7 @@ contract GenericAdapter is
         address _account,
         address _contract,
         bytes calldata _contractParams,
-        IERC20[] calldata _refundTokens,
+        IERC20Standard[] calldata _refundTokens,
         uint256 _submitterFee,
         // Required
         uint256 _amount,
@@ -111,7 +111,7 @@ contract GenericAdapter is
         address _account,
         address _contract,
         bytes memory _contractParams,
-        IERC20[] memory _refundTokens,
+        IERC20Standard[] memory _refundTokens,
         uint256 _submitterFee,
         // Required
         uint256 _amount,
@@ -152,17 +152,17 @@ contract GenericAdapter is
 
     function _returnReceivedTokens(
         string memory _symbol,
-        IERC20[] memory _refundTokens,
+        IERC20Standard[] memory _refundTokens,
         uint256 _submitterFee
     ) internal {
-        IERC20 token = registry.getTokenBySymbol(_symbol);
+        IERC20Standard token = registry.getTokenBySymbol(_symbol);
 
         // The user must specify which tokens may potentially be recieved during
         // the contract call. Note that if one of the matched refund tokens
         // match `token` and a fee is paid out later on, the transaction will
         // revert.
         for (uint256 i = 0; i < _refundTokens.length; i++) {
-            IERC20 refundToken = IERC20(_refundTokens[i]);
+            IERC20Standard refundToken = IERC20Standard(_refundTokens[i]);
             uint256 refundBalance = refundToken.balanceOf(address(this));
             if (refundBalance > 0) {
                 refundToken.transfer(currentAccount, refundBalance);
@@ -207,7 +207,7 @@ contract GenericAdapter is
                 _sig
             );
 
-        IERC20 token = registry.getTokenBySymbol(_symbol);
+        IERC20Standard token = registry.getTokenBySymbol(_symbol);
 
         // Approval the amount excluding the fee.
         uint256 oldApproval = token.allowance(address(this), _contract);

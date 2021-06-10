@@ -98,10 +98,10 @@ contract MintGatewayLogicV2 is
         selectorHash = _selectorHash;
     }
 
-    /// @notice Allow the owner to update the token symbol.
-    function updateSymbol(string memory symbol) public onlyOwner {
-        token.updateSymbol(symbol);
-    }
+    // /// @notice Allow the owner to update the token symbol.
+    // function updateSymbol(string memory symbol) public onlyOwner {
+    //     token.updateSymbol(symbol);
+    // }
 
     // Public functions ////////////////////////////////////////////////////////
 

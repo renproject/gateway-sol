@@ -323,14 +323,14 @@ export async function deployGateways() {
             actionCount++;
         }
 
-        const actualSymbol = await tokenInstance.symbol();
-        if (actualSymbol !== prefixedSymbol) {
-            console.log(
-                `Updating symbol from ${actualSymbol} to ${prefixedSymbol}`
-            );
-            await gatewayInstance.updateSymbol(prefixedSymbol);
-            actionCount++;
-        }
+        // const actualSymbol = await tokenInstance.symbol();
+        // if (actualSymbol !== prefixedSymbol) {
+        //     console.log(
+        //         `Updating symbol from ${actualSymbol} to ${prefixedSymbol}`
+        //     );
+        //     await gatewayInstance.updateSymbol(prefixedSymbol);
+        //     actionCount++;
+        // }
 
         const selectorHash = (
             await gatewayInstance.selectorHash()

@@ -1,6 +1,6 @@
 pragma solidity >=0.5.0;
 
-import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
+import "./IERC20Standard.sol";
 
 import "./IGateway.sol";
 
@@ -64,5 +64,5 @@ interface IGatewayRegistry {
     function getTokenBySymbol(string calldata _tokenSymbol)
         external
         view
-        returns (IERC20);
+        returns (IERC20Standard);
 }

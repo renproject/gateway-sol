@@ -46,9 +46,9 @@ contract RenERC20LogicV1 is
         CanReclaimTokens.initialize(_nextOwner);
     }
 
-    function updateSymbol(string memory symbol) public onlyOwner {
-        ERC20Detailed._symbol = symbol;
-    }
+    // function updateSymbol(string memory symbol) public onlyOwner {
+    //     ERC20Detailed._symbol = symbol;
+    // }
 
     /// @notice mint can only be called by the tokens' associated Gateway
     /// contract. See Gateway's mint function instead.

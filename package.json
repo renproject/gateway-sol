@@ -15,7 +15,6 @@
         "bindings:ts": "truffle compile && typechain --target web3-v1 \"./build/chaosnet/*.json\"",
         "bindings:go": "solc --optimize darknode-sol=`pwd`/node_modules/darknode-sol @openzeppelin/upgrades=`pwd`/node_modules/@openzeppelin/upgrades @openzeppelin/contracts=`pwd`/node_modules/@openzeppelin/contracts --combined-json bin,abi,userdoc,devdoc,metadata $(find contracts -type f -name '*.sol') > go-abi.json && abigen -pkg bindings --out bindings.go --combined-json go-abi.json; rm go-abi.json",
         "coveralls": "cat ./coverage/lcov.info | coveralls",
-        "prepare": "patch-package",
         "deploy": "truffle migrate --network $NETWORK --interactive 2>&1 | tee --append .output-logs/$NETWORK.log",
         "deploy-skipDryRun": "truffle migrate --network $NETWORK --skip-dry-run 2>&1 | tee --append .output-logs/$NETWORK.log",
         "clean-build": "echo  \"Have all contracts been verified on Etherscan? Continuing in 10 seconds...\" && sleep 10 && grep -R -l 'networks\": {}' build --exclude-dir=development | xargs rm; node build/clean.js",

@@ -19,18 +19,15 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
     RenProxyAdmin renProxyAdmin;
     MintGatewayLogicV2 newGatewayLogic;
     address previousAdminOwner;
-    address newMintAuthority;
 
     constructor(
         RenProxyAdmin _renProxyAdmin,
-        MintGatewayLogicV2 _newGatewayLogic,
-        address _newMintAuthority
+        MintGatewayLogicV2 _newGatewayLogic
     ) public {
         Ownable.initialize(msg.sender);
         renProxyAdmin = _renProxyAdmin;
         newGatewayLogic = _newGatewayLogic;
         previousAdminOwner = renProxyAdmin.owner();
-        newMintAuthority = _newMintAuthority;
     }
 
     function upgrade(MintGatewayLogicV2 gatewayInstance, bytes32 selectorHash)
@@ -58,9 +55,6 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
         );
 
         // Update mint authorities and selector hash.
-        address legacyMintAuthority = gatewayInstance.mintAuthority();
-        gatewayInstance.updateMintAuthority(newMintAuthority);
-        gatewayInstance._legacy_updateMintAuthority(legacyMintAuthority);
         gatewayInstance.updateSelectorHash(selectorHash);
 
         require(
@@ -72,11 +66,7 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
             "Expected token to not change."
         );
         require(
-            gatewayInstance._legacy_mintAuthority() == mintAuthority,
-            "Expected _legacy_mintAuthority to equal old mintAuthority."
-        );
-        require(
-            gatewayInstance.mintAuthority() == newMintAuthority,
+            gatewayInstance.mintAuthority() == mintAuthority,
             "Expected mintAuthority to equal new mintAuthority."
         );
         require(

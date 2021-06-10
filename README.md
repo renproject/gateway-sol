@@ -5,6 +5,17 @@ Ren gateway contracts written in Solidity
 <!-- [![CircleCI](https://circleci.com/gh/renproject/gateway-sol.svg?style=shield)](https://circleci.com/gh/renproject/gateway-sol) -->
 <!-- [![Coverage Status](https://coveralls.io/repos/github/renproject/gateway-sol/badge.svg?branch=master)](https://coveralls.io/github/renproject/gateway-sol?branch=master) -->
 
+## Setup
+
+If you are using VSCode, put this into `.vscode/settings.json`:
+
+```json
+{
+    "solidity.packageDefaultDependenciesContractsDirectory": "",
+    "solidity.compileUsingRemoteVersion": "v0.5.17+commit.d19bba13"
+}
+```
+
 ## Tests
 
 Install the dependencies.

@@ -87,9 +87,9 @@ const increaseTimeHelper = async (seconds: number) => {
                             reject();
                         }
                         resolve();
-                    }) as any,
+                    }) as any
                 );
-            }) as any,
+            }) as any
         );
     });
 };
@@ -99,7 +99,7 @@ export const getCurrentTimestamp = async (): Promise<number> =>
         (
             await web3.eth.getBlock(await web3.eth.getBlockNumber())
         ).timestamp.toString(),
-        10,
+        10
     );
 
 export const increaseTime = async (seconds: number) => {
@@ -122,7 +122,7 @@ export const deployProxy = async <T>(
     LogicContract: Truffle.Contract<any>,
     proxyGovernanceAddress: string,
     params: { type: string; value: any; name?: string }[],
-    options?: { from: string },
+    options?: { from: string }
 ): Promise<T> => {
     const logicContract = await LogicContract.new();
     const proxy = await ProxyContract.new();
@@ -131,19 +131,18 @@ export const deployProxy = async <T>(
         logicContract.address,
         proxyGovernanceAddress,
         encodeCallData(
-            web3,
             "initialize",
             params.map((p) => p.type),
-            params.map((p) => p.value),
+            params.map((p) => p.value)
         ),
-        options,
+        options
     );
     return await LogicContract.at(proxy.address);
 };
 
 export const sigToString = (sig: ECDSASignature) => {
     return Ox(
-        `${sig.r.toString("hex")}${sig.s.toString("hex")}${sig.v.toString(16)}`,
+        `${sig.r.toString("hex")}${sig.s.toString("hex")}${sig.v.toString(16)}`
     );
 };
 

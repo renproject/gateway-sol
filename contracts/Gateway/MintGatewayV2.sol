@@ -25,10 +25,6 @@ contract MintGatewayStateV2 {
     mapping(uint256 => Burn) internal burns;
 
     bytes32 public selectorHash;
-
-    // Initialize to 0x1 because 0x0 is the default value returned by `recover`
-    // when it encounters an error.
-    address public _legacy_mintAuthority;
 }
 
 /// @notice Gateway handles verifying mint and burn requests. A mintAuthority
@@ -142,16 +138,6 @@ contract MintGatewayLogicV2 is
         emit LogMintAuthorityUpdated(mintAuthority);
     }
 
-    /// @notice Allow the owner to update the legacy mint authority.
-    ///
-    /// @param _nextMintAuthority The new legacy mint authority address.
-    function _legacy_updateMintAuthority(address _nextMintAuthority)
-        public
-        onlyOwner
-    {
-        _legacy_mintAuthority = _nextMintAuthority;
-    }
-
     /// @notice Allow the owner to update the minimum burn amount.
     ///
     /// @param _minimumBurnAmount The new min burn amount.
@@ -186,6 +172,18 @@ contract MintGatewayLogicV2 is
     ///
     /// @param _nextBurnFee The new fee for minting and burning.
     function updateBurnFee(uint16 _nextBurnFee) public onlyOwner {
+        burnFee = _nextBurnFee;
+    }
+
+    /// @notice Allow the owner to update the mint and burn fees.
+    ///
+    /// @param _nextMintFee The new fee for minting and burning.
+    /// @param _nextBurnFee The new fee for minting and burning.
+    function updateFees(uint16 _nextMintFee, uint16 _nextBurnFee)
+        public
+        onlyOwner
+    {
+        mintFee = _nextMintFee;
         burnFee = _nextBurnFee;
     }
 
@@ -228,7 +226,7 @@ contract MintGatewayLogicV2 is
         // them passed the verification, continue.
         if (
             !verifySignature(sigHash, _sig) &&
-            !_legacy_verifySignature(legacySigHash, _sig)
+            !verifySignature(legacySigHash, _sig)
         ) {
             // Return a detailed string containing the hash and recovered
             // signer. This is somewhat costly but is only run in the revert
@@ -368,20 +366,6 @@ contract MintGatewayLogicV2 is
         returns (bool)
     {
         return mintAuthority == ECDSA.recover(_sigHash, _sig);
-    }
-
-    /// @notice verifySignature checks the the provided signature matches the
-    /// provided parameters.
-    function _legacy_verifySignature(bytes32 _sigHash, bytes memory _sig)
-        public
-        view
-        returns (bool)
-    {
-        require(
-            _legacy_mintAuthority != address(0x0),
-            "MintGateway: legacy mintAuthority not set"
-        );
-        return _legacy_mintAuthority == ECDSA.recover(_sigHash, _sig);
     }
 
     /// @notice hashForSignature hashes the parameters so that they can be

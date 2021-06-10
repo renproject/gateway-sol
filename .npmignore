@@ -6,6 +6,10 @@ yarn-error.log*
 
 # Build / test artifacts
 coverage
+build
+artifacts
+typechain
+cache
 dist
 coverageEnv
 coverage.json
@@ -26,10 +30,10 @@ coverage.json
 scTopics
 allFiredEvents
 in_complete_tests
-build/development
 local_*
 bindings.go
 types
+.output-logs
 
 
 # npmignore - content above this line is automatically generated and modifications may be omitted
@@ -42,3 +46,4 @@ test
 .solcover.js
 tsconfig.json
 tslint.json
+!typechain

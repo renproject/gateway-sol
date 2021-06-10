@@ -7,6 +7,9 @@ yarn-error.log*
 # Build / test artifacts
 coverage
 build
+artifacts
+typechain
+cache
 dist
 coverageEnv
 coverage.json

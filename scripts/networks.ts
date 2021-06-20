@@ -175,8 +175,8 @@ export const networks = {
             // mintAuthority: "0x44Bb4eF43408072bC888Afd1a5986ba0Ce35Cb54",
             mintAuthority: "0x44Bb4eF43408072bC888Afd1a5986ba0Ce35Cb54",
 
-            mintFee: 25,
-            burnFee: 10,
+            mintFee: 0,
+            burnFee: 0,
 
             tokenPrefix: "test",
         },
@@ -304,7 +304,7 @@ export const networks = {
             ...config,
             governanceAddress: "0x33024cfb7af11a7cb12ab0dedefc5dd5f430381f", // defaults to deployer
             feeRecipient: "0xE33417797d6b8Aec9171d0d6516E88002fbe23E7", // defaults to deployer
-            mintAuthority: "0xfd2baaba0981ee5002c9322c1e46b3ef80d78b8d", // defaults to deployer
+            mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
 
             mintFee: 25,
             burnFee: 10,
@@ -379,7 +379,7 @@ export const networks = {
             ...config,
             governanceAddress: "", // defaults to deployer
             feeRecipient: "", // defaults to deployer
-            mintAuthority: "0xfd2baaba0981ee5002c9322c1e46b3ef80d78b8d", // defaults to deployer
+            mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
 
             tokenPrefix: "ren",
             chainName: "BinanceSmartChain",
@@ -537,8 +537,8 @@ export const networks = {
             feeRecipient: "", // defaults to deployer
             mintAuthority: "0x44Bb4eF43408072bC888Afd1a5986ba0Ce35Cb54",
 
-            mintFee: 10,
-            burnFee: 10,
+            mintFee: 0,
+            burnFee: 0,
 
             tokenPrefix: "dev",
             chainName: "BinanceSmartChain",
@@ -584,6 +584,9 @@ export const networks = {
             governanceAddress: "", // defaults to deployer
             feeRecipient: "", // defaults to deployer
             mintAuthority: "0x44Bb4eF43408072bC888Afd1a5986ba0Ce35Cb54",
+
+            mintFee: 0,
+            burnFee: 0,
 
             tokenPrefix: "test",
             chainName: "Celo",
@@ -739,8 +742,8 @@ export const networks = {
             tokenPrefix: "test",
             chainName: "Fantom",
 
-            mintFee: 15,
-            burnFee: 15,
+            mintFee: 0,
+            burnFee: 0,
         },
     },
 
@@ -811,7 +814,7 @@ export const networks = {
             ...config,
             governanceAddress: "", // defaults to deployer
             feeRecipient: "", // defaults to deployer
-            mintAuthority: "0xfd2baaba0981ee5002c9322c1e46b3ef80d78b8d", // defaults to deployer
+            mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
 
             tokenPrefix: "ren",
             chainName: "Fantom",
@@ -892,8 +895,8 @@ export const networks = {
             tokenPrefix: "test",
             chainName: "Polygon",
 
-            mintFee: 15,
-            burnFee: 15,
+            mintFee: 0,
+            burnFee: 0,
         },
     },
 
@@ -963,7 +966,7 @@ export const networks = {
             ...config,
             governanceAddress: "", // defaults to deployer
             feeRecipient: "", // defaults to deployer
-            mintAuthority: "0xfd2baaba0981ee5002c9322c1e46b3ef80d78b8d", // defaults to deployer
+            mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
 
             tokenPrefix: "ren",
             chainName: "Polygon",
@@ -1044,8 +1047,8 @@ export const networks = {
             tokenPrefix: "test",
             chainName: "Avalanche",
 
-            mintFee: 15,
-            burnFee: 15,
+            mintFee: 0,
+            burnFee: 0,
         },
     },
 
@@ -1115,7 +1118,7 @@ export const networks = {
             ...config,
             governanceAddress: "", // defaults to deployer
             feeRecipient: "", // defaults to deployer
-            mintAuthority: "0xfd2baaba0981ee5002c9322c1e46b3ef80d78b8d", // defaults to deployer
+            mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
 
             tokenPrefix: "ren",
             chainName: "Avalanche",

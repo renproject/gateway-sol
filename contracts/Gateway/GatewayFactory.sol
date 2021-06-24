@@ -50,6 +50,8 @@ contract GatewayFactory is Claimable {
             keccak256(abi.encodePacked(_symbol, "/to", chainName))
         );
 
+        gateway.claimTokenOwnership();
+
         registry.setGateway(_symbol, address(token), address(gateway));
     }
 

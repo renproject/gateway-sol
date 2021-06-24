@@ -10,7 +10,10 @@ contract GatewayFactory is Claimable {
     GatewayRegistry public registry;
     string public chainName;
 
-    constructor(address _mintAuthority, string _chainName) public Claimable() {
+    constructor(address _mintAuthority, string memory _chainName)
+        public
+        Claimable()
+    {
         Claimable.initialize(msg.sender);
         mintAuthority = _mintAuthority;
         registry = new GatewayRegistry();

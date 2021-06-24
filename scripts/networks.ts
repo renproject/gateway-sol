@@ -377,7 +377,7 @@ export const networks = {
 
         config: {
             ...config,
-            governanceAddress: "", // defaults to deployer
+            governanceAddress: "0x33024cfb7af11a7cb12ab0dedefc5dd5f430381f", // defaults to deployer
             feeRecipient: "", // defaults to deployer
             mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
 
@@ -832,7 +832,7 @@ export const networks = {
         GenericAdapter: "",
 
         RenERC20LogicV1: "0xB5072BE373a120d81c728e908Ed0710968fC247f",
-        MintGatewayLogicV2: "0x5e3c8B0F7229f1F1873267B6811465fEF73d53CA",
+        MintGatewayLogicV2: "0xa6e39c23fe29D15b0302E8ca234b365328fD49B5",
 
         assets: [
             {
@@ -964,7 +964,7 @@ export const networks = {
 
         config: {
             ...config,
-            governanceAddress: "", // defaults to deployer
+            governanceAddress: "0x33024CFB7aF11A7Cb12AB0dedeFC5dD5f430381f", // defaults to deployer
             feeRecipient: "", // defaults to deployer
             mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
 

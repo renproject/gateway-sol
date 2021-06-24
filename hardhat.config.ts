@@ -11,8 +11,13 @@ import "@typechain/hardhat";
 
 const INFURA_KEY = process.env.INFURA_KEY || "";
 const MNEMONIC_TESTNET = process.env.MNEMONIC_TESTNET;
-const ETHERSCAN_KEY = process.env.ETHERSCAN_KEY;
 const MNEMONIC_MAINNET = process.env.MNEMONIC_MAINNET;
+
+// Explorer keys
+const ETHERSCAN_KEY = process.env.ETHERSCAN_KEY;
+const BSCSCAN_KEY = process.env.BSCSCAN_KEY;
+const POLYGONSCAN_KEY = process.env.POLYGONSCAN_KEY;
+const FTMSCAN_KEY = process.env.FTMSCAN_KEY;
 
 if (!MNEMONIC_TESTNET && !MNEMONIC_MAINNET) {
     throw new Error(`Must set mnemonic.`);
@@ -72,7 +77,7 @@ const config: HardhatUserConfig = {
             },
         },
         polygonTestnet: {
-            url: `https://rpc-mumbai.matic.today`,
+            url: `https://rpc-mumbai.maticvigil.com/`,
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },
@@ -114,7 +119,7 @@ const config: HardhatUserConfig = {
     etherscan: {
         // Your API key for Etherscan
         // Obtain one at https://etherscan.io/
-        apiKey: ETHERSCAN_KEY,
+        apiKey: FTMSCAN_KEY,
     },
 };
 

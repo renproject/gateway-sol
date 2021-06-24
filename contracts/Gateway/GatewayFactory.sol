@@ -8,11 +8,13 @@ import "./RenERC20.sol";
 contract GatewayFactory is Claimable {
     address public mintAuthority;
     GatewayRegistry public registry;
+    string public chainName;
 
-    constructor(address _mintAuthority) public Claimable() {
+    constructor(address _mintAuthority, string _chainName) public Claimable() {
         Claimable.initialize(msg.sender);
         mintAuthority = _mintAuthority;
         registry = new GatewayRegistry();
+        chainName = _chainName;
     }
 
     function addToken(
@@ -39,6 +41,10 @@ contract GatewayFactory is Claimable {
             15,
             15,
             0
+        );
+
+        gateway.updateSelectorHash(
+            keccak256(abi.encodePacked(_symbol, "/to", chainName))
         );
 
         registry.setGateway(_symbol, address(token), address(gateway));

@@ -74,11 +74,7 @@ Add an Etherscan API key to your `.env`:
 ETHERSCAN_KEY="..."
 ```
 
-Run the following (replacing the network and contract name):
-
-```sh
-NETWORK=mainnet yarn run verify Contract1 Contract2
-```
+For now, follow the same steps as in [./VERIFY.md](./VERIFY.md) until a script is written.
 
 For contracts that use a Proxy, you then need to go to the Etherscan page, select "More Options" and then "Is this a proxy?":
 

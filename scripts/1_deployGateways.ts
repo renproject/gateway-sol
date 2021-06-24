@@ -19,6 +19,7 @@ import {
 import { encodeCallData } from "./encode";
 import { networks } from "./networks";
 import { at, deploy, printDeployerInfo, sleep } from "./utils";
+import chalk from "chalk";
 
 const NULL = "0x0000000000000000000000000000000000000000";
 const NULL1 = "0x0000000000000000000000000000000000000001";
@@ -452,7 +453,11 @@ export async function deployGateways() {
         }
 
         const currentGatewayOwner = await gatewayInstance.owner();
-        if (Ox(currentGatewayOwner) !== Ox(governanceAddress)) {
+        const pendingGatewayOwner = await gatewayInstance.pendingOwner();
+        if (
+            Ox(currentGatewayOwner) !== Ox(governanceAddress) &&
+            Ox(pendingGatewayOwner) !== Ox(governanceAddress)
+        ) {
             console.log(
                 `Transferring ownership of ${prefixedSymbol} Gateway. Was ${Ox(
                     currentGatewayOwner
@@ -460,6 +465,12 @@ export async function deployGateways() {
             );
             await gatewayInstance.transferOwnership(governanceAddress);
             actionCount++;
+        } else if (Ox(pendingGatewayOwner) === Ox(governanceAddress)) {
+            console.log(
+                chalk.bgYellow(
+                    `Note - ${prefixedSymbol} Gateway ownership hasn't been claimed yet.`
+                )
+            );
         }
 
         console.log(`

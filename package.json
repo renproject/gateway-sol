@@ -1,6 +1,6 @@
 {
     "name": "@renproject/gateway-sol",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "repository": "https://github.io/renproject/gateway-sol",
     "publishConfig": {
         "access": "public"

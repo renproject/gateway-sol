@@ -26,9 +26,11 @@ contract GatewayFactory is Claimable {
         uint8 _decimals
     ) public onlyOwner {
         RenERC20LogicV1 token = new RenERC20LogicV1();
+        MintGatewayLogicV2 gateway = new MintGatewayLogicV2();
+
         token.initialize(
             1, // ChainID
-            owner(), // Token owner
+            address(gateway), // Token owner
             1000000000000000000, // Token rate
             "1", // Token version
             _name,
@@ -36,7 +38,6 @@ contract GatewayFactory is Claimable {
             _decimals
         );
 
-        MintGatewayLogicV2 gateway = new MintGatewayLogicV2();
         gateway.initialize(
             token,
             owner(), // Fee recipient
@@ -49,9 +50,6 @@ contract GatewayFactory is Claimable {
         gateway.updateSelectorHash(
             keccak256(abi.encodePacked(_symbol, "/to", chainName))
         );
-
-        token.transferOwnership(address(gateway));
-        gateway.claimTokenOwnership();
 
         registry.setGateway(_symbol, address(token), address(gateway));
     }

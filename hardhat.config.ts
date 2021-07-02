@@ -40,7 +40,7 @@ const config: HardhatUserConfig = {
     },
     networks: {
         hardhat: {},
-        ethereum: {
+        ethereumMainnet: {
             url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
             accounts: {
                 mnemonic: MNEMONIC_MAINNET,

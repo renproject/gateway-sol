@@ -1,8 +1,8 @@
 const config = {
     governanceAddress: "", // defaults to deployer
     mintAuthority: "", // RenVM public key
-    mintFee: 25,
-    burnFee: 10,
+    mintFee: 0,
+    burnFee: 0,
 
     // Overwritten by each network configuration.
     tokenPrefix: "mock",
@@ -99,8 +99,8 @@ export const networks = {
             feeRecipient: "0xE33417797d6b8Aec9171d0d6516E88002fbe23E7",
             mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7",
 
-            mintFee: 25,
-            burnFee: 10,
+            mintFee: 0,
+            burnFee: 0,
 
             tokenPrefix: "ren",
         },
@@ -252,8 +252,8 @@ export const networks = {
             // mintAuthority: "0x0d72570ea72626bcd049f43ced062e1ce67e616d",
             mintAuthority: "0x1A5650DAd360803ea7912b7a0a747446b554a5BE",
 
-            mintFee: 25,
-            burnFee: 10,
+            mintFee: 0,
+            burnFee: 0,
 
             tokenPrefix: "dev",
         },
@@ -306,8 +306,8 @@ export const networks = {
             feeRecipient: "0xE33417797d6b8Aec9171d0d6516E88002fbe23E7", // defaults to deployer
             mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
 
-            mintFee: 25,
-            burnFee: 10,
+            mintFee: 0,
+            burnFee: 0,
 
             tokenPrefix: "ren",
         },
@@ -666,8 +666,8 @@ export const networks = {
             tokenPrefix: "dev",
             chainName: "Fantom",
 
-            mintFee: 15,
-            burnFee: 15,
+            mintFee: 0,
+            burnFee: 0,
         },
     },
 
@@ -819,8 +819,8 @@ export const networks = {
             tokenPrefix: "ren",
             chainName: "Fantom",
 
-            mintFee: 15,
-            burnFee: 15,
+            mintFee: 0,
+            burnFee: 0,
         },
     },
 
@@ -971,8 +971,8 @@ export const networks = {
             tokenPrefix: "ren",
             chainName: "Polygon",
 
-            mintFee: 15,
-            burnFee: 15,
+            mintFee: 0,
+            burnFee: 0,
         },
     },
 
@@ -1123,8 +1123,8 @@ export const networks = {
             tokenPrefix: "ren",
             chainName: "Avalanche",
 
-            mintFee: 15,
-            burnFee: 15,
+            mintFee: 0,
+            burnFee: 0,
         },
     },
 

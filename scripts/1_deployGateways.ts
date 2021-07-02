@@ -2,6 +2,7 @@ import { keccak256 } from "ethereumjs-util";
 import { ethers } from "hardhat";
 import { fromWei, toChecksumAddress } from "web3-utils";
 
+import chalk from "chalk";
 import {
     BasicAdapter,
     BasicAdapter__factory,
@@ -19,7 +20,6 @@ import {
 import { encodeCallData } from "./encode";
 import { networks } from "./networks";
 import { at, deploy, printDeployerInfo, sleep } from "./utils";
-import chalk from "chalk";
 
 const NULL = "0x0000000000000000000000000000000000000000";
 const NULL1 = "0x0000000000000000000000000000000000000001";

@@ -6,6 +6,7 @@ import { HardhatUserConfig } from "hardhat/types";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
+import "hardhat-deploy";
 // TODO: reenable solidity-coverage when it works
 // import "solidity-coverage";
 
@@ -30,10 +31,10 @@ const config: HardhatUserConfig = {
             {
                 version: "0.5.17",
                 settings: {
-                    // optimizer: {
-                    //   enabled: true,
-                    //   runs: 200
-                    // }
+                    optimizer: {
+                      enabled: true,
+                      runs: 200
+                    }
                 },
             },
         ],
@@ -119,7 +120,7 @@ const config: HardhatUserConfig = {
     etherscan: {
         // Your API key for Etherscan
         // Obtain one at https://etherscan.io/
-        apiKey: FTMSCAN_KEY,
+        apiKey: POLYGONSCAN_KEY,
     },
 };
 

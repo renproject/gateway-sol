@@ -156,8 +156,8 @@ export const networks = {
                 // testFIL
                 symbol: "FIL",
                 decimals: 18,
-                token: "0xE657dc7A25eB2b5023C16a1C7cfB42c805C1b855",
-                gateway: "0x9302EA4C04c04fe2ca81b1A27c7a9906309b6701",
+                token: "0x41db5283522Ef37225c095908C5865d6E9C2F460",
+                gateway: "0x1b94fD4ad404d3502b71A5c083BcE9eC978C2478",
             },
             {
                 // testLUNA
@@ -218,8 +218,8 @@ export const networks = {
                 // devFIL
                 symbol: "FIL",
                 decimals: 18,
-                token: "0x46864558846D0cE7F6EA296d78ca8d29c1D5a1E0",
-                gateway: "0x44e6364B20bc775a071F5aa3AcD1534fBC40d14e",
+                token: "",
+                gateway: "",
             },
             {
                 // devDGB
@@ -439,8 +439,8 @@ export const networks = {
             {
                 symbol: "FIL",
                 decimals: 18,
-                token: "0x51E8ea8D684a0dbd1d88C27BCafb3B080c5009Fe",
-                gateway: "0x833DEEb0d0Ba1244935B6ec106c3F2Aa1CBd8A23",
+                token: "",
+                gateway: "",
             },
             {
                 symbol: "LUNA",
@@ -519,8 +519,8 @@ export const networks = {
                 // devFIL
                 symbol: "FIL",
                 decimals: 18,
-                token: "0xe8163f31A7a23167D21252Bcc0a996a1A40E7d61",
-                gateway: "0x0c5Efe870916cA7c89c03D742963795Ed7d3C35a",
+                token: "0xDC42759e28e41898BdE199aB044F366dACbF3436",
+                gateway: "0xF461Fe16eb3BcFC6e930dB0bDD2A3aD28636BBB9",
             },
             {
                 // devLUNA
@@ -643,8 +643,8 @@ export const networks = {
                 // devFIL
                 symbol: "FIL",
                 decimals: 18,
-                token: "0x0E1B161b33dE8E56B917f4735AfC26d5cf760c0C",
-                gateway: "0x1156663dFab56A9BAdd844e12eDD69eC96Dd0eFb",
+                token: "",
+                gateway: "",
             },
             {
                 // devLUNA
@@ -721,8 +721,8 @@ export const networks = {
                 // testFIL
                 symbol: "FIL",
                 decimals: 18,
-                token: "0x4d0F77d0f57ba3282AcA0B408F64bAa11D43156c",
-                gateway: "0x9c1232c01828fee8d9E5BFD4d44AD19ecc9f4bE5",
+                token: "0xEd9780F478a28786A30C51d004972910bb8778fd",
+                gateway: "0xD566bB681a231f5648D7cB0f09A89cb47fd09513",
             },
             {
                 // testLUNA
@@ -812,7 +812,7 @@ export const networks = {
 
         config: {
             ...config,
-            governanceAddress: "", // defaults to deployer
+            governanceAddress: "0x33024cfb7af11a7cb12ab0dedefc5dd5f430381f", // defaults to deployer
             feeRecipient: "", // defaults to deployer
             mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
 
@@ -874,8 +874,8 @@ export const networks = {
                 // testFIL
                 symbol: "FIL",
                 decimals: 18,
-                token: "0xe9Ab97d707ad9A67bd01345233C3c179f42F9aD0",
-                gateway: "0x43D828c81Ea229f5F4601D12C5EC00133bD17dE1",
+                token: "0x9485Fd224a4B0075a47d26d49d0A6c5bd3dEfFD9",
+                gateway: "0x3ce3266Ab11b6C23ea50dF8a777198d6dedAd85f",
             },
             {
                 // testLUNA
@@ -1026,8 +1026,8 @@ export const networks = {
                 // testFIL
                 symbol: "FIL",
                 decimals: 18,
-                token: "0x0E1B161b33dE8E56B917f4735AfC26d5cf760c0C",
-                gateway: "0x1156663dFab56A9BAdd844e12eDD69eC96Dd0eFb",
+                token: "0xcf3B06E64dc24CCd4Add10E6f97D8EF0438D6e54",
+                gateway: "0xec1fbb79bcA682EF2CCcBE6194Ab62413e6c7895",
             },
             {
                 // testLUNA
@@ -1116,7 +1116,7 @@ export const networks = {
 
         config: {
             ...config,
-            governanceAddress: "", // defaults to deployer
+            governanceAddress: "0x33024cfb7af11a7cb12ab0dedefc5dd5f430381f", // defaults to deployer
             feeRecipient: "", // defaults to deployer
             mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
 

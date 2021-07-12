@@ -8,17 +8,14 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/ERC20Deta
 
 import "../Governance/Claimable.sol";
 import "../libraries/CanReclaimTokens.sol";
-import "./ERC20WithRate.sol";
+import "./ERC20WithRateV2.sol";
 import "./ERC20WithPermit.sol";
 
-/// @notice RenERC20 represents a digital asset that has been bridged on to
-/// the Ethereum ledger. It exposes mint and burn functions that can only be
-/// called by it's associated Gateway contract.
-contract RenERC20LogicV1 is
+contract RenERC20LogicV2 is
     Initializable,
     ERC20,
     ERC20Detailed,
-    ERC20WithRate,
+    ERC20WithRateV2,
     ERC20WithPermit,
     Claimable,
     CanReclaimTokens
@@ -27,14 +24,12 @@ contract RenERC20LogicV1 is
     function initialize(
         uint256 _chainId,
         address _nextOwner,
-        uint256 _initialRate,
         string memory _version,
         string memory _name,
         string memory _symbol,
         uint8 _decimals
     ) public initializer {
         ERC20Detailed.initialize(_name, _symbol, _decimals);
-        ERC20WithRate.initialize(_nextOwner, _initialRate);
         ERC20WithPermit.initialize(
             _chainId,
             _version,

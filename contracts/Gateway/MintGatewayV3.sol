@@ -1,4 +1,5 @@
 pragma solidity ^0.5.17;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
@@ -11,32 +12,22 @@ import "./RenERC20.sol";
 import "./interfaces/IGateway.sol";
 import "../libraries/CanReclaimTokens.sol";
 import "./MintGatewayV1.sol";
+import "./MintGatewayV2.sol";
 
-contract MintGatewayStateV2 is MintGatewayStateV1 {
-    struct Burn {
-        uint256 _blocknumber;
-        bytes _to;
-        uint256 _amount;
-        // Optional
-        string _chain;
-        bytes _payload;
-    }
-
-    mapping(uint256 => Burn) internal burns;
-
-    bytes32 public selectorHash;
-}
+contract MintGatewayStateV3 is MintGatewayStateV2 {}
 
 /// @notice Gateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
-contract MintGatewayLogicV2 is
+contract MintGatewayLogicV3 is
     Initializable,
     Claimable,
     CanReclaimTokens,
     IGateway,
     MintGatewayStateV1,
-    MintGatewayStateV2
+    MintGatewayStateV2,
+    MintGatewayStateV3,
+    MintGatewayLogicV2
 {
     using SafeMath for uint256;
 
@@ -54,6 +45,14 @@ contract MintGatewayLogicV2 is
         uint256 _amount,
         uint256 indexed _n,
         bytes indexed _indexedTo
+    );
+    event LogBurnAndMint(
+        bytes _to,
+        uint256 _amount,
+        uint256 indexed _n,
+        bytes indexed _indexedTo,
+        string _chain,
+        bytes _payload
     );
 
     /// @notice Only allow the Darknode Payment contract.
@@ -293,52 +292,44 @@ contract MintGatewayLogicV2 is
     ///        Bitcoin address.
     /// @param _amount The amount of the token being burnt, in its
     ///        smallest value. (e.g. satoshis for BTC)
-    function burn(bytes memory _to, uint256 _amount) public returns (uint256) {
+    function burnAndMint(
+        bytes memory _to,
+        uint256 _amount,
+        string memory _chain,
+        bytes memory _payload
+    ) public returns (uint256) {
         // The recipient must not be empty. Better validation is possible,
         // but would need to be customized for each destination ledger.
         require(_to.length != 0, "MintGateway: to address is empty");
 
-        // Calculate fee, subtract it from amount being burnt.
-        uint256 fee = _amount.mul(burnFee).div(BIPS_DENOMINATOR);
-        uint256 amountAfterFee = _amount.sub(
-            fee,
-            "MintGateway: fee exceeds amount"
-        );
-
-        // If the scaled token can represent more precision than the underlying
-        // token, the difference is lost. This won't exceed 1 sat, so is
-        // negligible compared to burning and transaction fees.
-        uint256 amountAfterFeeUnderlying = token.toUnderlying(amountAfterFee);
-
-        // Burn the whole amount, and then re-mint the fee.
+        // Burn the tokens. If the user doesn't have enough tokens, this will
+        // throw.
         token.burn(msg.sender, _amount);
-        if (fee > 0) {
-            token.mint(feeRecipient, fee);
+
+        if (bytes(_chain).length > 0) {
+            emit LogBurnAndMint(_to, _amount, nextN, _to, _chain, _payload);
+        } else {
+            emit LogBurn(_to, _amount, nextN, _to);
         }
-
-        require(
-            // Must be strictly greater, to that the release transaction is of
-            // at least one unit.
-            amountAfterFeeUnderlying > minimumBurnAmount,
-            "MintGateway: amount is less than the minimum burn amount"
-        );
-
-        emit LogBurn(_to, amountAfterFeeUnderlying, nextN, _to);
 
         // Store burn so that it can be looked up instead of relying on event
         // logs.
-        bytes memory payload;
         MintGatewayStateV2.burns[nextN] = Burn({
             _blocknumber: block.number,
             _to: _to,
-            _amount: amountAfterFeeUnderlying,
-            _chain: "",
-            _payload: payload
+            _amount: _amount,
+            _chain: _chain,
+            _payload: _payload
         });
 
         nextN += 1;
 
-        return amountAfterFeeUnderlying;
+        return _amount;
+    }
+
+    function burn(bytes memory _to, uint256 _amount) public returns (uint256) {
+        bytes memory payload;
+        burnAndMint(_to, _amount, "", payload);
     }
 
     function getBurn(uint256 _n)
@@ -386,20 +377,9 @@ contract MintGatewayLogicV2 is
             keccak256(abi.encode(_pHash, _amount, selectorHash, _to, _nHash));
     }
 
-    /// @notice _legacy_hashForSignature calculates the signature hash used by
-    /// the 0.2 version of RenVM. It's kept here for backwards-compatibility.
-    function _legacy_hashForSignature(
-        bytes32 _pHash,
-        uint256 _amount,
-        address _to,
-        bytes32 _nHash
-    ) public view returns (bytes32) {
-        return
-            keccak256(abi.encode(_pHash, _amount, address(token), _to, _nHash));
+    function getBurnStruct(uint256 _n) public view returns (Burn memory) {
+        Burn memory burnStruct = MintGatewayStateV2.burns[_n];
+        require(burnStruct._to.length > 0, "MintGateway: burn not found");
+        return burnStruct;
     }
-}
-
-/* solium-disable-next-line no-empty-blocks */
-contract MintGatewayProxy is InitializableAdminUpgradeabilityProxy {
-
 }

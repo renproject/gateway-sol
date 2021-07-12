@@ -310,8 +310,9 @@ export async function deployGateways() {
             "0x" +
             keccak256(Buffer.from(selector)).toString("hex").toLowerCase();
 
-        const MintGatewayProxyLogic =
-            await renProxyAdmin.getProxyImplementation(gatewayInstance.address);
+        const MintGatewayProxyLogic = await renProxyAdmin.getProxyImplementation(
+            gatewayInstance.address
+        );
         if (Ox(MintGatewayProxyLogic) !== Ox(gatewayLogic.address)) {
             console.log(
                 `${prefixedSymbol} gateway is pointing to out-dated GatewayLogic.`
@@ -441,16 +442,16 @@ export async function deployGateways() {
             actionCount++;
         }
 
-        const currentFeeRecipient = await gatewayInstance.feeRecipient();
-        if (Ox(feeRecipient) !== Ox(currentFeeRecipient)) {
-            console.log(
-                `Updating fee recipient for ${prefixedSymbol} Gateway. Was ${Ox(
-                    currentFeeRecipient
-                )}, now is ${Ox(feeRecipient)}`
-            );
-            await gatewayInstance.updateFeeRecipient(feeRecipient);
-            actionCount++;
-        }
+        // const currentFeeRecipient = await gatewayInstance.feeRecipient();
+        // if (Ox(feeRecipient) !== Ox(currentFeeRecipient)) {
+        //     console.log(
+        //         `Updating fee recipient for ${prefixedSymbol} Gateway. Was ${Ox(
+        //             currentFeeRecipient
+        //         )}, now is ${Ox(feeRecipient)}`
+        //     );
+        //     await gatewayInstance.updateFeeRecipient(feeRecipient);
+        //     actionCount++;
+        // }
 
         const currentGatewayOwner = await gatewayInstance.owner();
         const pendingGatewayOwner = await gatewayInstance.pendingOwner();
@@ -463,14 +464,26 @@ export async function deployGateways() {
                     currentGatewayOwner
                 )}, now is ${Ox(governanceAddress)}`
             );
-            await gatewayInstance.transferOwnership(governanceAddress);
+            await gatewayInstance._directTransferOwnership(governanceAddress);
             actionCount++;
         } else if (Ox(pendingGatewayOwner) === Ox(governanceAddress)) {
-            console.log(
-                chalk.bgYellow(
-                    `Note - ${prefixedSymbol} Gateway ownership hasn't been claimed yet.`
-                )
-            );
+            try {
+                console.log(
+                    `Direct transferring ownership of ${prefixedSymbol} Gateway. Was ${Ox(
+                        currentGatewayOwner
+                    )}, now is ${Ox(governanceAddress)}`
+                );
+                await gatewayInstance._directTransferOwnership(
+                    governanceAddress
+                );
+                actionCount++;
+            } catch (error) {
+                console.log(
+                    chalk.bgYellow(
+                        `Note - ${prefixedSymbol} Gateway ownership hasn't been claimed yet.`
+                    )
+                );
+            }
         }
 
         console.log(`
@@ -498,14 +511,34 @@ export async function deployGateways() {
 
     // Update GatewayRegistry's owner.
     const currentGatewayRegistryOwner = await registry.owner();
-    if (Ox(currentGatewayRegistryOwner) !== Ox(governanceAddress)) {
+    const pendingGatewayRegistryOwner = await registry.pendingOwner();
+    if (
+        Ox(currentGatewayRegistryOwner) !== Ox(governanceAddress) &&
+        Ox(pendingGatewayRegistryOwner) !== Ox(governanceAddress)
+    ) {
         console.log(
             `Transferring ownership of GatewayRegistry. Was ${Ox(
                 currentGatewayRegistryOwner
             )}, now is ${Ox(governanceAddress)}`
         );
-        await registry.transferOwnership(governanceAddress);
+        await registry._directTransferOwnership(governanceAddress);
         actionCount++;
+    } else if (Ox(pendingGatewayRegistryOwner) !== Ox(governanceAddress)) {
+        try {
+            console.log(
+                `Direct transferring ownership of GatewayRegistry. Was ${Ox(
+                    currentGatewayRegistryOwner
+                )}, now is ${Ox(governanceAddress)}`
+            );
+            await registry._directTransferOwnership(governanceAddress);
+            actionCount++;
+        } catch (error) {
+            console.log(
+                chalk.bgYellow(
+                    `Note - GatewayRegistry ownership hasn't been claimed yet.`
+                )
+            );
+        }
     }
 
     console.log(`Performed ${actionCount} updates.`);

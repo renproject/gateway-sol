@@ -7,6 +7,9 @@ yarn-error.log*
 # Build / test artifacts
 coverage
 build
+artifacts
+typechain
+cache
 dist
 coverageEnv
 coverage.json
@@ -18,6 +21,7 @@ coverage.json
 # Configuration files
 *.env
 .env*
+.vscode/
 
 # OS files
 .DS_Store
@@ -30,3 +34,4 @@ in_complete_tests
 local_*
 bindings.go
 types
+.output-logs

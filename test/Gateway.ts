@@ -8,9 +8,9 @@ import { keccak256 } from "web3-utils";
 
 import {
     GatewayRegistryInstance,
-    MintGatewayLogicV1Instance,
+    MintGatewayLogicV2Instance,
     RenERC20LogicV1Instance,
-    StandaloneERC20Instance,
+    StandaloneERC20Instance
 } from "../types/truffle-contracts";
 import { log } from "./helper/logs";
 import {
@@ -19,7 +19,7 @@ import {
     NULL,
     Ox,
     randomAddress,
-    randomBytes,
+    randomBytes
 } from "./helper/testUtils";
 
 const ForceSend = artifacts.require("ForceSend");
@@ -29,12 +29,12 @@ const GatewayRegistry = artifacts.require("GatewayRegistry");
 const BTCGateway = artifacts.require("BTCGateway");
 const RenBTC = artifacts.require("RenBTC");
 const RenERC20LogicV1 = artifacts.require("RenERC20LogicV1");
-const MintGatewayLogicV1 = artifacts.require("MintGatewayLogicV1");
+const MintGatewayLogicV2 = artifacts.require("MintGatewayLogicV2");
 
 contract(
     "Gateway",
     ([owner, feeRecipient, user, malicious, proxyGovernanceAddress]) => {
-        let btcGateway: MintGatewayLogicV1Instance;
+        let btcGateway: MintGatewayLogicV2Instance;
         let renbtc: RenERC20LogicV1Instance;
 
         // We generate a new account so that we have access to its private key for
@@ -52,7 +52,7 @@ contract(
                 await token.exchangeRateCurrent
                     .call()
                     .should.be.rejectedWith(
-                        /ERC20WithRate: rate has not been initialized/,
+                        /ERC20WithRate: rate has not been initialized/
                     );
             });
 
@@ -70,28 +70,28 @@ contract(
                         { type: "string", value: "1" },
                         { type: "string", value: "renBTC" },
                         { type: "string", value: "renBTC" },
-                        { type: "uint8", value: 8 },
+                        { type: "uint8", value: 8 }
                     ],
-                    { from: owner },
+                    { from: owner }
                 );
                 await token
                     .setExchangeRate(0, { from: owner })
                     .should.be.rejectedWith(
-                        /ERC20WithRate: rate must be greater than zero/,
+                        /ERC20WithRate: rate must be greater than zero/
                     );
 
                 await token.setExchangeRate(new BN(rate).add(new BN(1)), {
-                    from: owner,
+                    from: owner
                 });
 
                 (await token.exchangeRateCurrent.call()).should.bignumber.equal(
-                    new BN(rate).add(new BN(1)),
+                    new BN(rate).add(new BN(1))
                 );
 
                 await token.setExchangeRate(rate);
 
                 (await token.exchangeRateCurrent.call()).should.bignumber.equal(
-                    rate,
+                    rate
                 );
             });
         });
@@ -99,7 +99,7 @@ contract(
         for (const rate of [
             "2000000000000000000",
             "1000000000000000000",
-            "500000000000000000",
+            "500000000000000000"
         ]) {
             // for (const rate of ["2000000000000000000", "1000000000000000000", "500000000000000000", "1111111111111111111"]) {
             // for (const rate of ["1111111111111111111"]) {
@@ -111,7 +111,7 @@ contract(
                 before(async () => {
                     ren = await StandaloneERC20.new();
                     const renSupply = new BigNumber(1000000000).times(
-                        new BigNumber(10).exponentiatedBy(18),
+                        new BigNumber(10).exponentiatedBy(18)
                     );
                     await (ren.initialize as any)(
                         "REN",
@@ -120,7 +120,7 @@ contract(
                         renSupply,
                         owner,
                         [],
-                        [],
+                        []
                     );
 
                     renbtc = await deployProxy<RenERC20LogicV1Instance>(
@@ -131,27 +131,27 @@ contract(
                         [
                             {
                                 type: "uint256",
-                                value: await web3.eth.net.getId(),
+                                value: await web3.eth.net.getId()
                             },
                             { type: "address", value: owner },
                             { type: "uint256", value: rate },
                             { type: "string", value: "1" },
                             { type: "string", value: "renBTC" },
                             { type: "string", value: "renBTC" },
-                            { type: "uint8", value: 8 },
+                            { type: "uint8", value: 8 }
                         ],
-                        { from: owner },
+                        { from: owner }
                     );
                     mintAuthority = web3.eth.accounts.create();
                     privKey = Buffer.from(
                         mintAuthority.privateKey.slice(2),
-                        "hex",
+                        "hex"
                     );
 
-                    btcGateway = await deployProxy<MintGatewayLogicV1Instance>(
+                    btcGateway = await deployProxy<MintGatewayLogicV2Instance>(
                         web3,
                         BTCGateway,
-                        MintGatewayLogicV1,
+                        MintGatewayLogicV2,
                         proxyGovernanceAddress,
                         [
                             { type: "address", value: renbtc.address },
@@ -159,9 +159,9 @@ contract(
                             { type: "address", value: mintAuthority.address },
                             { type: "uint16", value: mintFees.toString() },
                             { type: "uint16", value: burnFees.toString() },
-                            { type: "uint256", value: 10000 },
+                            { type: "uint256", value: 10000 }
                         ],
-                        { from: owner },
+                        { from: owner }
                     );
 
                     await renbtc.transferOwnership(btcGateway.address);
@@ -171,10 +171,10 @@ contract(
                 const getFeeScaled = async (
                     token: RenERC20LogicV1Instance,
                     amountUnderlying: number | BN,
-                    bips: number | BN,
+                    bips: number | BN
                 ) => {
                     const amountScaled = new BN(
-                        await token.fromUnderlying.call(amountUnderlying),
+                        await token.fromUnderlying.call(amountUnderlying)
                     );
                     const amountFee = amountScaled
                         .mul(new BN(bips))
@@ -185,12 +185,12 @@ contract(
                 const removeMintFee = async (
                     token: RenERC20LogicV1Instance,
                     amountUnderlying: number | BN,
-                    bips: number | BN,
+                    bips: number | BN
                 ) => {
                     const amount = new BigNumber(
                         (
                             await token.fromUnderlying.call(amountUnderlying)
-                        ).toString(),
+                        ).toString()
                     );
                     const amountFee = amount
                         .times(new BigNumber(bips.toString()))
@@ -200,25 +200,25 @@ contract(
                         .minus(amountFee)
                         .decimalPlaces(0, BigNumber.ROUND_DOWN);
                     const amountAfterFeeUnderlying = await token.toUnderlying.call(
-                        amountAfterFee.toFixed(0, BigNumber.ROUND_DOWN),
+                        amountAfterFee.toFixed(0, BigNumber.ROUND_DOWN)
                     );
                     const amountAfterFeeRepresentable = await token.fromUnderlying.call(
-                        amountAfterFeeUnderlying,
+                        amountAfterFeeUnderlying
                     );
                     // The following may slightly vary from amountAfterFeeUnderlying.
                     const amountAfterFeeRepresentableUnderlying = new BigNumber(
                         (
                             await token.toUnderlying.call(
-                                amountAfterFeeRepresentable,
+                                amountAfterFeeRepresentable
                             )
-                        ).toString(),
+                        ).toString()
                     ).decimalPlaces(0, BigNumber.ROUND_DOWN);
 
                     const result = new BN(
                         amountAfterFeeRepresentableUnderlying.toFixed(
                             0,
-                            BigNumber.ROUND_DOWN,
-                        ),
+                            BigNumber.ROUND_DOWN
+                        )
                     );
 
                     return result;
@@ -227,12 +227,12 @@ contract(
                 const removeBurnFee = async (
                     token: RenERC20LogicV1Instance,
                     amountUnderlying: number | BN,
-                    bips: number | BN,
+                    bips: number | BN
                 ) => {
                     const amount_scaled = new BigNumber(
                         (
                             await token.fromUnderlying.call(amountUnderlying)
-                        ).toString(),
+                        ).toString()
                     );
                     const amountFee_scaled = amount_scaled
                         .times(new BigNumber(bips.toString()))
@@ -242,16 +242,16 @@ contract(
                         .minus(amountFee_scaled)
                         .decimalPlaces(0, BigNumber.ROUND_DOWN);
                     const amountAfterFee = await token.toUnderlying.call(
-                        amountAfterFee_scaled.toFixed(0, BigNumber.ROUND_DOWN),
+                        amountAfterFee_scaled.toFixed(0, BigNumber.ROUND_DOWN)
                     );
 
                     return new BN(amountAfterFee.toString());
                 };
 
                 const mintTest = async (
-                    gateway: MintGatewayLogicV1Instance,
+                    gateway: MintGatewayLogicV2Instance,
                     value: number | BN,
-                    n?: string,
+                    n?: string
                 ): Promise<[string, string, BN]> => {
                     const nHash = randomBytes(32);
                     const pHash = randomBytes(32);
@@ -260,11 +260,11 @@ contract(
                         pHash,
                         value,
                         user,
-                        nHash,
+                        nHash
                     );
                     const sig = ecsign(
                         Buffer.from(hash.slice(2), "hex"),
-                        privKey,
+                        privKey
                     );
 
                     pubToAddress(
@@ -272,52 +272,50 @@ contract(
                             Buffer.from(hash.slice(2), "hex"),
                             sig.v,
                             sig.r,
-                            sig.s,
-                        ),
+                            sig.s
+                        )
                     )
                         .toString("hex")
                         .should.equal(
-                            mintAuthority.address.slice(2).toLowerCase(),
+                            mintAuthority.address.slice(2).toLowerCase()
                         );
 
                     const sigString = Ox(
                         `${sig.r.toString("hex")}${sig.s.toString(
-                            "hex",
-                        )}${sig.v.toString(16)}`,
+                            "hex"
+                        )}${sig.v.toString(16)}`
                     );
 
                     const hashForSignature = await gateway.hashForSignature.call(
                         pHash,
                         value,
                         user,
-                        nHash,
+                        nHash
                     );
                     (
                         await gateway.verifySignature.call(
                             hashForSignature,
-                            sigString,
+                            sigString
                         )
                     ).should.be.true;
 
                     const balanceBefore = new BN(
-                        (
-                            await renbtc.balanceOfUnderlying.call(user)
-                        ).toString(),
+                        (await renbtc.balanceOfUnderlying.call(user)).toString()
                     );
                     const _n = await gateway.nextN.call();
                     const valueMinted = await removeMintFee(
                         renbtc,
                         value,
-                        mintFees,
+                        mintFees
                     );
                     ((await gateway.mint(pHash, value, nHash, sigString, {
-                        from: user,
+                        from: user
                     })) as any).should.emit.logs([
                         log("LogMint", {
                             _to: user,
                             _amount: valueMinted,
-                            _n: n !== undefined ? n : _n,
-                        }),
+                            _n: n !== undefined ? n : _n
+                        })
                     ]);
                     // (await renbtc.balanceOfUnderlying.call(user)).should.bignumber.equal(balanceBefore.add(valueMinted));
 
@@ -326,31 +324,31 @@ contract(
                     ).should.bignumber.lte(
                         balanceBefore
                             .add(await removeMintFee(renbtc, value, mintFees))
-                            .add(new BN(1)),
+                            .add(new BN(1))
                     );
                     (
                         await renbtc.balanceOfUnderlying.call(user)
                     ).should.bignumber.gte(
                         balanceBefore
                             .add(await removeMintFee(renbtc, value, mintFees))
-                            .sub(new BN(1)),
+                            .sub(new BN(1))
                     );
 
                     return [pHash, nHash, valueMinted];
                 };
 
                 const burnTest = async (
-                    gateway: MintGatewayLogicV1Instance,
+                    gateway: MintGatewayLogicV2Instance,
                     value: number | BN,
                     btcAddress?: string,
-                    n?: string,
+                    n?: string
                 ) => {
                     // Note: we don't use `||` because we want to pass in `""`
                     btcAddress =
                         btcAddress !== undefined ? btcAddress : randomBytes(35);
 
                     const balanceBefore = new BN(
-                        (await renbtc.balanceOf.call(user)).toString(),
+                        (await renbtc.balanceOf.call(user)).toString()
                     );
                     const _n = await gateway.nextN.call();
 
@@ -358,44 +356,44 @@ contract(
                     const token = await RenERC20LogicV1.at(tokenAddress);
 
                     const value_scaled = new BN(
-                        (await token.fromUnderlying.call(value)).toString(),
+                        (await token.fromUnderlying.call(value)).toString()
                     );
                     const amountAfterFees = await removeBurnFee(
                         token,
                         new BN(
                             await (
                                 await token.toUnderlying.call(value_scaled)
-                            ).toString(),
+                            ).toString()
                         ),
-                        burnFees,
+                        burnFees
                     );
                     // const fee = await getFeeScaled(token, value, burnFees);
                     // const subtractedValueScaled = new BN(await token.fromUnderlying.call(amountAfterFees)).add(fee);
 
                     const x = (await gateway.burn(btcAddress, value_scaled, {
-                        from: user,
+                        from: user
                     })) as any;
                     x.should.emit.logs([
                         log("LogBurn", {
                             _to: btcAddress,
                             _amount: amountAfterFees,
                             _n: n !== undefined ? n : _n,
-                            _indexedTo: keccak256(btcAddress),
-                        }),
+                            _indexedTo: keccak256(btcAddress)
+                        })
                     ]);
 
                     // Should be at most 1 less than the expected value. It should not be less than the expected value.
                     (await renbtc.balanceOf.call(user)).should.bignumber.lte(
-                        balanceBefore.sub(value_scaled).add(new BN(1)),
+                        balanceBefore.sub(value_scaled).add(new BN(1))
                     );
                     (await renbtc.balanceOf.call(user)).should.bignumber.gte(
-                        balanceBefore.sub(value_scaled),
+                        balanceBefore.sub(value_scaled)
                     );
                 };
 
                 describe("can mint and burn", () => {
                     const value = new BN(
-                        Math.floor(Math.random() * 20000) + 40000,
+                        Math.floor(Math.random() * 20000) + 40000
                     );
                     it("can mint tokens with an unused hash, valid signature and pHash", async () =>
                         mintTest(btcGateway, value));
@@ -404,31 +402,31 @@ contract(
                     it("won't mint for the same nHash and pHash twice", async () => {
                         const [pHash, nHash] = await mintTest(
                             btcGateway,
-                            value,
+                            value
                         );
 
                         const hash = await btcGateway.hashForSignature.call(
                             pHash,
                             value.toNumber(),
                             user,
-                            nHash,
+                            nHash
                         );
                         const sig = ecsign(
                             Buffer.from(hash.slice(2), "hex"),
-                            privKey,
+                            privKey
                         );
                         const sigString = Ox(
                             `${sig.r.toString("hex")}${sig.s.toString(
-                                "hex",
-                            )}${sig.v.toString(16)}`,
+                                "hex"
+                            )}${sig.v.toString(16)}`
                         );
 
                         await btcGateway
                             .mint(pHash, value.toNumber(), nHash, sigString, {
-                                from: user,
+                                from: user
                             })
                             .should.be.rejectedWith(
-                                /Gateway: nonce hash already spent/,
+                                /Gateway: nonce hash already spent/
                             );
                     });
 
@@ -441,16 +439,16 @@ contract(
                             pHash,
                             value.toNumber(),
                             user,
-                            nHash,
+                            nHash
                         );
                         const sig = ecsign(
                             Buffer.from(hash.slice(2), "hex"),
-                            privKey,
+                            privKey
                         );
                         const sigString = Ox(
                             `${sig.r.toString("hex")}${sig.s.toString(
-                                "hex",
-                            )}${sig.v.toString(16)}`,
+                                "hex"
+                            )}${sig.v.toString(16)}`
                         );
 
                         await btcGateway.mint(
@@ -458,12 +456,12 @@ contract(
                             value.toNumber(),
                             nHash,
                             sigString,
-                            { from: user },
+                            { from: user }
                         );
 
                         await burnTest(
                             btcGateway,
-                            await removeMintFee(renbtc, value, mintFees),
+                            await removeMintFee(renbtc, value, mintFees)
                         );
                     });
 
@@ -476,25 +474,25 @@ contract(
                             pHash,
                             value.toNumber(),
                             user,
-                            nHash1,
+                            nHash1
                         );
                         const sig = ecsign(
                             Buffer.from(hash.slice(2), "hex"),
-                            privKey,
+                            privKey
                         );
 
                         const sigString = Ox(
                             `${sig.r.toString("hex")}${sig.s.toString(
-                                "hex",
-                            )}${sig.v.toString(16)}`,
+                                "hex"
+                            )}${sig.v.toString(16)}`
                         );
 
                         await btcGateway
                             .mint(pHash, value.toNumber(), nHash2, sigString, {
-                                from: user,
+                                from: user
                             })
                             .should.be.rejectedWith(
-                                /Gateway: invalid signature/,
+                                /Gateway: invalid signature/
                             );
                     });
 
@@ -502,15 +500,15 @@ contract(
                         await burnTest(
                             btcGateway,
                             await removeMintFee(renbtc, value, mintFees),
-                            (new Buffer([]) as any) as string,
+                            (new Buffer([]) as any) as string
                         ).should.be.rejectedWith(
-                            /Gateway: to address is empty/,
+                            /Gateway: to address is empty/
                         );
                     });
 
                     it("can't burn less than minimum burn amount", async () => {
                         await burnTest(btcGateway, 5000).should.be.rejectedWith(
-                            /Gateway: amount is less than the minimum burn amount/,
+                            /Gateway: amount is less than the minimum burn amount/
                         );
                     });
 
@@ -529,12 +527,12 @@ contract(
                             pHash,
                             value.toNumber(),
                             user,
-                            nHash,
+                            nHash
                         );
 
                         const sig = ecsign(
                             Buffer.from(hash.slice(2), "hex"),
-                            privKey,
+                            privKey
                         );
 
                         // Invalid signature
@@ -542,16 +540,16 @@ contract(
                             ...sig,
                             s: new BN(
                                 "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141",
-                                "hex",
+                                "hex"
                             )
                                 .sub(new BN(sig.s))
                                 .toArrayLike(Buffer, "be", 32),
-                            v: sig.v === 27 ? 28 : 27,
+                            v: sig.v === 27 ? 28 : 27
                         };
                         const altSigString = Ox(
                             `${altSig.r.toString("hex")}${altSig.s.toString(
-                                "hex",
-                            )}${altSig.v.toString(16)}`,
+                                "hex"
+                            )}${altSig.v.toString(16)}`
                         );
                         await btcGateway
                             .mint(
@@ -559,24 +557,24 @@ contract(
                                 value.toNumber(),
                                 nHash,
                                 altSigString,
-                                { from: user },
+                                { from: user }
                             )
                             .should.be.rejectedWith(
-                                /ECDSA: signature.s is in the wrong range/,
+                                /ECDSA: signature.s is in the wrong range/
                             );
 
                         // Valid signature
                         const sigString = Ox(
                             `${sig.r.toString("hex")}${sig.s.toString(
-                                "hex",
-                            )}${sig.v.toString(16)}`,
+                                "hex"
+                            )}${sig.v.toString(16)}`
                         );
                         await btcGateway.mint(
                             pHash,
                             value.toNumber(),
                             nHash,
                             sigString,
-                            { from: user },
+                            { from: user }
                         );
 
                         // Using the invalid signature after the valid one should throw
@@ -588,10 +586,10 @@ contract(
                                 value.toNumber(),
                                 nHash,
                                 altSigString,
-                                { from: user },
+                                { from: user }
                             )
                             .should.be.rejectedWith(
-                                /Gateway: nonce hash already spent/,
+                                /Gateway: nonce hash already spent/
                             );
                     });
                 });
@@ -601,18 +599,18 @@ contract(
                         await btcGateway
                             .updateFeeRecipient(malicious, { from: malicious })
                             .should.be.rejectedWith(
-                                /Ownable: caller is not the owner/,
+                                /Ownable: caller is not the owner/
                             );
                         await btcGateway
                             .updateFeeRecipient(NULL, { from: owner })
                             .should.be.rejectedWith(
-                                /Gateway: fee recipient cannot be 0x0/,
+                                /Gateway: fee recipient cannot be 0x0/
                             );
                         await btcGateway.updateFeeRecipient(user, {
-                            from: owner,
+                            from: owner
                         });
                         await btcGateway.updateFeeRecipient(feeRecipient, {
-                            from: owner,
+                            from: owner
                         });
                     });
 
@@ -621,11 +619,11 @@ contract(
                         await btcGateway
                             .updateMintFee(0, { from: malicious })
                             .should.be.rejectedWith(
-                                /Ownable: caller is not the owner/,
+                                /Ownable: caller is not the owner/
                             );
                         await btcGateway.updateMintFee(0, { from: owner });
                         await btcGateway.updateMintFee(currentFee, {
-                            from: owner,
+                            from: owner
                         });
                     });
 
@@ -634,11 +632,11 @@ contract(
                         await btcGateway
                             .updateBurnFee(0, { from: malicious })
                             .should.be.rejectedWith(
-                                /Ownable: caller is not the owner/,
+                                /Ownable: caller is not the owner/
                             );
                         await btcGateway.updateBurnFee(0, { from: owner });
                         await btcGateway.updateBurnFee(currentFee, {
-                            from: owner,
+                            from: owner
                         });
                     });
 
@@ -646,19 +644,19 @@ contract(
                         await btcGateway
                             .updateMintAuthority(malicious, { from: malicious })
                             .should.be.rejectedWith(
-                                /Gateway: caller is not the owner or mint authority/,
+                                /Gateway: caller is not the owner or mint authority/
                             );
                         // Owner can update mint authority
                         await btcGateway.updateMintAuthority(user, {
-                            from: owner,
+                            from: owner
                         });
                         // Mint authority can update mint authority
                         await btcGateway.updateMintAuthority(user, {
-                            from: user,
+                            from: user
                         });
                         await btcGateway.updateMintAuthority(
                             mintAuthority.address,
-                            { from: owner },
+                            { from: owner }
                         );
                     });
 
@@ -666,50 +664,50 @@ contract(
                         await btcGateway
                             .updateMintAuthority(NULL, { from: owner })
                             .should.be.rejectedWith(
-                                /Gateway: mintAuthority cannot be set to address zero/,
+                                /Gateway: mintAuthority cannot be set to address zero/
                             );
                     });
 
                     it("can upgrade min burn amount", async () => {
                         await btcGateway
                             .updateMinimumBurnAmount(malicious, {
-                                from: malicious,
+                                from: malicious
                             })
                             .should.be.rejectedWith(
-                                /Ownable: caller is not the owner/,
+                                /Ownable: caller is not the owner/
                             );
                         await btcGateway.updateMinimumBurnAmount(8000, {
-                            from: owner,
+                            from: owner
                         });
                         await btcGateway.updateMinimumBurnAmount(10000, {
-                            from: owner,
+                            from: owner
                         });
                     });
                 });
 
                 describe("upgrading gateway", () => {
-                    let newGateway: MintGatewayLogicV1Instance;
+                    let newGateway: MintGatewayLogicV2Instance;
 
                     it("can upgrade the gateway", async () => {
                         newGateway = await deployProxy<
-                            MintGatewayLogicV1Instance
+                            MintGatewayLogicV2Instance
                         >(
                             web3,
                             BTCGateway,
-                            MintGatewayLogicV1,
+                            MintGatewayLogicV2,
                             proxyGovernanceAddress,
                             [
                                 { type: "address", value: renbtc.address },
                                 { type: "address", value: feeRecipient },
                                 {
                                     type: "address",
-                                    value: mintAuthority.address,
+                                    value: mintAuthority.address
                                 },
                                 { type: "uint16", value: mintFees.toString() },
                                 { type: "uint16", value: burnFees.toString() },
-                                { type: "uint256", value: 10000 },
+                                { type: "uint256", value: 10000 }
                             ],
-                            { from: owner },
+                            { from: owner }
                         );
 
                         // Fund and unlock the mintAuthority - not used currently but
@@ -721,29 +719,29 @@ contract(
 
                         await btcGateway
                             .transferTokenOwnership(newGateway.address, {
-                                from: malicious,
+                                from: malicious
                             })
                             .should.be.rejectedWith(
-                                /Ownable: caller is not the owner/,
+                                /Ownable: caller is not the owner/
                             );
 
                         await btcGateway.transferTokenOwnership(
                             newGateway.address,
-                            { from: owner },
+                            { from: owner }
                         );
                         (await renbtc.owner.call()).should.equal(
-                            newGateway.address,
+                            newGateway.address
                         );
                     });
 
                     it("can mint and burn using new gateway", async () => {
                         const value = new BN(
-                            Math.floor(Math.random() * 200000) + 10000,
+                            Math.floor(Math.random() * 200000) + 10000
                         );
                         await mintTest(newGateway, value);
                         await burnTest(
                             newGateway,
-                            await removeMintFee(renbtc, value, mintFees),
+                            await removeMintFee(renbtc, value, mintFees)
                         );
                     });
 
@@ -755,7 +753,7 @@ contract(
                         await renbtc
                             .claimOwnership({ from: malicious })
                             .should.be.rejectedWith(
-                                /Claimable: caller is not the pending owner/,
+                                /Claimable: caller is not the pending owner/
                             );
                     });
 
@@ -764,17 +762,17 @@ contract(
                         await btcGateway
                             .transferTokenOwnership(NULL, { from: owner })
                             .should.be.rejectedWith(
-                                /Ownable: caller is not the owner/,
+                                /Ownable: caller is not the owner/
                             );
 
                         // Upgrade newGateway to point to btcGateway
                         await newGateway.transferTokenOwnership(
                             btcGateway.address,
-                            { from: owner },
+                            { from: owner }
                         );
 
                         (await renbtc.owner.call()).should.equal(
-                            btcGateway.address,
+                            btcGateway.address
                         );
                     });
                 });
@@ -782,20 +780,20 @@ contract(
                 describe("recovering funds", () => {
                     it("should be able to withdraw funds that are mistakenly sent to a Gateway", async () => {
                         let renbtcValue = new BN(
-                            Math.floor(Math.random() * 200000) + 10000,
+                            Math.floor(Math.random() * 200000) + 10000
                         );
                         [, , renbtcValue] = await mintTest(
                             btcGateway,
-                            renbtcValue,
+                            renbtcValue
                         );
                         renbtcValue = new BN(
                             (
                                 await renbtc.fromUnderlying.call(renbtcValue)
-                            ).toString(),
+                            ).toString()
                         );
 
                         await renbtc.transfer(btcGateway.address, renbtcValue, {
-                            from: user,
+                            from: user
                         });
 
                         const renAmount = 1000;
@@ -805,18 +803,18 @@ contract(
                         await btcGateway
                             .recoverTokens(ren.address, { from: malicious })
                             .should.be.rejectedWith(
-                                /Ownable: caller is not the owner/,
+                                /Ownable: caller is not the owner/
                             );
 
                         // Recover renBTC
                         const balanceBefore = new BN(
-                            await renbtc.balanceOf.call(owner),
+                            await renbtc.balanceOf.call(owner)
                         );
                         await btcGateway.recoverTokens(renbtc.address, {
-                            from: owner,
+                            from: owner
                         });
                         const balanceAfter = new BN(
-                            await renbtc.balanceOf.call(owner),
+                            await renbtc.balanceOf.call(owner)
                         );
                         balanceAfter
                             .sub(balanceBefore)
@@ -825,13 +823,13 @@ contract(
 
                         // Recover REN
                         const initialRenBalance = new BN(
-                            (await ren.balanceOf.call(owner)).toString(),
+                            (await ren.balanceOf.call(owner)).toString()
                         );
                         await btcGateway.recoverTokens(ren.address, {
-                            from: owner,
+                            from: owner
                         });
                         const finalRenBalance = new BN(
-                            (await ren.balanceOf.call(owner)).toString(),
+                            (await ren.balanceOf.call(owner)).toString()
                         );
                         finalRenBalance
                             .sub(initialRenBalance)
@@ -840,7 +838,7 @@ contract(
                         // Recover ETH
                         const forceSend = await ForceSend.new();
                         await forceSend.send(btcGateway.address, {
-                            value: "1",
+                            value: "1"
                         });
                         (
                             await web3.eth.getBalance(btcGateway.address)
@@ -855,8 +853,8 @@ contract(
                             new BN(
                                 (
                                     await renbtc.toUnderlying.call(balanceAfter)
-                                ).toString(),
-                            ),
+                                ).toString()
+                            )
                         );
                     });
 
@@ -873,28 +871,28 @@ contract(
                         await renbtc
                             .recoverTokens(ren.address, { from: malicious })
                             .should.be.rejectedWith(
-                                /Ownable: caller is not the owner/,
+                                /Ownable: caller is not the owner/
                             );
 
                         const claimer = await Claimer.new(renbtc.address);
                         await btcGateway.transferTokenOwnership(
                             claimer.address,
-                            { from: owner },
+                            { from: owner }
                         );
                         await claimer.transferTokenOwnership(owner, {
-                            from: owner,
+                            from: owner
                         });
                         await renbtc.claimOwnership({ from: owner });
 
                         // Recover REN
                         const initialRenBalance = new BN(
-                            (await ren.balanceOf.call(owner)).toString(),
+                            (await ren.balanceOf.call(owner)).toString()
                         );
                         await renbtc.recoverTokens(ren.address, {
-                            from: owner,
+                            from: owner
                         });
                         const finalRenBalance = new BN(
-                            (await ren.balanceOf.call(owner)).toString(),
+                            (await ren.balanceOf.call(owner)).toString()
                         );
                         finalRenBalance
                             .sub(initialRenBalance)
@@ -910,7 +908,7 @@ contract(
                         // Recover ETH
                         const forceSend = await ForceSend.new();
                         await forceSend.send(btcGateway.address, {
-                            value: "1",
+                            value: "1"
                         });
                         (
                             await web3.eth.getBalance(btcGateway.address)
@@ -956,27 +954,27 @@ contract(
                         await registry.setGateway(
                             "BTC",
                             renbtc.address,
-                            btcGateway.address,
+                            btcGateway.address
                         );
                         await registry
                             .setGateway(
                                 "BTC",
                                 renbtc.address,
-                                btcGateway.address,
+                                btcGateway.address
                             )
                             .should.be.rejectedWith(
-                                /GatewayRegistry: gateway already registered/,
+                                /GatewayRegistry: gateway already registered/
                             );
                         await registry
                             .setGateway("BTC", renbtc.address, NULL)
                             .should.be.rejectedWith(
-                                /GatewayRegistry: token already registered/,
+                                /GatewayRegistry: token already registered/
                             );
 
                         await registry
                             .setGateway("BTC!", NULL, NULL)
                             .should.be.rejectedWith(
-                                /GatewayRegistry: symbol must be alphanumeric/,
+                                /GatewayRegistry: symbol must be alphanumeric/
                             );
                     });
 
@@ -991,18 +989,18 @@ contract(
                                 "1",
                                 "renBTC",
                                 "renBTC",
-                                8,
+                                8
                             );
                             await registry
                                 .setGateway("BTC", altRenBTC.address, NULL)
                                 .should.be.rejectedWith(
-                                    /GatewayRegistry: symbol already registered/,
+                                    /GatewayRegistry: symbol already registered/
                                 );
                         }
 
                         (
                             await registry.getGatewayByToken.call(
-                                renbtc.address,
+                                renbtc.address
                             )
                         ).should.equal(btcGateway.address);
 
@@ -1018,7 +1016,7 @@ contract(
                             // The first 10 gateways starting from NULL
                             const gateway = await registry.getGateways.call(
                                 NULL,
-                                10,
+                                10
                             );
                             gateway[0].should.equal(btcGateway.address);
                             gateway[1].should.equal(NULL);
@@ -1026,7 +1024,7 @@ contract(
 
                             const renTokens = await registry.getRenTokens.call(
                                 NULL,
-                                10,
+                                10
                             );
                             renTokens[0].should.equal(renbtc.address);
                             renTokens[1].should.equal(NULL);
@@ -1037,14 +1035,14 @@ contract(
                             // Get all the gateways starting from NULL
                             const gateway = await registry.getGateways.call(
                                 NULL,
-                                0,
+                                0
                             );
                             gateway[0].should.equal(btcGateway.address);
                             gateway.length.should.equal(1);
 
                             const renTokens = await registry.getRenTokens.call(
                                 NULL,
-                                0,
+                                0
                             );
                             renTokens[0].should.equal(renbtc.address);
                             renTokens.length.should.equal(1);
@@ -1054,7 +1052,7 @@ contract(
                             // Starting from first entry
                             const gateway = await registry.getGateways.call(
                                 btcGateway.address,
-                                10,
+                                10
                             );
                             gateway[0].should.equal(btcGateway.address);
                             gateway[1].should.equal(NULL);
@@ -1062,7 +1060,7 @@ contract(
 
                             const renTokens = await registry.getRenTokens.call(
                                 renbtc.address,
-                                10,
+                                10
                             );
                             renTokens[0].should.equal(renbtc.address);
                             renTokens[1].should.equal(NULL);
@@ -1073,14 +1071,14 @@ contract(
                             // Get all the gateways starting from first entry
                             const gateways = await registry.getGateways.call(
                                 btcGateway.address,
-                                0,
+                                0
                             );
                             gateways[0].should.equal(btcGateway.address);
                             gateways.length.should.equal(1);
 
                             const renTokens = await registry.getRenTokens.call(
                                 renbtc.address,
-                                0,
+                                0
                             );
                             renTokens[0].should.equal(renbtc.address);
                             renTokens.length.should.equal(1);
@@ -1090,39 +1088,39 @@ contract(
                     it("can update gateway for a token", async () => {
                         (
                             await registry.getGatewayByToken.call(
-                                renbtc.address,
+                                renbtc.address
                             )
                         ).should.equal(btcGateway.address);
 
                         const newBtcGateway = await deployProxy<
-                            MintGatewayLogicV1Instance
+                            MintGatewayLogicV2Instance
                         >(
                             web3,
                             BTCGateway,
-                            MintGatewayLogicV1,
+                            MintGatewayLogicV2,
                             proxyGovernanceAddress,
                             [
                                 { type: "address", value: renbtc.address },
                                 { type: "address", value: feeRecipient },
                                 {
                                     type: "address",
-                                    value: mintAuthority.address,
+                                    value: mintAuthority.address
                                 },
                                 { type: "uint16", value: mintFees.toString() },
                                 { type: "uint16", value: burnFees.toString() },
-                                { type: "uint256", value: 10000 },
+                                { type: "uint256", value: 10000 }
                             ],
-                            { from: owner },
+                            { from: owner }
                         );
 
                         await registry.updateGateway(
                             renbtc.address,
-                            newBtcGateway.address,
+                            newBtcGateway.address
                         );
 
                         (
                             await registry.getGatewayByToken.call(
-                                renbtc.address,
+                                renbtc.address
                             )
                         ).should.equal(newBtcGateway.address);
                     });
@@ -1131,10 +1129,10 @@ contract(
                         await registry
                             .updateGateway(
                                 ETHEREUM_TOKEN_ADDRESS,
-                                randomAddress(),
+                                randomAddress()
                             )
                             .should.be.rejectedWith(
-                                /GatewayRegistry: token not registered/,
+                                /GatewayRegistry: token not registered/
                             );
                     });
 
@@ -1144,7 +1142,7 @@ contract(
                         await registry
                             .removeGateway("BTC")
                             .should.be.rejectedWith(
-                                /GatewayRegistry: symbol not registered/,
+                                /GatewayRegistry: symbol not registered/
                             );
                     });
 
@@ -1155,18 +1153,18 @@ contract(
                         await registry
                             .recoverTokens(ren.address, { from: malicious })
                             .should.be.rejectedWith(
-                                /Ownable: caller is not the owner/,
+                                /Ownable: caller is not the owner/
                             );
 
                         // Can recover unrelated token
                         const initialRenBalance = new BN(
-                            (await ren.balanceOf.call(owner)).toString(),
+                            (await ren.balanceOf.call(owner)).toString()
                         );
                         await registry.recoverTokens(ren.address, {
-                            from: owner,
+                            from: owner
                         });
                         const finalRenBalance = new BN(
-                            (await ren.balanceOf.call(owner)).toString(),
+                            (await ren.balanceOf.call(owner)).toString()
                         );
                         finalRenBalance
                             .sub(initialRenBalance)
@@ -1179,5 +1177,5 @@ contract(
                 });
             });
         }
-    },
+    }
 );

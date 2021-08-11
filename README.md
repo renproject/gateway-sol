@@ -5,6 +5,17 @@ Ren gateway contracts written in Solidity
 <!-- [![CircleCI](https://circleci.com/gh/renproject/gateway-sol.svg?style=shield)](https://circleci.com/gh/renproject/gateway-sol) -->
 <!-- [![Coverage Status](https://coveralls.io/repos/github/renproject/gateway-sol/badge.svg?branch=master)](https://coveralls.io/github/renproject/gateway-sol?branch=master) -->
 
+## Setup
+
+If you are using VSCode, put this into `.vscode/settings.json`:
+
+```json
+{
+    "solidity.packageDefaultDependenciesContractsDirectory": "",
+    "solidity.compileUsingRemoteVersion": "v0.5.17+commit.d19bba13"
+}
+```
+
 ## Tests
 
 Install the dependencies.
@@ -63,11 +74,7 @@ Add an Etherscan API key to your `.env`:
 ETHERSCAN_KEY="..."
 ```
 
-Run the following (replacing the network and contract name):
-
-```sh
-NETWORK=mainnet yarn run verify Contract1 Contract2
-```
+For now, follow the same steps as in [./VERIFY.md](./VERIFY.md) until a script is written.
 
 For contracts that use a Proxy, you then need to go to the Etherscan page, select "More Options" and then "Is this a proxy?":
 

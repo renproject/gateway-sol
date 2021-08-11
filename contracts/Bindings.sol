@@ -1,6 +1,6 @@
 pragma solidity ^0.5.17;
 
-import "./Gateway/MintGateway.sol";
+import "./Gateway/MintGatewayV2.sol";
 import "./Gateway/GatewayRegistry.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/StandaloneERC20.sol";
 

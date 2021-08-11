@@ -12,33 +12,28 @@ import "./RenERC20.sol";
 import "./interfaces/IGateway.sol";
 import "../libraries/CanReclaimTokens.sol";
 
-import "./MintGateway.sol";
+import "./MintGatewayV2.sol";
 import "../Governance/RenProxyAdmin.sol";
 
-/* solium-disable-next-line no-empty-blocks */
 contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
     RenProxyAdmin renProxyAdmin;
-    MintGatewayLogicV1 gatewayLogic;
+    MintGatewayLogicV2 newGatewayLogic;
     address previousAdminOwner;
-    address newMintAuthority;
 
     constructor(
         RenProxyAdmin _renProxyAdmin,
-        MintGatewayLogicV1 _gatewayLogic,
-        address _newMintAuthority
+        MintGatewayLogicV2 _newGatewayLogic
     ) public {
         Ownable.initialize(msg.sender);
         renProxyAdmin = _renProxyAdmin;
-        gatewayLogic = _gatewayLogic;
+        newGatewayLogic = _newGatewayLogic;
         previousAdminOwner = renProxyAdmin.owner();
-        newMintAuthority = _newMintAuthority;
     }
 
-    function upgrade(MintGatewayLogicV1 gatewayInstance, bytes32 selectorHash)
+    function upgrade(MintGatewayLogicV2 gatewayInstance, bytes32 selectorHash)
         public
         onlyOwner
     {
-        // uint256 BIPS_DENOMINATOR = gatewayInstance.BIPS_DENOMINATOR();
         uint256 minimumBurnAmount = gatewayInstance.minimumBurnAmount();
         RenERC20LogicV1 token = gatewayInstance.token();
         address mintAuthority = gatewayInstance.mintAuthority();
@@ -50,25 +45,18 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
         address previousGatewayOwner = gatewayInstance.owner();
         gatewayInstance.claimOwnership();
 
+        // Update implementation.
         renProxyAdmin.upgrade(
             AdminUpgradeabilityProxy(
                 // Cast gateway instance to payable address
                 address(uint160(address(gatewayInstance)))
             ),
-            address(gatewayLogic)
+            address(newGatewayLogic)
         );
 
-        // Update mint authorities.
-        address legacyMintAuthority = gatewayInstance.mintAuthority();
-        gatewayInstance.updateMintAuthority(newMintAuthority);
-        gatewayInstance._legacy_updateMintAuthority(legacyMintAuthority);
-
+        // Update mint authorities and selector hash.
         gatewayInstance.updateSelectorHash(selectorHash);
 
-        // require(
-        //     gatewayInstance.BIPS_DENOMINATOR() == BIPS_DENOMINATOR,
-        //     "Expected BIPS_DENOMINATOR to not change."
-        // );
         require(
             gatewayInstance.minimumBurnAmount() == minimumBurnAmount,
             "Expected minimumBurnAmount to not change."
@@ -78,11 +66,7 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
             "Expected token to not change."
         );
         require(
-            gatewayInstance._legacy_mintAuthority() == mintAuthority,
-            "Expected _legacy_mintAuthority to equal old mintAuthority."
-        );
-        require(
-            gatewayInstance.mintAuthority() == newMintAuthority,
+            gatewayInstance.mintAuthority() == mintAuthority,
             "Expected mintAuthority to equal new mintAuthority."
         );
         require(
@@ -102,7 +86,7 @@ contract MintGatewayUpgrader is Ownable, CanReclaimTokens {
             "Expected nextN to not change."
         );
 
-        gatewayInstance.transferOwnership(previousGatewayOwner);
+        gatewayInstance._directTransferOwnership(previousGatewayOwner);
     }
 
     function done() public onlyOwner {

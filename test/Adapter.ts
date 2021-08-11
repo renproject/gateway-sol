@@ -6,8 +6,8 @@ import { keccak256 } from "web3-utils";
 import {
     BTCGatewayInstance,
     GatewayRegistryInstance,
-    MintGatewayLogicV1Instance,
-    RenERC20LogicV1Instance,
+    MintGatewayLogicV2Instance,
+    RenERC20LogicV1Instance
 } from "../types/truffle-contracts";
 import { deployProxy, Ox, randomBytes } from "./helper/testUtils";
 
@@ -16,12 +16,12 @@ const BTCGateway = artifacts.require("BTCGateway");
 const GatewayRegistry = artifacts.require("GatewayRegistry");
 const RenBTC = artifacts.require("RenBTC");
 const RenERC20LogicV1 = artifacts.require("RenERC20LogicV1");
-const MintGatewayLogicV1 = artifacts.require("MintGatewayLogicV1");
+const MintGatewayLogicV2 = artifacts.require("MintGatewayLogicV2");
 
 contract.skip(
     "Adapter",
     ([owner, feeRecipient, user, proxyGovernanceAddress]) => {
-        let btcGateway: MintGatewayLogicV1Instance;
+        let btcGateway: MintGatewayLogicV2Instance;
         let renbtc: RenERC20LogicV1Instance;
         let registry: GatewayRegistryInstance;
 
@@ -45,17 +45,17 @@ contract.skip(
                     { type: "uint256", value: "500000000000000000" },
                     { type: "string", value: "1" },
                     { type: "string", value: "renBTC" },
-                    { type: "uint8", value: 8 },
+                    { type: "uint8", value: 8 }
                 ],
-                { from: owner },
+                { from: owner }
             );
             mintAuthority = web3.eth.accounts.create();
             privKey = Buffer.from(mintAuthority.privateKey.slice(2), "hex");
 
-            btcGateway = await deployProxy<MintGatewayLogicV1Instance>(
+            btcGateway = await deployProxy<MintGatewayLogicV2Instance>(
                 web3,
                 BTCGateway,
-                MintGatewayLogicV1,
+                MintGatewayLogicV2,
                 proxyGovernanceAddress,
                 [
                     { type: "address", value: renbtc.address },
@@ -63,16 +63,16 @@ contract.skip(
                     { type: "address", value: mintAuthority.address },
                     { type: "uint16", value: mintFees },
                     { type: "uint16", value: burnFees },
-                    { type: "uint256", value: 10000 },
+                    { type: "uint256", value: 10000 }
                 ],
-                { from: owner },
+                { from: owner }
             );
 
             registry = await GatewayRegistry.new();
             await registry.setGateway(
                 "BTC",
                 renbtc.address,
-                btcGateway.address,
+                btcGateway.address
             );
 
             await renbtc.transferOwnership(btcGateway.address);
@@ -81,7 +81,7 @@ contract.skip(
 
         const removeFee = (value: number | BN, bips: number | BN) =>
             new BN(value).sub(
-                new BN(value).mul(new BN(bips)).div(new BN(10000)),
+                new BN(value).mul(new BN(bips)).div(new BN(10000))
             );
 
         it("can mint to an adapter", async () => {
@@ -97,43 +97,43 @@ contract.skip(
             const pHash = keccak256(
                 web3.eth.abi.encodeParameters(
                     ["string", "address"],
-                    ["BTC", user],
-                ),
+                    ["BTC", user]
+                )
             );
 
             const hash = await btcGateway.hashForSignature.call(
                 pHash,
                 value,
                 basicAdapter.address,
-                nHash,
+                nHash
             );
             const sig = ecsign(Buffer.from(hash.slice(2), "hex"), privKey);
             const sigString = Ox(
                 `${sig.r.toString("hex")}${sig.s.toString(
-                    "hex",
-                )}${sig.v.toString(16)}`,
+                    "hex"
+                )}${sig.v.toString(16)}`
             );
 
             const balanceBeforeMint = new BN(
-                (await renbtc.balanceOfUnderlying.call(user)).toString(),
+                (await renbtc.balanceOfUnderlying.call(user)).toString()
             );
             await basicAdapter.mint("BTC", user, value, nHash, sigString);
             const balanceAfterMint = new BN(
-                (await renbtc.balanceOfUnderlying.call(user)).toString(),
+                (await renbtc.balanceOfUnderlying.call(user)).toString()
             );
             balanceAfterMint.should.bignumber.equal(
-                balanceBeforeMint.add(burnValue),
+                balanceBeforeMint.add(burnValue)
             );
 
             await renbtc.approve(basicAdapter.address, burnValue, {
-                from: user,
+                from: user
             });
             await basicAdapter.burn("BTC", bitcoinAddress, burnValue, {
-                from: user,
+                from: user
             });
             (
                 await renbtc.balanceOfUnderlying.call(user)
             ).should.bignumber.equal(balanceAfterMint.sub(burnValue));
         });
-    },
+    }
 );

@@ -4,88 +4,127 @@
 
 Ren has two repositories for its Solidity contract:
 
--   [`darknode-sol`](https://github.com/renproject/darknode-sol) - contracts on Ethereum for managing darknode registrations.
--   `gateway-sol` (this repository) - contracts on multiple EVM chains for minting and burning of ren-assets.
+- [`darknode-sol`](https://github.com/renproject/darknode-sol) - contracts on Ethereum for managing darknode registrations.
+- `gateway-sol` (this repository) - contracts on multiple EVM chains for minting and burning of ren-assets.
 
 ## ~ [Documentation](https://renproject.github.io/ren-client-docs/contracts/) ~
 
--   For the latest contract addresses, see the [contract addresses](https://renproject.github.io/ren-client-docs/contracts/deployments) page.
--   For a summary of each contract, see the [summary of contracts](https://renproject.github.io/ren-client-docs/contracts/summary) page.
+- For the latest contract addresses, see the [contract addresses](https://renproject.github.io/ren-client-docs/contracts/deployments) page.
+- For a summary of each contract, see the [summary of contracts](https://renproject.github.io/ren-client-docs/contracts/summary) page.
 
 <details>
 
 <summary>Development notes</summary>
 
-## Setup
+## INSTALL
 
-If you are using VSCode, put this into `.vscode/settings.json`:
-
-```json
-{
-    "solidity.packageDefaultDependenciesContractsDirectory": "",
-    "solidity.compileUsingRemoteVersion": "v0.5.17+commit.d19bba13"
-}
+```bash
+yarn
 ```
 
-## Tests
+## TEST
 
-Install the dependencies.
-
-```
-yarn install
+```bash
+yarn test
 ```
 
-Run the `ganache-cli` or an alternate Ethereum test RPC server on port 8545. The `-d` flag will use a deterministic mnemonic for reproducibility.
+## SCRIPTS
 
-```sh
-yarn ganache-cli -d
-```
+Here is the list of npm scripts you can execute:
 
-Run the Truffle test suite.
+Some of them relies on [./config/\_scripts.js](./config/_scripts.js) to allow parameterizing it via command line argument (have a look inside if you need modifications)
+<br/><br/>
 
-```sh
-yarn run test
-```
+`yarn prepare`
 
-## Coverage
+As a standard lifecycle npm script, it is executed automatically upon install. It generate config file and typechain to get you started with type safe contract interactions
+<br/><br/>
 
-Run the Truffle test suite with coverage.
+`yarn lint`, `yarn lint:fix`, `yarn format` and `yarn format:fix`
 
-```sh
-yarn run coverage
-```
+These will lint and format check your code. the `:fix` version will modifiy the files to match the requirement specified in `.eslintrc` and `.prettierrc.`
+<br/><br/>
 
-Open the coverage file.
+`yarn compile`
 
-```sh
-open ./coverage/index.html
-```
+These will compile your contracts
+<br/><br/>
 
-## Deploying
+`yarn void:deploy`
 
-Add a `.env`, filling in the mnemonic and Infura key:
+This will deploy your contracts on the in-memory hardhat network and exit, leaving no trace. quick way to ensure deployments work as intended without consequences
+<br/><br/>
 
-```sh
-MNEMONIC_TESTNET="..."
-MNEMONIC_MAINNET="..."
-INFURA_KEY="..."
-```
+`yarn test [mocha args...]`
 
-Deploy to Kovan:
+These will execute your tests using mocha. you can pass extra arguments to mocha
+<br/><br/>
 
-```sh
-NETWORK=kovan yarn run deploy
-```
+`yarn coverage`
 
-## Verifying Contract Code
+These will produce a coverage report in the `coverage/` folder
+<br/><br/>
 
-Add an Etherscan API key to your `.env`:
+`yarn gas`
 
-```
-ETHERSCAN_KEY="..."
-```
+These will produce a gas report for function used in the tests
+<br/><br/>
 
-For now, follow the same steps as in [./VERIFY.md](./VERIFY.md) until a script is written.
+`yarn dev`
+
+These will run a local hardhat network on `localhost:8545` and deploy your contracts on it. Plus it will watch for any changes and redeploy them.
+<br/><br/>
+
+`yarn local:dev`
+
+This assumes a local node it running on `localhost:8545`. It will deploy your contracts on it. Plus it will watch for any changes and redeploy them.
+<br/><br/>
+
+`yarn execute <network> <file.ts> [args...]`
+
+This will execute the script `<file.ts>` against the specified network
+<br/><br/>
+
+`yarn deploy <network> [args...]`
+
+This will deploy the contract on the specified network.
+
+Behind the scene it uses `hardhat deploy` command so you can append any argument for it
+<br/><br/>
+
+`yarn export <network> <file.json>`
+
+This will export the abi+address of deployed contract to `<file.json>`
+<br/><br/>
+
+`yarn fork:execute <network> [--blockNumber <blockNumber>] [--deploy] <file.ts> [args...]`
+
+This will execute the script `<file.ts>` against a temporary fork of the specified network
+
+if `--deploy` is used, deploy scripts will be executed
+<br/><br/>
+
+`yarn fork:deploy <network> [--blockNumber <blockNumber>] [args...]`
+
+This will deploy the contract against a temporary fork of the specified network.
+
+Behind the scene it uses `hardhat deploy` command so you can append any argument for it
+<br/><br/>
+
+`yarn fork:test <network> [--blockNumber <blockNumber>] [mocha args...]`
+
+This will test the contract against a temporary fork of the specified network.
+<br/><br/>
+
+`yarn fork:dev <network> [--blockNumber <blockNumber>] [args...]`
+
+This will deploy the contract against a fork of the specified network and it will keep running as a node.
+
+Behind the scene it uses `hardhat node` command so you can append any argument for it
+
+## Verifying
+
+`yarn hardhat --network kovan etherscan-verify --api-key ETHERSCAN_KEY --license GPL-3.0-only`
 
 For contracts that use a Proxy, you then need to go to the Etherscan page, select "More Options" and then "Is this a proxy?":
 

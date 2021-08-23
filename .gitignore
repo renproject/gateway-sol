@@ -1,15 +1,12 @@
 # Node / NPM / Yarn
-node_modules
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # Build / test artifacts
-coverage
-build
-artifacts
-typechain
-cache
+coverage*
+artifacts*
 dist
 coverageEnv
 coverage.json
@@ -17,11 +14,14 @@ coverage.json
 .coverage_artifacts
 .coverage_contracts
 *output.log
+typechain/
+contractsInfo.json
+deployments/hardhat
+deployments/localhost
 
 # Configuration files
 *.env
 .env*
-.vscode/
 
 # OS files
 .DS_Store
@@ -31,7 +31,15 @@ coverage.json
 scTopics
 allFiredEvents
 in_complete_tests
+build/development
 local_*
 bindings.go
 types
-.output-logs
+
+.vscode/*
+!.vscode/settings.json.default
+!.vscode/launch.json.default
+!.vscode/extensions.json.default
+
+.yalc
+yalc.lock

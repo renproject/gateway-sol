@@ -48,4 +48,24 @@ contract MintGatewayWithBurnStorageV3 is MintGatewayV3 {
 
         return amount_;
     }
+
+    /**
+     * @notice getBurn looks up a burn by it's `ref` value.
+     */
+    function getBurn(uint256 _n)
+        public
+        view
+        returns (
+            uint256 _blocknumber,
+            bytes memory _to,
+            uint256 _amount,
+            // Optional
+            string memory _chain,
+            bytes memory _payload
+        )
+    {
+        Burn memory burnStruct = burns[_n];
+        require(burnStruct._to.length > 0, "MintGateway: burn not found");
+        return (burnStruct._blocknumber, burnStruct._to, burnStruct._amount, burnStruct._chain, burnStruct._payload);
+    }
 }

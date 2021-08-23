@@ -182,6 +182,82 @@ export const networks = {
         },
     },
 
+    goerliTestnet: {
+        RenProxyAdmin: "0xf1DA6f4A594553335EdeA6B1203a4B590c752E32",
+
+        GatewayRegistry: "0xD881213F5ABF783d93220e6bD3Cc21706A8dc1fC",
+        BasicAdapter: "0xD087b0540e172553c12DEEeCDEf3dFD21Ec02066",
+        GenericAdapter: "",
+
+        RenERC20LogicV1: "0xB5072BE373a120d81c728e908Ed0710968fC247f",
+        MintGatewayLogicV2: "0x5e3c8B0F7229f1F1873267B6811465fEF73d53CA",
+
+        assets: [
+            {
+                // testBTC
+                symbol: "BTC",
+                decimals: 8,
+                token: "0x880Ad65DC5B3F33123382416351Eef98B4aAd7F1",
+                gateway: "0x29Aa535b65b9C9A08bEdEbA8F9398aAf4832F98b",
+            },
+            {
+                // testZEC
+                symbol: "ZEC",
+                decimals: 8,
+                token: "0xf98A573BEabDB73a2d8697001bD411c21CBb89b1",
+                gateway: "0x098ecF3bEb11E308f1B9C38c1E1b50c10FC02af3",
+            },
+            {
+                // testBCH
+                symbol: "BCH",
+                decimals: 8,
+                token: "0xc735241F93F87D4DBEA499EE6e1d41Ec50e3D8cE",
+                gateway: "0xe1Ae770a368ef05158c65c572701778575Da85d0",
+            },
+            {
+                // testDGB
+                symbol: "DGB",
+                decimals: 8,
+                token: "0x6268002A734EDcDe6c2111ae339E0D92B1ED2Bfa",
+                gateway: "0x20471d322f20E3cAE8f8b75D1481B5BD53c41695",
+            },
+            {
+                // testDOGE
+                symbol: "DOGE",
+                decimals: 8,
+                token: "0x7352e7244899b7Cb5d803CC02741c8910d3B75de",
+                gateway: "0x0E6bbBb35835cC3624a000e1698B7B68E9eeC7DF",
+            },
+            {
+                // testFIL
+                symbol: "FIL",
+                decimals: 18,
+                token: "0x1156663dFab56A9BAdd844e12eDD69eC96Dd0eFb",
+                gateway: "0x038b63C120a7e60946d6EbAa6Dcfc3a475108cc9",
+            },
+            {
+                // testLUNA
+                symbol: "LUNA",
+                decimals: 6,
+                token: "0xA0b04e9D8B883626769Ac23aF4fb019e34B944C4",
+                gateway: "0x75A33b43Af9d532da65750c01F5fAB3c3FC0b8F9",
+            },
+        ],
+
+        config: {
+            ...config,
+            governanceAddress: "", // defaults to deployer
+            feeRecipient: "",
+            mintAuthority: "0x44Bb4eF43408072bC888Afd1a5986ba0Ce35Cb54",
+
+            mintFee: 0,
+            burnFee: 0,
+
+            tokenPrefix: "test",
+            chainName: "Goerli",
+        },
+    },
+
     ethereumDevnet: {
         RenProxyAdmin: "0xA2C9D593bC096FbB3Cf5b869270645C470E5416B",
 
@@ -1122,6 +1198,164 @@ export const networks = {
 
             tokenPrefix: "ren",
             chainName: "Avalanche",
+
+            mintFee: 0,
+            burnFee: 0,
+        },
+    },
+
+    arbitrumTestnet: {
+        RenProxyAdmin: "0xf1DA6f4A594553335EdeA6B1203a4B590c752E32",
+
+        GatewayRegistry: "0x5eEBf6c199a9Db26dabF621fB8c43D58C62DF2bd",
+        BasicAdapter: "0x1156663dFab56A9BAdd844e12eDD69eC96Dd0eFb",
+        GenericAdapter: "",
+
+        RenERC20LogicV1: "0x3083E5BA36C6b42ca93c22C803013A4539eEdc7f",
+        MintGatewayLogicV2: "0xe9Ab97d707ad9A67bd01345233C3c179f42F9aD0",
+
+        assets: [
+            {
+                // testBTC
+                symbol: "BTC",
+                decimals: 8,
+                token: "0x43D828c81Ea229f5F4601D12C5EC00133bD17dE1",
+                gateway: "0xF47dff1B8442f6f37491DF74c058904AB2d306fd",
+            },
+            {
+                // testZEC
+                symbol: "ZEC",
+                decimals: 8,
+                token: "0xb98E6dA48F27e86D32dc9ab8721ce19c95E206b8",
+                gateway: "0x83785ad4B3B5255Af409Da3e34052ca5eaa8f9d5",
+            },
+            {
+                // testBCH
+                symbol: "BCH",
+                decimals: 8,
+                token: "0x5AF020172107C379a62D8C9B1614d3038186E0eA",
+                gateway: "0x07deB3917d234f787AEd86E0c88E829277D4a33b",
+            },
+            {
+                // testDOGE
+                symbol: "DOGE",
+                decimals: 8,
+                token: "0xBB25c81031ae580B0029dA1859c625e87e5468cD",
+                gateway: "0xd46aBBa0936915d8B34c6a5d4687241413e1B142",
+            },
+            {
+                // testDGB
+                symbol: "DGB",
+                decimals: 8,
+                token: "0xec1fbb79bcA682EF2CCcBE6194Ab62413e6c7895",
+                gateway: "0x84c9eb3c7e21714dfEe7c1AA91800a8B365daa9E",
+            },
+            {
+                // testFIL
+                symbol: "FIL",
+                decimals: 18,
+                token: "0x527C7f02588D0d1fba5059d3D69DF55E44186F9e",
+                gateway: "0xcD2D8f9E9f6A0Ef47FD3F8dDD011ee2B12Ae91D9",
+            },
+            {
+                // testLUNA
+                symbol: "LUNA",
+                decimals: 6,
+                token: "0xCa920A213f8f20406612eB02AA00EDDdAf5005EF",
+                gateway: "0xa6e39c23fe29D15b0302E8ca234b365328fD49B5",
+            },
+        ],
+
+        config: {
+            ...config,
+            governanceAddress: "", // defaults to deployer
+            feeRecipient: "", // defaults to deployer
+            mintAuthority: "0x44Bb4eF43408072bC888Afd1a5986ba0Ce35Cb54",
+
+            tokenPrefix: "test",
+            chainName: "Arbitrum",
+
+            mintFee: 0,
+            burnFee: 0,
+        },
+    },
+
+    arbitrumMainnet: {
+        RenProxyAdmin: "0xbdf27A048Ea859A20Fef6B956eaeeA4e80F2Bdc7",
+
+        GatewayRegistry: "0x21C482f153D0317fe85C60bE1F7fa079019fcEbD",
+        BasicAdapter: "0xAC23817f7E9Ec7EB6B7889BDd2b50e04a44470c5",
+        GenericAdapter: "",
+
+        RenERC20LogicV1: "0x3799006a87FDE3CCFC7666B3E6553B03ED341c2F",
+        MintGatewayLogicV2: "0x6b8bB175c092DE7d81860B18DB360B734A2598e0",
+
+        assets: [
+            {
+                // renBTC
+                symbol: "BTC",
+                decimals: 8,
+                token: "0xDBf31dF14B66535aF65AaC99C32e9eA844e14501",
+                gateway: "0x05Cadbf3128BcB7f2b89F3dD55E5B0a036a49e20",
+            },
+
+            {
+                // renZEC
+                symbol: "ZEC",
+                decimals: 8,
+                token: "0x31a0D1A199631D244761EEba67e8501296d2E383",
+                gateway: "0x7986568375Af35B427f3f51389d73196967C356a",
+            },
+
+            {
+                // renBCH
+                symbol: "BCH",
+                decimals: 8,
+                token: "0xc3fEd6eB39178A541D274e6Fc748d48f0Ca01CC3",
+                gateway: "0x06A2C5d79c66268610eEBBca10AFa17092860830",
+            },
+
+            {
+                // renFIL
+                symbol: "FIL",
+                decimals: 18,
+                token: "0xc4Ace9278e7E01755B670C0838c3106367639962",
+                gateway: "0x4d59f628CB8e4670b779eAE22aF0c46DebC06695",
+            },
+
+            {
+                // renDGB
+                symbol: "DGB",
+                decimals: 8,
+                token: "0x2628568509E87c4429fBb5c664Ed11391BE1BD29",
+                gateway: "0x677b23D0ffc82414B063accA197f74d791285952",
+            },
+
+            {
+                // renDOGE
+                symbol: "DOGE",
+                decimals: 8,
+                token: "0xcE829A89d4A55a63418bcC43F00145adef0eDB8E",
+                gateway: "0x9FB2C0b19A9fee6d02E7Ea861C71503608B64d6A",
+            },
+
+            {
+                // renLUNA
+                symbol: "LUNA",
+                decimals: 6,
+                token: "0x7c7DAAF2dB46fEFd067f002a69FD0BE14AeB159f",
+                gateway: "0x731Ea4Ba77fF184d89dBeB160A0078274Acbe9D2",
+            },
+        ],
+
+        config: {
+            ...config,
+            governanceAddress: "", // defaults to deployer
+            feeRecipient: "", // defaults to deployer
+            mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7", // defaults to deployer
+
+            tokenPrefix: "ren",
+            chainName: "Arbitrum",
 
             mintFee: 0,
             burnFee: 0,

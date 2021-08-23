@@ -5,7 +5,7 @@ import { ContractFactory } from "ethers";
 import { ethers } from "hardhat";
 
 export const sleep = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
+    new Promise((resolve) => setTimeout(resolve, ms, undefined));
 
 export const at = async <Factory extends ContractFactory>(
     contractName: string,

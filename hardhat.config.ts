@@ -32,9 +32,9 @@ const config: HardhatUserConfig = {
                 version: "0.5.17",
                 settings: {
                     optimizer: {
-                      enabled: true,
-                      runs: 200
-                    }
+                        enabled: true,
+                        runs: 200,
+                    },
                 },
             },
         ],
@@ -55,6 +55,12 @@ const config: HardhatUserConfig = {
         },
         ethereumTestnet: {
             url: `https://kovan.infura.io/v3/${INFURA_KEY}`,
+            accounts: {
+                mnemonic: MNEMONIC_TESTNET,
+            },
+        },
+        goerliTestnet: {
+            url: `https://goerli.infura.io/v3/${INFURA_KEY}`,
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },
@@ -113,6 +119,24 @@ const config: HardhatUserConfig = {
                 mnemonic: MNEMONIC_MAINNET,
             },
         },
+
+        arbitrumTestnet: {
+            url: `https://rinkeby.arbitrum.io/rpc`,
+            accounts: {
+                mnemonic: MNEMONIC_TESTNET,
+            },
+            gasPrice: 0, // https://developer.offchainlabs.com/docs/contract_deployment
+            gas: 80000000,
+        },
+        arbitrumMainnet: {
+            url: `https://arb1.arbitrum.io/rpc`,
+            accounts: {
+                mnemonic: MNEMONIC_MAINNET,
+            },
+            gasPrice: 0,
+            gas: 80000000,
+        },
+
         coverage: {
             url: "http://127.0.0.1:8555", // Coverage launches its own ganache-cli client
         },
@@ -120,7 +144,7 @@ const config: HardhatUserConfig = {
     etherscan: {
         // Your API key for Etherscan
         // Obtain one at https://etherscan.io/
-        apiKey: POLYGONSCAN_KEY,
+        apiKey: ETHERSCAN_KEY,
     },
 };
 

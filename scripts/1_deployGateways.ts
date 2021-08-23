@@ -1,6 +1,6 @@
 import { keccak256 } from "ethereumjs-util";
 import { ethers } from "hardhat";
-import { fromWei, toChecksumAddress } from "web3-utils";
+import { toChecksumAddress } from "web3-utils";
 
 import chalk from "chalk";
 import {
@@ -78,7 +78,7 @@ export async function deployGateways() {
 
     let registry: GatewayRegistry;
     if (!addresses.GatewayRegistry) {
-        console.log(`Deploying Gateway contract`);
+        console.log(`Deploying Gateway Registry contract`);
         registry = await deploy<GatewayRegistry__factory>("GatewayRegistry");
         actionCount++;
     } else {
@@ -87,18 +87,6 @@ export async function deployGateways() {
             addresses.GatewayRegistry
         );
     }
-
-    // if (!addresses.GenericAdapter) {
-    //     console.log(`Deploying GenericAdapter`);
-    //     await deploy<GenericAdapter__factory>("GenericAdapter", registry.address);
-    //     actionCount++;
-    // }
-
-    // await deploy<GaslessWithUniswap_factory>(
-    //     "GaslessWithUniswap",
-    //     GenericAdapter.address,
-    //     "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
-    // );
 
     // const protocolGatewayRegistry = await protocol.gatewayRegistry();
     // if (Ox(protocolGatewayRegistry) !== Ox(registry.address)) {
@@ -139,9 +127,11 @@ export async function deployGateways() {
     // Initialize RenERC20Logic so others can't.
     if (Ox(await renERC20Logic.owner()) === Ox(NULL)) {
         console.log("Ensuring RenERC20Logic is initialized");
-        await renERC20Logic[
-            "initialize(uint256,address,uint256,string,string,string,uint8)"
-        ](0, contractOwner.address, "1000000000000000000", "1", "", "", 0);
+        await (
+            await renERC20Logic[
+                "initialize(uint256,address,uint256,string,string,string,uint8)"
+            ](0, contractOwner.address, "1000000000000000000", "1", "", "", 0)
+        ).wait();
         actionCount++;
     }
 
@@ -162,9 +152,11 @@ export async function deployGateways() {
     // Initialize GatewayLogic so others can't.
     if (Ox(await gatewayLogic.owner()) === Ox(NULL)) {
         console.log("Ensuring GatewayLogic is initialized");
-        await gatewayLogic[
-            "initialize(address,address,address,uint16,uint16,uint256)"
-        ](NULL, NULL1, NULL1, 10000, 10000, 0);
+        await (
+            await gatewayLogic[
+                "initialize(address,address,address,uint16,uint16,uint256)"
+            ](NULL, NULL1, NULL1, 10000, 10000, 0)
+        ).wait();
         actionCount++;
     }
 
@@ -208,35 +200,38 @@ export async function deployGateways() {
         }
 
         if (!tokenInitialized) {
+            console.log(`Initializing ${prefixedSymbol} proxy`);
             const tokenProxy = await at<RenERC20Proxy__factory>(
                 "RenERC20Proxy",
                 token
             );
-            await tokenProxy["initialize(address,address,bytes)"](
-                renERC20Logic.address,
-                renProxyAdmin.address,
-                encodeCallData(
-                    "initialize",
-                    [
-                        "uint256",
-                        "address",
-                        "uint256",
-                        "string",
-                        "string",
-                        "string",
-                        "uint8",
-                    ],
-                    [
-                        chainID,
-                        contractOwner.address,
-                        "1000000000000000000",
-                        "1",
-                        prefixedSymbol,
-                        prefixedSymbol,
-                        decimals,
-                    ]
+            await (
+                await tokenProxy["initialize(address,address,bytes)"](
+                    renERC20Logic.address,
+                    renProxyAdmin.address,
+                    encodeCallData(
+                        "initialize",
+                        [
+                            "uint256",
+                            "address",
+                            "uint256",
+                            "string",
+                            "string",
+                            "string",
+                            "uint8",
+                        ],
+                        [
+                            chainID,
+                            contractOwner.address,
+                            "1000000000000000000",
+                            "1",
+                            prefixedSymbol,
+                            prefixedSymbol,
+                            decimals,
+                        ]
+                    )
                 )
-            );
+            ).wait();
             await sleep(1 * 1000);
             actionCount++;
         }
@@ -249,7 +244,9 @@ export async function deployGateways() {
                 `${prefixedSymbol} is pointing to out-dated RenERC20Logic.`
             );
 
-            await renProxyAdmin.upgrade(token, renERC20Logic.address);
+            await (
+                await renProxyAdmin.upgrade(token, renERC20Logic.address)
+            ).wait();
             actionCount++;
         }
 
@@ -278,29 +275,35 @@ export async function deployGateways() {
                 "MintGatewayProxy",
                 gateway
             );
-            await mintGatewayProxy["initialize(address,address,bytes)"](
-                gatewayLogic.address,
-                renProxyAdmin.address,
-                encodeCallData(
-                    "initialize",
-                    [
-                        "address",
-                        "address",
-                        "address",
-                        "uint16",
-                        "uint16",
-                        "uint256",
-                    ],
-                    [
-                        token,
-                        feeRecipient,
-                        mintAuthority,
-                        config.mintFee,
-                        config.burnFee,
-                        0,
-                    ]
+            await (
+                await mintGatewayProxy["initialize(address,address,bytes)"](
+                    gatewayLogic.address,
+                    renProxyAdmin.address,
+                    encodeCallData(
+                        "initialize",
+                        [
+                            "address",
+                            "address",
+                            "address",
+                            "uint16",
+                            "uint16",
+                            "uint256",
+                        ],
+                        [
+                            token,
+                            feeRecipient,
+                            mintAuthority,
+                            config.mintFee,
+                            config.burnFee,
+                            0,
+                        ]
+                    )
+                    // {
+                    //     gasLimit: 8000000,
+                    //     gasPrice: 6 * 1e9,
+                    // }
                 )
-            );
+            ).wait();
             await sleep(1 * 1000);
             actionCount++;
         }
@@ -310,18 +313,19 @@ export async function deployGateways() {
             "0x" +
             keccak256(Buffer.from(selector)).toString("hex").toLowerCase();
 
-        const MintGatewayProxyLogic = await renProxyAdmin.getProxyImplementation(
-            gatewayInstance.address
-        );
+        const MintGatewayProxyLogic =
+            await renProxyAdmin.getProxyImplementation(gatewayInstance.address);
         if (Ox(MintGatewayProxyLogic) !== Ox(gatewayLogic.address)) {
             console.log(
                 `${prefixedSymbol} gateway is pointing to out-dated GatewayLogic.`
             );
 
-            await renProxyAdmin.upgrade(
-                gatewayInstance.address,
-                gatewayLogic.address
-            );
+            await (
+                await renProxyAdmin.upgrade(
+                    gatewayInstance.address,
+                    gatewayLogic.address
+                )
+            ).wait();
             actionCount++;
         }
 
@@ -343,7 +347,9 @@ export async function deployGateways() {
             console.log(
                 `Updating selector hash from ${selectorHash} to ${expectedSelectorHash} (${selector})`
             );
-            await gatewayInstance.updateSelectorHash(expectedSelectorHash);
+            await (
+                await gatewayInstance.updateSelectorHash(expectedSelectorHash)
+            ).wait();
             actionCount++;
         }
 
@@ -355,7 +361,7 @@ export async function deployGateways() {
             console.log(
                 `Updating mint fee from ${actualMintFee} to ${config.mintFee}`
             );
-            await gatewayInstance.updateMintFee(config.mintFee);
+            await (await gatewayInstance.updateMintFee(config.mintFee)).wait();
             actionCount++;
         }
 
@@ -367,7 +373,7 @@ export async function deployGateways() {
             console.log(
                 `Updating burn fee from ${actualBurnFee} to ${config.burnFee}`
             );
-            await gatewayInstance.updateBurnFee(config.burnFee);
+            await (await gatewayInstance.updateBurnFee(config.burnFee)).wait();
             actionCount++;
         }
 
@@ -376,20 +382,32 @@ export async function deployGateways() {
             console.log(
                 `Updating mint authority in ${prefixedSymbol} Gateway. Was ${gatewayMintAuthority}, now is ${mintAuthority}`
             );
-            await gatewayInstance.updateMintAuthority(mintAuthority);
+            await (
+                await gatewayInstance.updateMintAuthority(mintAuthority)
+            ).wait();
             actionCount++;
         }
 
         const tokenOwner = await tokenInstance.owner();
+        const pendingOwner = await tokenInstance.pendingOwner();
         if (Ox(tokenOwner) !== Ox(gatewayInstance.address)) {
-            console.log(`Transferring ${prefixedSymbol} ownership`);
-
             if (Ox(tokenOwner) === Ox(contractOwner.address)) {
-                await tokenInstance.transferOwnership(gatewayInstance.address);
+                if (Ox(pendingOwner) !== Ox(gatewayInstance.address)) {
+                    console.log(`Transferring ${prefixedSymbol} ownership`);
+                    await (
+                        await tokenInstance.transferOwnership(
+                            gatewayInstance.address,
+                            {
+                                gasLimit: 8000000,
+                                gasPrice: 6 * 1e9,
+                            }
+                        )
+                    ).wait();
+                }
 
                 // Update token's Gateway contract
                 console.log(`Claiming ${prefixedSymbol} ownership in Gateway`);
-                await gatewayInstance.claimTokenOwnership();
+                await (await gatewayInstance.claimTokenOwnership()).wait();
             } else {
                 console.log(
                     `Transferring token ownership from ${tokenOwner} to new ${prefixedSymbol} Gateway`
@@ -398,14 +416,16 @@ export async function deployGateways() {
                     "MintGatewayLogicV2",
                     tokenOwner
                 );
-                await oldGateway.transferTokenOwnership(
-                    gatewayInstance.address
-                );
+                await (
+                    await oldGateway.transferTokenOwnership(
+                        gatewayInstance.address
+                    )
+                ).wait();
                 // This will also call claim, but we try anyway because older
                 // contracts didn't:
                 try {
                     // Claim ownership
-                    await gatewayInstance.claimTokenOwnership();
+                    await (await gatewayInstance.claimTokenOwnership()).wait();
                 } catch (error) {
                     console.error(error);
                 }
@@ -427,16 +447,20 @@ export async function deployGateways() {
             const otherToken = await registry.getTokenBySymbol(symbol);
             if (Ox(otherRegistration) === Ox(NULL)) {
                 console.log(`Registering ${prefixedSymbol} Gateway`);
-                await registry.setGateway(symbol, token, gateway);
+                await (
+                    await registry.setGateway(symbol, token, gateway)
+                ).wait();
             } else {
                 console.log(
                     `Updating registered ${prefixedSymbol} Gateway (was ${otherRegistration})`
                 );
                 if (Ox(token) === Ox(otherToken)) {
-                    await registry.updateGateway(token, gateway);
+                    await (await registry.updateGateway(token, gateway)).wait();
                 } else {
-                    await registry.removeGateway(symbol);
-                    await registry.setGateway(symbol, token, gateway);
+                    await (await registry.removeGateway(symbol)).wait();
+                    await (
+                        await registry.setGateway(symbol, token, gateway)
+                    ).wait();
                 }
             }
             actionCount++;
@@ -464,7 +488,11 @@ export async function deployGateways() {
                     currentGatewayOwner
                 )}, now is ${Ox(governanceAddress)}`
             );
-            await gatewayInstance._directTransferOwnership(governanceAddress);
+            await (
+                await gatewayInstance._directTransferOwnership(
+                    governanceAddress
+                )
+            ).wait();
             actionCount++;
         } else if (Ox(pendingGatewayOwner) === Ox(governanceAddress)) {
             try {
@@ -473,9 +501,11 @@ export async function deployGateways() {
                         currentGatewayOwner
                     )}, now is ${Ox(governanceAddress)}`
                 );
-                await gatewayInstance._directTransferOwnership(
-                    governanceAddress
-                );
+                await (
+                    await gatewayInstance._directTransferOwnership(
+                        governanceAddress
+                    )
+                ).wait();
                 actionCount++;
             } catch (error) {
                 console.log(
@@ -505,7 +535,7 @@ export async function deployGateways() {
                 currentProxyAdminOwner
             )}, now is ${Ox(governanceAddress)}`
         );
-        await renProxyAdmin.transferOwnership(governanceAddress);
+        await (await renProxyAdmin.transferOwnership(governanceAddress)).wait();
         actionCount++;
     }
 
@@ -521,7 +551,9 @@ export async function deployGateways() {
                 currentGatewayRegistryOwner
             )}, now is ${Ox(governanceAddress)}`
         );
-        await registry._directTransferOwnership(governanceAddress);
+        await (
+            await registry._directTransferOwnership(governanceAddress)
+        ).wait();
         actionCount++;
     } else if (Ox(pendingGatewayRegistryOwner) !== Ox(governanceAddress)) {
         try {
@@ -530,7 +562,9 @@ export async function deployGateways() {
                     currentGatewayRegistryOwner
                 )}, now is ${Ox(governanceAddress)}`
             );
-            await registry._directTransferOwnership(governanceAddress);
+            await (
+                await registry._directTransferOwnership(governanceAddress)
+            ).wait();
             actionCount++;
         } catch (error) {
             console.log(

@@ -36,8 +36,8 @@ contract MintGatewayLogicV3 is
         address indexed _to,
         uint256 _amount,
         uint256 indexed _n,
-        // Log the nHash instead of sHash so that it can be queried without
-        // knowing the sHash.
+        // Log the nHash instead of sigHash so that it can be queried without
+        // knowing the sigHash.
         bytes32 indexed _nHash
     );
     event LogBurn(

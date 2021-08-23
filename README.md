@@ -1,9 +1,20 @@
 # `⛩️ gateway-sol`
 
-Ren gateway contracts written in Solidity
+## EVM contracts for minting and burning ren-assets
 
-<!-- [![CircleCI](https://circleci.com/gh/renproject/gateway-sol.svg?style=shield)](https://circleci.com/gh/renproject/gateway-sol) -->
-<!-- [![Coverage Status](https://coveralls.io/repos/github/renproject/gateway-sol/badge.svg?branch=master)](https://coveralls.io/github/renproject/gateway-sol?branch=master) -->
+Ren has two repositories for its Solidity contract:
+
+-   [`darknode-sol`](https://github.com/renproject/darknode-sol) - contracts on Ethereum for managing darknode registrations.
+-   `gateway-sol` (this repository) - contracts on multiple EVM chains for minting and burning of ren-assets.
+
+## ~ [Documentation](https://renproject.github.io/ren-client-docs/contracts/) ~
+
+-   For the latest contract addresses, see the [contract addresses](https://renproject.github.io/ren-client-docs/contracts/deployments) page.
+-   For a summary of each contract, see the [summary of contracts](https://renproject.github.io/ren-client-docs/contracts/summary) page.
+
+<details>
+
+<summary>Development notes</summary>
 
 ## Setup
 
@@ -79,3 +90,5 @@ For now, follow the same steps as in [./VERIFY.md](./VERIFY.md) until a script i
 For contracts that use a Proxy, you then need to go to the Etherscan page, select "More Options" and then "Is this a proxy?":
 
 ![image](https://user-images.githubusercontent.com/2221955/110889473-4c881900-8342-11eb-8c50-0fd09c4e239a.png)
+
+</details>

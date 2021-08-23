@@ -147,4 +147,4 @@ export const sigToString = (sig: ECDSASignature) => {
 };
 
 export const sleep = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
+    new Promise((resolve) => setTimeout(resolve, ms, undefined));

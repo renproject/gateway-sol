@@ -10,7 +10,7 @@ import {SignatureVerifier} from "./SignatureVerifier.sol";
 import {ValidString} from "../../libraries/ValidString.sol";
 import {RenVMHashes} from "./RenVMHashes.sol";
 
-contract GatewayStateV1 {
+contract GatewayStateV3 {
     // Selector hash details.
     string public chain;
     string public asset;
@@ -26,13 +26,15 @@ contract GatewayStateV1 {
 
     address public previousGateway;
 
+    uint256 internal eventNonce;
+
     uint256[43] private __gap;
 }
 
 /// @notice Gateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
-contract GatewayStateManagerV1 is Initializable, OwnableUpgradeable, GatewayStateV1 {
+contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStateV3 {
     event LogChainUpdated(string _chain, bytes32 _selectorHash);
     event LogAssetUpdated(string _asset, bytes32 _selectorHash);
     event LogSignatureVerifierUpdated(SignatureVerifier indexed _newSignatureVerifier);
@@ -123,7 +125,7 @@ contract GatewayStateManagerV1 is Initializable, OwnableUpgradeable, GatewayStat
         }
 
         if (previousGateway != address(0x0)) {
-            return GatewayStateManagerV1(previousGateway)._status(hash_);
+            return GatewayStateManagerV3(previousGateway)._status(hash_);
         }
 
         return false;

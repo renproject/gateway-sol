@@ -9,8 +9,6 @@ import {RenAssetV1} from "../RenAsset/RenAsset.sol";
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
 contract MintGatewayWithBurnStorageV3 is MintGatewayV3 {
-    uint256 public nextN;
-
     struct Burn {
         uint256 _blocknumber;
         bytes _to;
@@ -40,11 +38,19 @@ contract MintGatewayWithBurnStorageV3 is MintGatewayV3 {
         // throw.
         RenAssetV1(token).burn(msg.sender, amount_);
 
-        emit LogBurn(bytes(recipient_), amount_, nextN, bytes(recipient_));
+        uint256 burnNonce = nextN();
 
-        burns[nextN] = Burn({_blocknumber: block.number, _to: recipient_, _amount: amount_, _chain: "", _payload: ""});
+        emit LogBurn(bytes(recipient_), amount_, burnNonce, bytes(recipient_));
 
-        nextN += 1;
+        burns[burnNonce] = Burn({
+            _blocknumber: block.number,
+            _to: recipient_,
+            _amount: amount_,
+            _chain: "",
+            _payload: ""
+        });
+
+        eventNonce = burnNonce + 1;
 
         return amount_;
     }

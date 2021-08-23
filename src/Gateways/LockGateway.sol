@@ -9,13 +9,13 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {RenAssetV1} from "../RenAsset/RenAsset.sol";
 import {SafeTransferWithFees} from "./common/SafeTransferWithFees.sol";
-import {GatewayStateV1, GatewayStateManagerV1} from "./common/GatewayState.sol";
+import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
 
 /// @notice Gateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
-contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV1, GatewayStateManagerV1 {
+contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, GatewayStateManagerV3 {
     using SafeERC20 for IERC20;
     using SafeTransferWithFees for IERC20;
 
@@ -26,6 +26,7 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV1, Gat
         string recipientChain,
         bytes recipientPayload,
         uint256 amount,
+        uint256 indexed lockNonce,
         // Indexed versions of previous parameters.
         string indexed recipientAddressIndexed,
         string indexed recipientChainIndexed
@@ -38,12 +39,14 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV1, Gat
         address token
     ) public initializer {
         OwnableUpgradeable.__Ownable_init();
-        GatewayStateManagerV1.__GatewayStateManager_init(chain_, asset_, signatureVerifier_, token);
+        GatewayStateManagerV3.__GatewayStateManager_init(chain_, asset_, signatureVerifier_, token);
     }
 
-    // Governance functions ////////////////////////////////////////////////////
-
     // Public functions ////////////////////////////////////////////////////////
+
+    function nextN() public view returns (uint256) {
+        return GatewayStateV3.eventNonce;
+    }
 
     /// @notice burn destroys tokens after taking a fee for the `_feeRecipient`,
     ///         allowing the associated assets to be released on their native
@@ -70,20 +73,25 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV1, Gat
 
         // Burn the tokens. If the user doesn't have enough tokens, this will
         // throw.
-        uint256 amountActual = IERC20(GatewayStateV1.token).safeTransferFromWithFees(
+        uint256 amountActual = IERC20(GatewayStateV3.token).safeTransferFromWithFees(
             msg.sender,
             address(this),
             amount_
         );
+
+        uint256 lockNonce = GatewayStateV3.eventNonce;
 
         emit LogLock(
             recipientAddress_,
             recipientChain_,
             recipientPayload_,
             amountActual,
+            lockNonce,
             recipientAddress_,
             recipientChain_
         );
+
+        GatewayStateV3.eventNonce = lockNonce + 1;
 
         return amount_;
     }
@@ -109,7 +117,7 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV1, Gat
         bytes32 sigHash = RenVMHashes.calculateSigHash(
             pHash_,
             amount_,
-            GatewayStateV1.selectorHash,
+            GatewayStateV3.selectorHash,
             msg.sender,
             nHash_
         );
@@ -118,7 +126,7 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV1, Gat
         require(status(sigHash) == false && status(nHash_) == false, "LockGateway: signature already spent");
 
         // If the signature fails verification, throw an error.
-        if (!GatewayStateV1.signatureVerifier.verifySignature(sigHash, sig_)) {
+        if (!GatewayStateV3.signatureVerifier.verifySignature(sigHash, sig_)) {
             revert("LockGateway: invalid signature");
         }
 
@@ -127,7 +135,7 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV1, Gat
         _status[nHash_] = true;
 
         // Mint the amount to the msg.sender.
-        IERC20(GatewayStateV1.token).safeTransfer(msg.sender, amount_);
+        IERC20(GatewayStateV3.token).safeTransfer(msg.sender, amount_);
 
         // Emit a log with a unique identifier 'n'.
         emit LogRelease(msg.sender, amount_, sigHash, nHash_);

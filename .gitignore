@@ -1,8 +1,8 @@
+*.log*
+build/
+
 # Node / NPM / Yarn
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # Build / test artifacts
 coverage*

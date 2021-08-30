@@ -9,7 +9,7 @@ import {ERC20WithPermit} from "./ERC20WithPermit.sol";
 
 import "./ERC20WithPermit.sol";
 
-contract RenAssetStateV1 {
+contract RenAssetStateV2 {
     string public constant NAME = "RenAsset";
 
     uint8 internal _decimals;
@@ -20,7 +20,7 @@ contract RenAssetStateV1 {
 /// @notice RenERC20 represents a digital asset that has been bridged on to
 /// the Ethereum ledger. It exposes mint and burn functions that can only be
 /// called by it's associated Gateway contract.
-contract RenAssetV1 is Initializable, ERC20Upgradeable, ERC20WithPermit, OwnableUpgradeable, RenAssetStateV1 {
+contract RenAssetV2 is Initializable, ERC20Upgradeable, ERC20WithPermit, OwnableUpgradeable, RenAssetStateV2 {
     /* solium-disable-next-line no-empty-blocks */
     function __RenAsset_init(
         uint256 chainId_,
@@ -32,11 +32,11 @@ contract RenAssetV1 is Initializable, ERC20Upgradeable, ERC20WithPermit, Ownable
         ERC20Upgradeable.__ERC20_init(name_, symbol_);
         ERC20WithPermit.__ERC20WithPermit_init(chainId_, version_, name_, symbol_);
         OwnableUpgradeable.__Ownable_init();
-        RenAssetStateV1._decimals = decimals_;
+        RenAssetStateV2._decimals = decimals_;
     }
 
     function decimals() public view override returns (uint8) {
-        return RenAssetStateV1._decimals;
+        return RenAssetStateV2._decimals;
     }
 
     /// @notice mint can only be called by the tokens' associated Gateway

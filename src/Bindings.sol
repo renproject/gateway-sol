@@ -7,7 +7,6 @@ import "./RenAsset/RenAsset.sol";
 
 import "./Gateways/LockGateway.sol";
 import "./Gateways/MintGateway.sol";
-import "./Gateways/_MintGatewayWithBurnStorage.sol";
 
 import "./GatewayRegistry/ProxyBeacon.sol";
 import "./GatewayRegistry/RenAssetFactory.sol";

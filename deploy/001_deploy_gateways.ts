@@ -5,7 +5,6 @@ import {
   GatewayRegistryV2,
   RenAssetProxyBeaconV1,
   MintGatewayProxyBeaconV1,
-  MintGatewayWithBurnStorageProxyBeaconV1,
   LockGatewayProxyBeaconV1,
   SignatureVerifier,
   LockGatewayV3,
@@ -13,7 +12,7 @@ import {
 } from '../typechain';
 import {BaseContract} from 'ethers';
 
-const CREATE2_SALT = keccak256('0x52454e');
+const CREATE2_SALT = keccak256(Buffer.from('REN-0001'));
 
 const setupCreate2 =
   (hre: HardhatRuntimeEnvironment) =>
@@ -30,6 +29,7 @@ const setupCreate2 =
       log: true,
       deterministicDeployment: CREATE2_SALT,
     });
+    console.log(name, result.address);
     return await ethers.getContractAt<T>(name, result.address, deployer);
   };
 
@@ -46,7 +46,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const mintAuthority = deployer;
 
   // Deploy RenAssetProxyBeacon ////////////////////////////////////////////////
-  const renAssetImplementation = await deploy('RenAssetV1', {
+  const renAssetImplementation = await deploy('RenAssetV2', {
     from: deployer,
     log: true,
     deterministicDeployment: CREATE2_SALT,
@@ -66,21 +66,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     'MintGatewayProxyBeaconV1',
     [mintGatewayImplementation.address, deployer]
   );
-
-  // Deploy MintGatewayProxyBeacon /////////////////////////////////////////////
-  const mintGatewayWithBurnStorageImplementation = await deploy(
-    'MintGatewayWithBurnStorageV3',
-    {
-      from: deployer,
-      log: true,
-      deterministicDeployment: CREATE2_SALT,
-    }
-  );
-  const mintGatewayWithBurnStorageProxyBeacon =
-    await create2<MintGatewayWithBurnStorageProxyBeaconV1>(
-      'MintGatewayWithBurnStorageProxyBeaconV1',
-      [mintGatewayWithBurnStorageImplementation.address, deployer]
-    );
 
   // Deploy LockGatewayProxyBeacon /////////////////////////////////////////////
   const lockGatewayImplementation = await deploy('LockGatewayV3', {
@@ -109,7 +94,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     chainId,
     renAssetProxyBeacon.address,
     mintGatewayProxyBeacon.address,
-    mintGatewayWithBurnStorageProxyBeacon.address,
     lockGatewayProxyBeacon.address,
     deployer
   );
@@ -123,58 +107,54 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     await mintGatewayProxyBeacon.PROXY_DEPLOYER(),
     gatewayRegistry.address
   );
-  await mintGatewayWithBurnStorageProxyBeacon.grantRole(
-    await mintGatewayProxyBeacon.PROXY_DEPLOYER(),
-    gatewayRegistry.address
-  );
   await lockGatewayProxyBeacon.grantRole(
     await lockGatewayProxyBeacon.PROXY_DEPLOYER(),
     gatewayRegistry.address
   );
 
-  await gatewayRegistry.deployMintGatewayWithBurnStorageAndRenAsset(
+  await gatewayRegistry.deployMintGatewayAndRenAsset(
     'BTC',
     'renBTC',
     'renBTC',
     8,
     '1'
   );
-  await gatewayRegistry.deployMintGatewayWithBurnStorageAndRenAsset(
+  await gatewayRegistry.deployMintGatewayAndRenAsset(
     'ZEC',
     'renZEC',
     'renZEC',
     8,
     '1'
   );
-  await gatewayRegistry.deployMintGatewayWithBurnStorageAndRenAsset(
+  await gatewayRegistry.deployMintGatewayAndRenAsset(
     'BCH',
     'renBCH',
     'renBCH',
     8,
     '1'
   );
-  await gatewayRegistry.deployMintGatewayWithBurnStorageAndRenAsset(
+  await gatewayRegistry.deployMintGatewayAndRenAsset(
     'DGB',
     'renDGB',
     'renDGB',
     8,
     '1'
   );
-  await gatewayRegistry.deployMintGatewayWithBurnStorageAndRenAsset(
+  await gatewayRegistry.deployMintGatewayAndRenAsset(
     'FIL',
     'renFIL',
     'renFIL',
     18,
     '1'
   );
-  await gatewayRegistry.deployMintGatewayWithBurnStorageAndRenAsset(
+  await gatewayRegistry.deployMintGatewayAndRenAsset(
     'LUNA',
     'renLUNA',
     'renLUNA',
     6,
     '1'
   );
-  await gatewayRegistry.deployMintGatewayWithBurnStorageAndRenAsset(
+  await gatewayRegistry.deployMintGatewayAndRenAsset(
     'DOGE',
     'renDOGE',
     'renDOGE',
@@ -186,6 +166,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     'UST',
     'renUST',
     'renUST',
+    18,
+    '1'
+  );
+
+  await gatewayRegistry.deployMintGatewayAndRenAsset(
+    'USDC',
+    'renUSDC',
+    'renUSDC',
     2,
     '1'
   );
@@ -229,7 +217,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 export default func;
 
 func.tags = [
-  'RenAssetV1',
+  'RenAssetV2',
   'RenAssetProxyBeacon',
   'MintGatewayV3',
   'MintGatewayProxyBeacon',

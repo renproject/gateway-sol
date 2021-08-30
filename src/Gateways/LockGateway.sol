@@ -7,7 +7,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {RenAssetV1} from "../RenAsset/RenAsset.sol";
+import {RenAssetV2} from "../RenAsset/RenAsset.sol";
 import {SafeTransferWithFees} from "./common/SafeTransferWithFees.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";

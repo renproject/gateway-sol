@@ -28,14 +28,14 @@ contract BasicBridge {
 
     function burn(
         string calldata _symbol,
-        bytes calldata _to,
+        string calldata _to,
         uint256 _amount
     ) external {
         require(
             registry.getRenAssetBySymbol(_symbol).transferFrom(msg.sender, address(this), _amount),
             "token transfer failed"
         );
-        registry.getMintGatewayBySymbol(_symbol).burn(_to, _amount);
+        registry.getMintGatewayBySymbol(_symbol).burn(bytes(_to), _amount);
     }
 
     function lock(

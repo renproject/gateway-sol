@@ -6,8 +6,9 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-
+import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import {IMintGateway} from "../Gateways/interfaces/IMintGateway.sol";
 import {ILockGateway} from "../Gateways/interfaces/ILockGateway.sol";
 import {ValidString} from "../libraries/ValidString.sol";
@@ -139,16 +140,10 @@ contract GatewayRegistryV2 is
         uint256 chainId_,
         address renAssetProxyBeacon_,
         address mintGatewayProxyBeacon_,
-        address mintGatewayWithBurnStorageProxyBeacon_,
         address lockGatewayProxyBeacon_,
         address adminAddress_
     ) public initializer onlyValidString(chainName_) {
-        __RenAssetFactory_init(
-            renAssetProxyBeacon_,
-            mintGatewayWithBurnStorageProxyBeacon_,
-            mintGatewayProxyBeacon_,
-            lockGatewayProxyBeacon_
-        );
+        __RenAssetFactory_init(renAssetProxyBeacon_, mintGatewayProxyBeacon_, lockGatewayProxyBeacon_);
         chainName = chainName_;
         chainId = chainId_;
         AccessControlEnumerableUpgradeable._setupRole(AccessControlUpgradeable.DEFAULT_ADMIN_ROLE, adminAddress_);
@@ -175,8 +170,30 @@ contract GatewayRegistryV2 is
 
     event LogSignatureVerifierUpdated(address indexed newSignatureVerifier);
 
+    // MODIFIERS ///////////////////////////////////////////////////////////////
+
     modifier onlyValidString(string calldata str_) {
         require(ValidString.isValidString(str_), "GatewayRegistry: empty or invalid string input");
+        _;
+    }
+
+    /// @notice Modifier to require the caller to have at least one of two roles.
+    modifier onlyAtLeastOneRole(bytes32 role1, bytes32 role2) {
+        address account = _msgSender();
+        if (!hasRole(role1, account) && !hasRole(role2, account)) {
+            revert(
+                string(
+                    abi.encodePacked(
+                        "AccessControl: account ",
+                        StringsUpgradeable.toHexString(uint160(account), 20),
+                        " is missing roles ",
+                        StringsUpgradeable.toHexString(uint256(role1), 32),
+                        " or ",
+                        StringsUpgradeable.toHexString(uint256(role2), 32)
+                    )
+                )
+            );
+        }
         _;
     }
 
@@ -185,12 +202,10 @@ contract GatewayRegistryV2 is
     /// @notice Allow the owner to update the signature verifier contract.
     ///
     /// @param nextSignatureVerifier_ The new verifier contract address.
-    function updateSignatureVerifier(address nextSignatureVerifier_) public {
-        require(
-            hasRole(CAN_ADD_GATEWAYS, _msgSender()) || hasRole(CAN_UPDATE_GATEWAYS, _msgSender()),
-            "GatewayRegistry: not authorized"
-        );
-
+    function updateSignatureVerifier(address nextSignatureVerifier_)
+        public
+        onlyAtLeastOneRole(CAN_ADD_GATEWAYS, CAN_UPDATE_GATEWAYS)
+    {
         require(nextSignatureVerifier_ != address(0x0), "Gateway: invalid signature verifier");
         signatureVerifier = nextSignatureVerifier_;
         emit LogSignatureVerifierUpdated(signatureVerifier);
@@ -208,17 +223,12 @@ contract GatewayRegistryV2 is
         string calldata symbol_,
         address renAsset_,
         address mintGateway_
-    ) public onlyValidString(symbol_) {
+    ) public onlyValidString(symbol_) onlyAtLeastOneRole(CAN_ADD_GATEWAYS, CAN_UPDATE_GATEWAYS) {
         if (mintGatewaySymbols.contains(symbol_)) {
             // If there is an existing gateway for the symbol, delete it. Note
             // that this will check that the sender has the CAN_UPDATE_GATEWAYS
             // role.
             removeMintGateway(symbol_);
-        } else {
-            require(
-                hasRole(CAN_ADD_GATEWAYS, _msgSender()) || hasRole(CAN_UPDATE_GATEWAYS, _msgSender()),
-                "GatewayRegistry: not authorized"
-            );
         }
 
         // Check that token, Gateway and symbol haven't already been registered.
@@ -234,34 +244,38 @@ contract GatewayRegistryV2 is
         emit LogMintGatewayUpdated(symbol_, symbol_, renAsset_, mintGateway_);
     }
 
-    function deployMintGatewayAndRenAsset(
-        string calldata asset_,
-        string memory erc20Name_,
-        string memory erc20Symbol_,
-        uint8 erc20Decimals_,
+    function deployMintGateway(
+        string calldata symbol_,
+        address renAsset_,
         string memory version_
     ) external onlyRole(CAN_ADD_GATEWAYS) {
         require(bytes(chainName).length > 0, "GatewayRegistry: chain details not set");
-        address token = address(_deployRenAsset(chainId, asset_, erc20Name_, erc20Symbol_, erc20Decimals_, version_));
-        address mintGateway = address(_deployMintGateway(chainName, asset_, signatureVerifier, token, version_));
-        Ownable(token).transferOwnership(mintGateway);
-        addMintGateway(asset_, token, mintGateway);
+        if (lockGatewaySymbols.contains(symbol_)) {
+            _checkRole(CAN_UPDATE_GATEWAYS, _msgSender());
+        }
+
+        address mintGateway = address(_deployMintGateway(chainName, symbol_, signatureVerifier, renAsset_, version_));
+        addMintGateway(symbol_, renAsset_, mintGateway);
     }
 
-    function deployMintGatewayWithBurnStorageAndRenAsset(
-        string calldata asset_,
+    function deployMintGatewayAndRenAsset(
+        string calldata symbol_,
         string memory erc20Name_,
         string memory erc20Symbol_,
         uint8 erc20Decimals_,
         string memory version_
     ) external onlyRole(CAN_ADD_GATEWAYS) {
         require(bytes(chainName).length > 0, "GatewayRegistry: chain details not set");
-        address token = address(_deployRenAsset(chainId, asset_, erc20Name_, erc20Symbol_, erc20Decimals_, version_));
-        address mintGateway = address(
-            _deployMintGatewayWithBurnStorage(chainName, asset_, signatureVerifier, token, version_)
+        if (lockGatewaySymbols.contains(symbol_)) {
+            revert(string(abi.encodePacked("GatewayRegistry: ", symbol_, " mint gateway already registered")));
+        }
+
+        address renAsset = address(
+            _deployRenAsset(chainId, symbol_, erc20Name_, erc20Symbol_, erc20Decimals_, version_)
         );
-        Ownable(token).transferOwnership(mintGateway);
-        addMintGateway(asset_, token, mintGateway);
+        address mintGateway = address(_deployMintGateway(chainName, symbol_, signatureVerifier, renAsset, version_));
+        Ownable(renAsset).transferOwnership(mintGateway);
+        addMintGateway(symbol_, renAsset, mintGateway);
     }
 
     /// @notice Allows the owner to remove the Gateway contract for a given
@@ -293,17 +307,12 @@ contract GatewayRegistryV2 is
         string calldata symbol_,
         address lockAsset_,
         address lockGateway_
-    ) public onlyValidString(symbol_) {
+    ) public onlyValidString(symbol_) onlyAtLeastOneRole(CAN_ADD_GATEWAYS, CAN_UPDATE_GATEWAYS) {
         if (lockGatewaySymbols.contains(symbol_)) {
             // If there is an existing gateway for the symbol, delete it. Note
             // that this will check that the sender has the CAN_UPDATE_GATEWAYS
             // role.
             removeLockGateway(symbol_);
-        } else {
-            require(
-                hasRole(CAN_ADD_GATEWAYS, _msgSender()) || hasRole(CAN_UPDATE_GATEWAYS, _msgSender()),
-                "GatewayRegistry: not authorized"
-            );
         }
 
         // Check that token, Gateway and symbol haven't already been registered.
@@ -320,13 +329,18 @@ contract GatewayRegistryV2 is
     }
 
     function deployLockGateway(
-        string calldata asset_,
+        string calldata symbol_,
         address lockToken,
         string memory version_
     ) external onlyRole(CAN_ADD_GATEWAYS) {
         require(bytes(chainName).length > 0, "GatewayRegistry: chain details not set");
-        address lockGateway = address(_deployLockGateway(chainName, asset_, signatureVerifier, lockToken, version_));
-        addLockGateway(asset_, lockToken, lockGateway);
+
+        if (lockGatewaySymbols.contains(symbol_)) {
+            _checkRole(CAN_UPDATE_GATEWAYS, _msgSender());
+        }
+
+        address lockGateway = address(_deployLockGateway(chainName, symbol_, signatureVerifier, lockToken, version_));
+        addLockGateway(symbol_, lockToken, lockGateway);
     }
 
     /// @notice Allows the owner to remove the Gateway contract for a given

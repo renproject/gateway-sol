@@ -9,6 +9,7 @@ import {
   BasicBridge,
   SignatureVerifier,
   ERC20PresetMinterPauserUpgradeable,
+  RenAssetV2,
 } from '../typechain';
 import {setupUsers} from './utils';
 
@@ -58,6 +59,16 @@ const setup = deployments.createFixture(async () => {
   );
 
   const ethereum = Ethereum(ethers.provider, network);
+  mockRenVMProvider.registerChain(ethereum);
+
+  mockRenVMProvider.registerAsset('BTC');
+
+  console.log(
+    '!!!!!!\n\n',
+    await renJS.renVM.getConfirmationTarget!('BTC/fromEthereum', {
+      name: 'Bitcoin',
+    })
+  );
 
   return {
     ...contracts,
@@ -68,8 +79,8 @@ const setup = deployments.createFixture(async () => {
   };
 });
 
-describe('Mint', () => {
-  it('Should mint some tokens', async function () {
+describe('RenJS', () => {
+  it('LockAndMint', async function () {
     this.timeout(1000 * 1000);
 
     const {users, Bitcoin, renJS, ethereum} = await setup();
@@ -132,6 +143,59 @@ describe('Mint', () => {
       };
       mint.on('deposit', depositCallback);
     });
+  });
+
+  it('BurnAndRelease', async function () {
+    this.timeout(1000 * 1000);
+
+    const {users, Bitcoin, renJS, ethereum, GatewayRegistryV2} = await setup();
+
+    // const [_, user] = await ethers.getSigners();
+
+    // Use random amount, multiplied by the asset's decimals.
+    const renBTCAddress = await GatewayRegistryV2.getRenAssetBySymbol('BTC');
+    const renBTC = <RenAssetV2>(
+      (<unknown>await ethers.getContractAt('RenAssetV2', renBTCAddress))
+    );
+    const amount = await renBTC.balanceOf(users[0].address);
+
+    // Initialize RenJS lockAndMint.
+    const burn = await renJS.burnAndRelease({
+      // Send BTC from the Bitcoin blockchain to the Ethereum blockchain.
+      asset: 'BTC', // `bitcoin.asset`
+      // If you change this to another chain, you also have to change the
+      // chain name passed to `gatewayFactory` above.
+      from: ethereum.Contract({
+        // The contract we want to interact with
+        sendTo: users[0].BasicBridge.address,
+
+        // The name of the function we want to call
+        contractFn: 'burn',
+
+        // Arguments expected for calling `deposit`
+        contractParams: [
+          {
+            name: 'symbol',
+            type: 'string',
+            value: 'BTC',
+          },
+          {
+            name: 'recipient',
+            type: 'string',
+            value: users[0].address,
+          },
+          {
+            name: 'amount',
+            type: 'uint256',
+            value: amount.toString(),
+          },
+        ],
+      }),
+      to: Bitcoin,
+    });
+
+    await burn.burn();
+    await burn.release();
   });
 });
 

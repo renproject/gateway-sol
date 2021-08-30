@@ -38,10 +38,6 @@ contract MintGatewayProxyBeaconV1 is ProxyBeaconV1 {
     constructor(address implementation_, address adminAddress_) ProxyBeaconV1(implementation_, adminAddress_) {}
 }
 
-contract MintGatewayWithBurnStorageProxyBeaconV1 is ProxyBeaconV1 {
-    constructor(address implementation_, address adminAddress_) ProxyBeaconV1(implementation_, adminAddress_) {}
-}
-
 contract LockGatewayProxyBeaconV1 is ProxyBeaconV1 {
     constructor(address implementation_, address adminAddress_) ProxyBeaconV1(implementation_, adminAddress_) {}
 }

@@ -5,7 +5,7 @@ pragma solidity ^0.8.7;
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {RenAssetV1} from "../RenAsset/RenAsset.sol";
+import {RenAssetV2} from "../RenAsset/RenAsset.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
 
@@ -13,10 +13,13 @@ import {RenVMHashes} from "./common/RenVMHashes.sol";
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
 contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, GatewayStateManagerV3 {
-    // For backwards compatiblity reasons, the sigHash is cast to a uint256.
+    /// @dev For backwards compatiblity reasons, the sigHash is cast to a
+    /// uint256.
     event LogMint(address indexed to, uint256 amount, uint256 indexed sigHash, bytes32 indexed nHash);
 
-    // For backwards compatibility, `to` is bytes instead of a string, and the third parameter is unused.
+    /// @dev Once `LogBurnWithPayload` is enabled on mainnet, LogBurn may be
+    /// replaced by LogBurnWithPayload with empty payload and chain fields.
+    /// @dev For backwards compatibility, `to` is bytes instead of a string.
     event LogBurn(
         bytes to,
         uint256 amount,
@@ -49,7 +52,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
 
     /// @notice Allow the owner to update the owner of the RenERC20 token.
     function transferTokenOwnership(address nextTokenOwner_) public onlyOwner {
-        RenAssetV1(GatewayStateV3.token).transferOwnership(address(nextTokenOwner_));
+        RenAssetV2(GatewayStateV3.token).transferOwnership(address(nextTokenOwner_));
     }
 
     // PUBLIC FUNCTIONS ////////////////////////////////////////////////////////
@@ -73,9 +76,11 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         return _mint(pHash_, amount_, nHash_, sig_, _msgSender());
     }
 
-    /// @notice burn destroys tokens after taking a fee for the `_feeRecipient`,
-    ///         allowing the associated assets to be released on their native
-    ///         chain.
+    /// @notice burnWithPayload allows minted assets to be released to their
+    ///         native chain, or to another chain as specified by the chain and
+    ///         payload parameters.
+    ///         WARNING: Burning with invalid parameters can cause the funds to
+    ///         become unrecoverable.
     ///
     /// @param recipientAddress_ The address to which the locked assets will be
     ///        minted to. The address should be a plain-text address, without
@@ -95,7 +100,15 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         return _burnWithPayload(recipientAddress_, recipientChain_, recipientPayload_, amount_, _msgSender());
     }
 
-    // For backwards compatibility,
+    /// @notice burn is a convenience function that is equivalent to calling
+    ///         `burnWithPayload` with an empty payload and chain, releasing
+    ///         the asset to the native chain.
+    function burn(string memory recipient_, uint256 amount_) public virtual returns (uint256) {
+        return _burnWithPayload(recipient_, "", "", amount_, _msgSender());
+    }
+
+    /// Same as `burn` with the recipient parameter being `bytes` instead of
+    /// a `string`. For backwards compatibility with the MintGatewayV2.
     function burn(bytes memory recipient_, uint256 amount_) public virtual returns (uint256) {
         return _burnWithPayload(string(recipient_), "", "", amount_, _msgSender());
     }
@@ -148,7 +161,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         _status[nHash_] = true;
 
         // Mint the amount to the caller.
-        RenAssetV1(GatewayStateV3.token).mint(caller_, amount_);
+        RenAssetV2(GatewayStateV3.token).mint(caller_, amount_);
 
         // Emit mint log. For backwards compatiblity reasons, the sigHash is
         // cast to a uint256.
@@ -183,7 +196,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
 
         // Burn the tokens. If the user doesn't have enough tokens, this will
         // throw.
-        RenAssetV1(GatewayStateV3.token).burn(caller_, amount_);
+        RenAssetV2(GatewayStateV3.token).burn(caller_, amount_);
 
         uint256 burnNonce = GatewayStateV3.eventNonce;
 

@@ -124,7 +124,7 @@ Behind the scene it uses `hardhat node` command so you can append any argument f
 
 ## Verifying
 
-`yarn hardhat --network kovan etherscan-verify --api-key ETHERSCAN_KEY --license GPL-3.0-only`
+`yarn hardhat --network kovan etherscan-verify --api-key ETHERSCAN_KEY --license GPL-3.0`
 
 For contracts that use a Proxy, you then need to go to the Etherscan page, select "More Options" and then "Is this a proxy?":
 

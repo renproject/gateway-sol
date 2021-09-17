@@ -7,7 +7,7 @@ import {ethers, deployments, getUnnamedAccounts} from 'hardhat';
 import {
   GatewayRegistryV2,
   BasicBridge,
-  SignatureVerifier,
+  SignatureVerifierV1,
   ERC20PresetMinterPauserUpgradeable,
   RenAssetV2,
 } from '../typechain';
@@ -16,18 +16,33 @@ import {setupUsers} from './utils';
 const setup = deployments.createFixture(async () => {
   await deployments.fixture('GatewayRegistryV2');
   await deployments.fixture('BasicBridge');
-  await deployments.fixture('SignatureVerifier');
+  await deployments.fixture('SignatureVerifierV1');
+  await deployments.fixture('SignatureVerifierProxy');
   await deployments.fixture('ERC20PresetMinterPauserUpgradeable');
 
   const contracts = {
     GatewayRegistryV2: <GatewayRegistryV2>(
-      (<unknown>await ethers.getContract('GatewayRegistryV2'))
+      (<unknown>(
+        await ethers.getContractAt(
+          'GatewayRegistryV2',
+          (
+            await ethers.getContract('GatewayRegistryProxy')
+          ).address
+        )
+      ))
     ),
     BasicBridge: <BasicBridge>(
       (<unknown>await ethers.getContract('BasicBridge'))
     ),
-    SignatureVerifier: <SignatureVerifier>(
-      (<unknown>await ethers.getContract('SignatureVerifier'))
+    SignatureVerifier: <SignatureVerifierV1>(
+      (<unknown>(
+        await ethers.getContractAt(
+          'SignatureVerifierV1',
+          (
+            await ethers.getContract('SignatureVerifierProxy')
+          ).address
+        )
+      ))
     ),
     USDC: <ERC20PresetMinterPauserUpgradeable>(
       (<unknown>await ethers.getContract('ERC20PresetMinterPauserUpgradeable'))
@@ -58,13 +73,17 @@ const setup = deployments.createFixture(async () => {
     contracts.BasicBridge.address
   );
 
-  const ethereum = Ethereum(ethers.provider, network);
+  const signer = await ethers.getSigner(user.address);
+  console.log('!!?', (await ethers.getSigner(user.address)).address);
+  const ethereum = Ethereum(
+    {provider: signer.provider!, signer: await ethers.getSigner(user.address)},
+    network
+  );
   mockRenVMProvider.registerChain(ethereum);
 
   mockRenVMProvider.registerAsset('BTC');
 
   console.log(
-    '!!!!!!\n\n',
     await renJS.renVM.getConfirmationTarget!('BTC/fromEthereum', {
       name: 'Bitcoin',
     })
@@ -80,15 +99,15 @@ const setup = deployments.createFixture(async () => {
 });
 
 describe('RenJS', () => {
-  it('LockAndMint', async function () {
+  it('mint and burn', async function () {
     this.timeout(1000 * 1000);
 
-    const {users, Bitcoin, renJS, ethereum} = await setup();
+    const {users, Bitcoin, renJS, ethereum, GatewayRegistryV2} = await setup();
 
     // const [_, user] = await ethers.getSigners();
 
     // Use random amount, multiplied by the asset's decimals.
-    const amount = new BigNumber(Math.random())
+    const amount = new BigNumber(Math.random() + 1)
       .times(
         new BigNumber(10).exponentiatedBy(Bitcoin.assetDecimals(Bitcoin.asset))
       )
@@ -128,13 +147,16 @@ describe('RenJS', () => {
     Bitcoin.addUTXO(mint.gatewayAddress!, amount.toNumber());
 
     // Process the deposit, including the mint step.
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<string>((resolve, reject) => {
       const depositCallback = async (deposit: LockAndMintDeposit) => {
         try {
           await deposit.confirmed();
           await deposit.signed();
-          await deposit.mint().on('transactionHash', console.log);
-          resolve();
+          let tx = '';
+          await deposit.mint().on('transactionHash', (txHash) => {
+            tx = txHash;
+          });
+          resolve(tx);
         } catch (error) {
           console.error(error);
           mint.removeAllListeners();
@@ -143,21 +165,17 @@ describe('RenJS', () => {
       };
       mint.on('deposit', depositCallback);
     });
-  });
 
-  it('BurnAndRelease', async function () {
-    this.timeout(1000 * 1000);
-
-    const {users, Bitcoin, renJS, ethereum, GatewayRegistryV2} = await setup();
-
-    // const [_, user] = await ethers.getSigners();
-
-    // Use random amount, multiplied by the asset's decimals.
     const renBTCAddress = await GatewayRegistryV2.getRenAssetBySymbol('BTC');
-    const renBTC = <RenAssetV2>(
+    const renBTC = await (<RenAssetV2>(
       (<unknown>await ethers.getContractAt('RenAssetV2', renBTCAddress))
-    );
-    const amount = await renBTC.balanceOf(users[0].address);
+    )).connect(await ethers.getSigner(users[0].address));
+
+    const amountToBurn = await renBTC.balanceOf(users[0].address);
+
+    await (
+      await renBTC.approve(users[0].BasicBridge.address, amountToBurn)
+    ).wait();
 
     // Initialize RenJS lockAndMint.
     const burn = await renJS.burnAndRelease({
@@ -182,12 +200,12 @@ describe('RenJS', () => {
           {
             name: 'recipient',
             type: 'string',
-            value: users[0].address,
+            value: 'miMi2VET41YV1j6SDNTeZoPBbmH8B4nEx6',
           },
           {
             name: 'amount',
             type: 'uint256',
-            value: amount.toString(),
+            value: amountToBurn.toString(),
           },
         ],
       }),

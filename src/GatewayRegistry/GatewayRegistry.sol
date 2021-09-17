@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.7;
 
@@ -8,6 +8,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import {IMintGateway} from "../Gateways/interfaces/IMintGateway.sol";
 import {ILockGateway} from "../Gateways/interfaces/ILockGateway.sol";
@@ -359,4 +360,12 @@ contract GatewayRegistryV2 is
 
         emit LogLockGatewayDeleted(symbol_, symbol_);
     }
+}
+
+contract GatewayRegistryProxy is TransparentUpgradeableProxy {
+    constructor(
+        address _logic,
+        address admin_,
+        bytes memory _data
+    ) payable TransparentUpgradeableProxy(_logic, admin_, _data) {}
 }

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.7;
 
@@ -17,8 +17,8 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
     /// uint256.
     event LogMint(address indexed to, uint256 amount, uint256 indexed sigHash, bytes32 indexed nHash);
 
-    /// @dev Once `LogBurnWithPayload` is enabled on mainnet, LogBurn may be
-    /// replaced by LogBurnWithPayload with empty payload and chain fields.
+    /// @dev Once `LogBurnToChain` is enabled on mainnet, LogBurn may be
+    /// replaced by LogBurnToChain with empty payload and chain fields.
     /// @dev For backwards compatibility, `to` is bytes instead of a string.
     event LogBurn(
         bytes to,
@@ -27,7 +27,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         // Indexed versions of previous parameters.
         bytes indexed indexedTo
     );
-    event LogBurnWithPayload(
+    event LogBurnToChain(
         string recipientAddress,
         string recipientChain,
         bytes recipientPayload,
@@ -201,7 +201,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         uint256 burnNonce = GatewayStateV3.eventNonce;
 
         if (bytes(recipientChain_).length > 0 || recipientPayload_.length > 0) {
-            emit LogBurnWithPayload(
+            emit LogBurnToChain(
                 recipientAddress_,
                 recipientChain_,
                 recipientPayload_,

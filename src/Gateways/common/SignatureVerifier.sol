@@ -1,10 +1,15 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.7;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+
+interface ISignatureVerifier {
+    function verifySignature(bytes32 _sigHash, bytes memory _sig) external view returns (bool);
+}
 
 contract SignatureVerifierStateV1 {
     address public mintAuthority;
@@ -14,7 +19,7 @@ contract SignatureVerifierStateV1 {
 /// @notice Gateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
-contract SignatureVerifier is Initializable, OwnableUpgradeable, SignatureVerifierStateV1 {
+contract SignatureVerifierV1 is Initializable, OwnableUpgradeable, SignatureVerifierStateV1 {
     event LogMintAuthorityUpdated(address indexed _newMintAuthority);
 
     function __SignatureVerifier_init(address mintAuthority_) public initializer {
@@ -44,4 +49,12 @@ contract SignatureVerifier is Initializable, OwnableUpgradeable, SignatureVerifi
         require(mintAuthority != address(0x0), "SignatureVerifier: mintAuthority not initialized");
         return mintAuthority == ECDSA.recover(_sigHash, _sig);
     }
+}
+
+contract SignatureVerifierProxy is TransparentUpgradeableProxy {
+    constructor(
+        address _logic,
+        address admin_,
+        bytes memory _data
+    ) payable TransparentUpgradeableProxy(_logic, admin_, _data) {}
 }

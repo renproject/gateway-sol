@@ -6,11 +6,16 @@ import 'hardhat-gas-reporter';
 import '@typechain/hardhat';
 import 'solidity-coverage';
 import {node_url, accounts} from './utils/network';
+import '@nomiclabs/hardhat-etherscan';
 
 // While waiting for hardhat PR: https://github.com/nomiclabs/hardhat/pull/1542
 if (process.env.HARDHAT_FORK) {
   process.env['HARDHAT_DEPLOY_FORK'] = process.env.HARDHAT_FORK;
 }
+
+const MNEMONIC_TESTNET = process.env.MNEMONIC;
+const MNEMONIC_MAINNET = process.env.MNEMONIC_MAINNET;
+const INFURA_KEY = process.env.INFURA_KEY || '';
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -37,33 +42,130 @@ const config: HardhatUserConfig = {
         : undefined,
       // allowUnlimitedContractSize: true,
     },
-    localhost: {
-      url: node_url('localhost'),
-      accounts: accounts(),
+    // localhost: {
+    //   url: node_url('localhost'),
+    //   accounts: accounts(),
+    // },
+    // staging: {
+    //   url: node_url('rinkeby'),
+    //   accounts: accounts('rinkeby'),
+    // },
+    // production: {
+    //   url: node_url('mainnet'),
+    //   accounts: accounts('mainnet'),
+    // },
+    // mainnet: {
+    //   url: node_url('mainnet'),
+    //   accounts: accounts('mainnet'),
+    // },
+    // rinkeby: {
+    //   url: node_url('rinkeby'),
+    //   accounts: accounts('rinkeby'),
+    // },
+    // kovan: {
+    //   url: node_url('kovan'),
+    //   accounts: accounts('kovan'),
+    // },
+    // goerli: {
+    //   url: node_url('goerli'),
+    //   accounts: accounts('goerli'),
+    // },
+
+    ethereumMainnet: {
+      url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
+      accounts: {
+        mnemonic: MNEMONIC_MAINNET,
+      },
     },
-    staging: {
-      url: node_url('rinkeby'),
-      accounts: accounts('rinkeby'),
+    ethereumMainnetVDot3: {
+      url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
+      accounts: {
+        mnemonic: MNEMONIC_MAINNET,
+      },
     },
-    production: {
-      url: node_url('mainnet'),
-      accounts: accounts('mainnet'),
+    ethereumTestnet: {
+      url: `https://kovan.infura.io/v3/${INFURA_KEY}`,
+      accounts: {
+        mnemonic: MNEMONIC_TESTNET,
+      },
     },
-    mainnet: {
-      url: node_url('mainnet'),
-      accounts: accounts('mainnet'),
+    ethereumDevnet: {
+      url: `https://kovan.infura.io/v3/${INFURA_KEY}`,
+      accounts: {
+        mnemonic: MNEMONIC_TESTNET,
+      },
     },
-    rinkeby: {
-      url: node_url('rinkeby'),
-      accounts: accounts('rinkeby'),
+    bscTestnet: {
+      url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
+      accounts: {
+        mnemonic: MNEMONIC_TESTNET,
+      },
     },
-    kovan: {
-      url: node_url('kovan'),
-      accounts: accounts('kovan'),
+    bscMainnet: {
+      url: `https://bsc-dataseed1.binance.org/`,
+      accounts: {
+        mnemonic: MNEMONIC_MAINNET,
+      },
     },
-    goerli: {
-      url: node_url('goerli'),
-      accounts: accounts('goerli'),
+    polygonTestnet: {
+      url: `https://rpc-mumbai.maticvigil.com/`,
+      accounts: {
+        mnemonic: MNEMONIC_TESTNET,
+      },
+    },
+    polygonMainnet: {
+      url: `https://rpc-mainnet.maticvigil.com`,
+      accounts: {
+        mnemonic: MNEMONIC_MAINNET,
+      },
+    },
+    fantomTestnet: {
+      url: `https://rpc.testnet.fantom.network/`,
+      accounts: {
+        mnemonic: MNEMONIC_TESTNET,
+      },
+    },
+    fantomMainnet: {
+      url: `https://rpcapi.fantom.network`,
+      accounts: {
+        mnemonic: MNEMONIC_MAINNET,
+      },
+    },
+    avalancheTestnet: {
+      url: `https://api.avax-test.network/ext/bc/C/rpc`,
+      accounts: {
+        mnemonic: MNEMONIC_TESTNET,
+      },
+    },
+    avalancheMainnet: {
+      url: `https://api.avax.network/ext/bc/C/rpc`,
+      accounts: {
+        mnemonic: MNEMONIC_MAINNET,
+      },
+    },
+
+    arbitrumTestnet: {
+      url: `https://rinkeby.arbitrum.io/rpc`,
+      accounts: {
+        mnemonic: MNEMONIC_TESTNET,
+      },
+      gasPrice: 0, // https://developer.offchainlabs.com/docs/contract_deployment
+      gas: 80000000,
+    },
+    arbitrumMainnet: {
+      url: `https://arb1.arbitrum.io/rpc`,
+      accounts: {
+        mnemonic: MNEMONIC_MAINNET,
+      },
+      gasPrice: 0,
+      gas: 80000000,
+    },
+
+    goerliTestnet: {
+      url: `https://goerli.infura.io/v3/${INFURA_KEY}`,
+      accounts: {
+        mnemonic: MNEMONIC_TESTNET,
+      },
     },
   },
   paths: {
@@ -82,6 +184,11 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     timeout: 0,
+  },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: process.env.BSCSCAN_KEY,
   },
 };
 

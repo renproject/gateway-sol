@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.7;
 
@@ -6,7 +6,6 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import {RenAssetV2} from "../RenAsset/RenAsset.sol";
 import {SafeTransferWithFees} from "./common/SafeTransferWithFees.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
@@ -21,7 +20,7 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
 
     event LogRelease(address indexed recipient, uint256 amount, bytes32 indexed sigHash, bytes32 indexed nHash);
 
-    event LogLock(
+    event LogLockToChain(
         string recipientAddress,
         string recipientChain,
         bytes recipientPayload,
@@ -81,7 +80,7 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
 
         uint256 lockNonce = GatewayStateV3.eventNonce;
 
-        emit LogLock(
+        emit LogLockToChain(
             recipientAddress_,
             recipientChain_,
             recipientPayload_,

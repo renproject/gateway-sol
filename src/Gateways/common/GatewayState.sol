@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.7;
 
@@ -6,7 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {SignatureVerifier} from "./SignatureVerifier.sol";
+import {ISignatureVerifier} from "./SignatureVerifier.sol";
 import {ValidString} from "../../libraries/ValidString.sol";
 import {RenVMHashes} from "./RenVMHashes.sol";
 
@@ -22,7 +22,7 @@ contract GatewayStateV3 {
     /// @notice Each Gateway is tied to a specific asset.
     address public token;
 
-    SignatureVerifier public signatureVerifier;
+    ISignatureVerifier public signatureVerifier;
 
     address public previousGateway;
 
@@ -37,7 +37,7 @@ contract GatewayStateV3 {
 contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStateV3 {
     event LogChainUpdated(string _chain, bytes32 _selectorHash);
     event LogAssetUpdated(string _asset, bytes32 _selectorHash);
-    event LogSignatureVerifierUpdated(SignatureVerifier indexed _newSignatureVerifier);
+    event LogSignatureVerifierUpdated(ISignatureVerifier indexed _newSignatureVerifier);
     event LogTokenUpdated(address indexed _newToken);
     event LogPreviousGatewayUpdated(address indexed _newPreviousGateway);
 
@@ -50,7 +50,7 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
         __Ownable_init();
         updateChain(chain_);
         updateAsset(asset_);
-        updateSignatureVerifier(SignatureVerifier(signatureVerifier_));
+        updateSignatureVerifier(ISignatureVerifier(signatureVerifier_));
         updateToken(token_);
     }
 
@@ -83,7 +83,7 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
     /// @notice Allow the owner to update the signature verifier contract.
     ///
     /// @param nextSignatureVerifier_ The new verifier contract address.
-    function updateSignatureVerifier(SignatureVerifier nextSignatureVerifier_) public onlyOwner {
+    function updateSignatureVerifier(ISignatureVerifier nextSignatureVerifier_) public onlyOwner {
         require(address(nextSignatureVerifier_) != address(0x0), "Gateway: invalid signature verifier");
         signatureVerifier = nextSignatureVerifier_;
         emit LogSignatureVerifierUpdated(nextSignatureVerifier_);

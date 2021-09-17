@@ -1,10 +1,12 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
+
 import {ERC20WithPermit} from "./ERC20WithPermit.sol";
 
 import "./ERC20WithPermit.sol";
@@ -56,6 +58,16 @@ contract RenAssetV2 is Initializable, ERC20Upgradeable, ERC20WithPermit, Ownable
         // mistake caused by the Ethereum transaction's `to` needing to be
         // the token's address.
         require(recipient != address(this), "RenERC20: can't transfer to token address");
+        require(
+            balanceOf(_msgSender()) >= amount,
+            string(
+                abi.encodePacked(
+                    "ERC20: transfer from ",
+                    StringsUpgradeable.toHexString(uint160(_msgSender()), 20),
+                    " amount exceeds allowance"
+                )
+            )
+        );
         return super.transfer(recipient, amount);
     }
 

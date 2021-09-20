@@ -42,10 +42,10 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         string calldata chain_,
         string calldata asset_,
         address signatureVerifier_,
-        address token
+        address token_
     ) public initializer {
         OwnableUpgradeable.__Ownable_init();
-        GatewayStateManagerV3.__GatewayStateManager_init(chain_, asset_, signatureVerifier_, token);
+        GatewayStateManagerV3.__GatewayStateManager_init(chain_, asset_, signatureVerifier_, token_);
     }
 
     // Governance functions ////////////////////////////////////////////////////

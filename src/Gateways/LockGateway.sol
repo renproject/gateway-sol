@@ -68,7 +68,7 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
 
         // Burn the tokens. If the user doesn't have enough tokens, this will
         // throw.
-        uint256 amountActual = IERC20(token()).safeTransferFromWithFees(msg.sender, address(this), amount);
+        uint256 transferredAmount = IERC20(token()).safeTransferFromWithFees(msg.sender, address(this), amount);
 
         uint256 lockNonce = eventNonce();
 
@@ -76,7 +76,7 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
             recipientAddress,
             recipientChain,
             recipientPayload,
-            amountActual,
+            transferredAmount,
             lockNonce,
             recipientAddress,
             recipientChain

@@ -18,7 +18,7 @@ import { networks } from "./networks";
 
 const Ox0 = "0x0000000000000000000000000000000000000000";
 
-const CREATE2_SALT = keccak256(Buffer.from("REN-0001"));
+const CREATE2_SALT = keccak256(Buffer.from("REN-RC1"));
 
 const setupCreate2 =
     (hre: HardhatRuntimeEnvironment, overrides?: CallOptions) =>
@@ -269,6 +269,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
                         "1",
                         {
                             ...config.overrides,
+                            gasLimit: 5000000,
                         }
                     )
                 );

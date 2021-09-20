@@ -48,7 +48,7 @@ contract RenAssetFactory is Initializable, RenAssetFactoryState {
         string memory version
     ) internal returns (IERC20) {
         bytes memory encodedParameters = abi.encodeWithSignature(
-            "__RenAssetinit(uint256,string,string,string,uint8)",
+            "__RenAsset_init(uint256,string,string,string,uint8)",
             chainId,
             version,
             name,

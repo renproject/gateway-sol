@@ -11,8 +11,9 @@ import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 contract ProxyBeaconV1 is AccessControl, UpgradeableBeacon {
     bytes32 public constant PROXY_DEPLOYER = keccak256("PROXY_DEPLOYER");
 
-    constructor(address implementation_, address adminAddress_) UpgradeableBeacon(implementation_) {
+    constructor(address implementation, address adminAddress_) UpgradeableBeacon(implementation) {
         AccessControl._setupRole(AccessControl.DEFAULT_ADMIN_ROLE, adminAddress_);
+        transferOwnership(adminAddress_);
     }
 
     function deployProxy(bytes32 create2Salt, bytes calldata encodedParameters)
@@ -31,13 +32,13 @@ contract ProxyBeaconV1 is AccessControl, UpgradeableBeacon {
 }
 
 contract RenAssetProxyBeaconV1 is ProxyBeaconV1 {
-    constructor(address implementation_, address adminAddress_) ProxyBeaconV1(implementation_, adminAddress_) {}
+    constructor(address implementation, address adminAddress) ProxyBeaconV1(implementation, adminAddress) {}
 }
 
 contract MintGatewayProxyBeaconV1 is ProxyBeaconV1 {
-    constructor(address implementation_, address adminAddress_) ProxyBeaconV1(implementation_, adminAddress_) {}
+    constructor(address implementation, address adminAddress) ProxyBeaconV1(implementation, adminAddress) {}
 }
 
 contract LockGatewayProxyBeaconV1 is ProxyBeaconV1 {
-    constructor(address implementation_, address adminAddress_) ProxyBeaconV1(implementation_, adminAddress_) {}
+    constructor(address implementation, address adminAddress) ProxyBeaconV1(implementation, adminAddress) {}
 }

@@ -52,7 +52,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
 
     /// @notice Allow the owner to update the owner of the RenERC20 token.
     function transferTokenOwnership(address nextTokenOwner_) public onlyOwner {
-        RenAssetV2(GatewayStateV3.token).transferOwnership(address(nextTokenOwner_));
+        RenAssetV2(token()).transferOwnership(address(nextTokenOwner_));
     }
 
     // PUBLIC FUNCTIONS ////////////////////////////////////////////////////////
@@ -60,20 +60,20 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
     /// @notice mint verifies a mint approval signature from RenVM and creates
     ///         tokens after taking a fee for the `_feeRecipient`.
     ///
-    /// @param pHash_ (payload hash) The hash of the payload associated with the
+    /// @param pHash (payload hash) The hash of the payload associated with the
     ///        mint.
-    /// @param amount_ The amount of the token being minted, in its smallest
+    /// @param amount The amount of the token being minted, in its smallest
     ///        value. (e.g. satoshis for BTC).
-    /// @param nHash_ (nonce hash) The hash of the nonce, amount and pHash.
-    /// @param sig_ The signature of the hash of the following values:
+    /// @param nHash (nonce hash) The hash of the nonce, amount and pHash.
+    /// @param sig The signature of the hash of the following values:
     ///        (pHash, amount, msg.sender, nHash), signed by the mintAuthority.
     function mint(
-        bytes32 pHash_,
-        uint256 amount_,
-        bytes32 nHash_,
-        bytes memory sig_
+        bytes32 pHash,
+        uint256 amount,
+        bytes32 nHash,
+        bytes memory sig
     ) public returns (uint256) {
-        return _mint(pHash_, amount_, nHash_, sig_, _msgSender());
+        return _mint(pHash, amount, nHash, sig, _msgSender());
     }
 
     /// @notice burnWithPayload allows minted assets to be released to their
@@ -82,140 +82,136 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
     ///         WARNING: Burning with invalid parameters can cause the funds to
     ///         become unrecoverable.
     ///
-    /// @param recipientAddress_ The address to which the locked assets will be
+    /// @param recipientAddress The address to which the locked assets will be
     ///        minted to. The address should be a plain-text address, without
     ///        decoding to bytes first.
-    /// @param recipientChain_ The target chain to which the assets are being
+    /// @param recipientChain The target chain to which the assets are being
     ///        moved to.
-    /// @param recipientPayload_ An optional payload to be passed to the
+    /// @param recipientPayload An optional payload to be passed to the
     ///        recipient chain along with the address.
-    /// @param amount_ The amount of the token being locked, in the asset's
+    /// @param amount The amount of the token being locked, in the asset's
     ///        smallest unit. (e.g. satoshis for BTC)
     function burnWithPayload(
-        string memory recipientAddress_,
-        string memory recipientChain_,
-        bytes memory recipientPayload_,
-        uint256 amount_
+        string memory recipientAddress,
+        string memory recipientChain,
+        bytes memory recipientPayload,
+        uint256 amount
     ) public returns (uint256) {
-        return _burnWithPayload(recipientAddress_, recipientChain_, recipientPayload_, amount_, _msgSender());
+        return _burnWithPayload(recipientAddress, recipientChain, recipientPayload, amount, _msgSender());
     }
 
     /// @notice burn is a convenience function that is equivalent to calling
     ///         `burnWithPayload` with an empty payload and chain, releasing
     ///         the asset to the native chain.
-    function burn(string memory recipient_, uint256 amount_) public virtual returns (uint256) {
-        return _burnWithPayload(recipient_, "", "", amount_, _msgSender());
+    function burn(string memory recipient, uint256 amount) public virtual returns (uint256) {
+        return _burnWithPayload(recipient, "", "", amount, _msgSender());
     }
 
     /// Same as `burn` with the recipient parameter being `bytes` instead of
     /// a `string`. For backwards compatibility with the MintGatewayV2.
-    function burn(bytes memory recipient_, uint256 amount_) public virtual returns (uint256) {
-        return _burnWithPayload(string(recipient_), "", "", amount_, _msgSender());
+    function burn(bytes memory recipient, uint256 amount) public virtual returns (uint256) {
+        return _burnWithPayload(string(recipient), "", "", amount, _msgSender());
     }
 
     function _mintFromPreviousGateway(
-        bytes32 pHash_,
-        uint256 amount_,
-        bytes32 nHash_,
-        bytes memory sig_,
-        address caller_
+        bytes32 pHash,
+        uint256 amount,
+        bytes32 nHash,
+        bytes memory sig,
+        address caller
     ) public onlyPreviousGateway returns (uint256) {
-        return _mint(pHash_, amount_, nHash_, sig_, caller_);
+        return _mint(pHash, amount, nHash, sig, caller);
     }
 
     function _burnFromPreviousGateway(
-        bytes memory recipient_,
-        uint256 amount_,
-        address caller_
+        bytes memory recipient,
+        uint256 amount,
+        address caller
     ) public onlyPreviousGateway returns (uint256) {
-        return _burnWithPayload(string(recipient_), "", "", amount_, caller_);
-    }
-
-    function nextN() public view returns (uint256) {
-        return GatewayStateV3.eventNonce;
+        return _burnWithPayload(string(recipient), "", "", amount, caller);
     }
 
     // INTERNAL FUNCTIONS //////////////////////////////////////////////////////
 
     function _mint(
-        bytes32 pHash_,
-        uint256 amount_,
-        bytes32 nHash_,
-        bytes memory sig_,
-        address caller_
+        bytes32 pHash,
+        uint256 amount,
+        bytes32 nHash,
+        bytes memory sig,
+        address caller
     ) internal returns (uint256) {
         // Calculate the hash signed by RenVM. This binds the payload hash,
         // amount, caller and nonce hash to the signature.
-        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash_, amount_, GatewayStateV3.selectorHash, caller_, nHash_);
+        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, selectorHash(), caller, nHash);
 
         // Check that the signature hasn't been redeemed.
-        require(status(sigHash) == false && status(nHash_) == false, "MintGateway: signature already spent");
+        require(status(sigHash) == false && status(nHash) == false, "MintGateway: signature already spent");
 
         // If the signature fails verification, throw an error.
-        if (!GatewayStateV3.signatureVerifier.verifySignature(sigHash, sig_)) {
+        if (!signatureVerifier().verifySignature(sigHash, sig)) {
             revert("MintGateway: invalid signature");
         }
 
         // Update the status for both the signature hash and the nHash.
         _status[sigHash] = true;
-        _status[nHash_] = true;
+        _status[nHash] = true;
 
         // Mint the amount to the caller.
-        RenAssetV2(GatewayStateV3.token).mint(caller_, amount_);
+        RenAssetV2(token()).mint(caller, amount);
 
         // Emit mint log. For backwards compatiblity reasons, the sigHash is
         // cast to a uint256.
-        emit LogMint(caller_, amount_, uint256(sigHash), nHash_);
+        emit LogMint(caller, amount, uint256(sigHash), nHash);
 
-        return amount_;
+        return amount;
     }
 
     /// @notice burn destroys tokens after taking a fee for the `_feeRecipient`,
     ///         allowing the associated assets to be released on their native
     ///         chain.
     ///
-    /// @param recipientAddress_ The address to which the locked assets will be
+    /// @param recipientAddress The address to which the locked assets will be
     ///        minted to. The address should be a plain-text address, without
     ///        decoding to bytes first.
-    /// @param recipientChain_ The target chain to which the assets are being
+    /// @param recipientChain The target chain to which the assets are being
     ///        moved to.
-    /// @param recipientPayload_ An optional payload to be passed to the
+    /// @param recipientPayload An optional payload to be passed to the
     ///        recipient chain along with the address.
-    /// @param amount_ The amount of the token being locked, in the asset's
+    /// @param amount The amount of the token being locked, in the asset's
     ///        smallest unit. (e.g. satoshis for BTC)
     function _burnWithPayload(
-        string memory recipientAddress_,
-        string memory recipientChain_,
-        bytes memory recipientPayload_,
-        uint256 amount_,
-        address caller_
+        string memory recipientAddress,
+        string memory recipientChain,
+        bytes memory recipientPayload,
+        uint256 amount,
+        address caller
     ) internal returns (uint256) {
         // The recipient must not be empty. Better validation is possible,
         // but would need to be customized for each destination ledger.
-        require(bytes(recipientAddress_).length != 0, "MintGateway: to address is empty");
+        require(bytes(recipientAddress).length != 0, "MintGateway: to address is empty");
 
         // Burn the tokens. If the user doesn't have enough tokens, this will
         // throw.
-        RenAssetV2(GatewayStateV3.token).burn(caller_, amount_);
+        RenAssetV2(token()).burn(caller, amount);
 
-        uint256 burnNonce = GatewayStateV3.eventNonce;
+        uint256 burnNonce = eventNonce();
 
-        if (bytes(recipientChain_).length > 0 || recipientPayload_.length > 0) {
+        if (bytes(recipientChain).length > 0 || recipientPayload.length > 0) {
             emit LogBurnToChain(
-                recipientAddress_,
-                recipientChain_,
-                recipientPayload_,
-                amount_,
+                recipientAddress,
+                recipientChain,
+                recipientPayload,
+                amount,
                 burnNonce,
-                recipientAddress_,
-                recipientChain_
+                recipientAddress,
+                recipientChain
             );
         } else {
-            emit LogBurn(bytes(recipientAddress_), amount_, burnNonce, bytes(recipientAddress_));
+            emit LogBurn(bytes(recipientAddress), amount, burnNonce, bytes(recipientAddress));
         }
 
-        GatewayStateV3.eventNonce = burnNonce + 1;
+        _eventNonce = burnNonce + 1;
 
-        return amount_;
+        return amount;
     }
 }

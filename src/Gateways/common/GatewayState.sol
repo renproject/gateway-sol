@@ -12,21 +12,21 @@ import {RenVMHashes} from "./RenVMHashes.sol";
 
 contract GatewayStateV3 {
     // Selector hash details.
-    string public chain;
-    string public asset;
-    bytes32 public selectorHash;
+    string internal _chain;
+    string internal _asset;
+    bytes32 internal _selectorHash;
 
     /// @notice Each signature can only be seen once.
-    mapping(bytes32 => bool) public _status;
+    mapping(bytes32 => bool) internal _status;
 
     /// @notice Each Gateway is tied to a specific asset.
-    address public token;
+    address internal _token;
 
-    ISignatureVerifier public signatureVerifier;
+    ISignatureVerifier internal _signatureVerifier;
 
-    address public previousGateway;
+    address internal _previousGateway;
 
-    uint256 internal eventNonce;
+    uint256 internal _eventNonce;
 
     uint256[43] private __gap;
 }
@@ -54,78 +54,115 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
         updateToken(token_);
     }
 
+    // GETTERS /////////////////////////////////////////////////////////////////
+
+    function chain() public view returns (string memory) {
+        return _chain;
+    }
+
+    function asset() public view returns (string memory) {
+        return _asset;
+    }
+
+    function selectorHash() public view returns (bytes32) {
+        return _selectorHash;
+    }
+
+    function token() public view returns (address) {
+        return _token;
+    }
+
+    function signatureVerifier() public view returns (ISignatureVerifier) {
+        return _signatureVerifier;
+    }
+
+    function previousGateway() public view returns (address) {
+        return _previousGateway;
+    }
+
+    function eventNonce() public view returns (uint256) {
+        return _eventNonce;
+    }
+
     // GOVERNANCE //////////////////////////////////////////////////////////////
 
     /// @notice Allow the owner to update the chain.
     ///
-    /// @param nextChain_ The new chain.
-    function updateChain(string calldata nextChain_) public onlyOwner {
-        require(ValidString.isNotEmpty(nextChain_), "Gateway: chain can't be empty");
-        require(ValidString.isAlphanumeric(nextChain_), "Gateway: symbol must be alphanumeric");
+    /// @param nextChain The new chain.
+    function updateChain(string calldata nextChain) public onlyOwner {
+        require(ValidString.isNotEmpty(nextChain), "Gateway: chain can't be empty");
+        require(ValidString.isAlphanumeric(nextChain), "Gateway: symbol must be alphanumeric");
 
-        chain = nextChain_;
-        selectorHash = RenVMHashes.calculateSelectorHash(asset, chain);
-        emit LogChainUpdated(chain, selectorHash);
+        _chain = nextChain;
+
+        bytes32 newSelectorHash = RenVMHashes.calculateSelectorHash(asset(), nextChain);
+        _selectorHash = newSelectorHash;
+        emit LogChainUpdated(nextChain, newSelectorHash);
     }
 
     /// @notice Allow the owner to update the asset.
     ///
-    /// @param nextAsset_ The new asset.
-    function updateAsset(string calldata nextAsset_) public onlyOwner {
-        require(ValidString.isNotEmpty(nextAsset_), "Gateway: asset can't be empty");
-        require(ValidString.isAlphanumeric(nextAsset_), "Gateway: symbol must be alphanumeric");
+    /// @param nextAsset The new asset.
+    function updateAsset(string calldata nextAsset) public onlyOwner {
+        require(ValidString.isNotEmpty(nextAsset), "Gateway: asset can't be empty");
+        require(ValidString.isAlphanumeric(nextAsset), "Gateway: symbol must be alphanumeric");
 
-        asset = nextAsset_;
-        selectorHash = RenVMHashes.calculateSelectorHash(asset, chain);
-        emit LogAssetUpdated(asset, selectorHash);
+        _asset = nextAsset;
+
+        bytes32 newSelectorHash = RenVMHashes.calculateSelectorHash(nextAsset, chain());
+        _selectorHash = newSelectorHash;
+        emit LogAssetUpdated(nextAsset, newSelectorHash);
     }
 
     /// @notice Allow the owner to update the signature verifier contract.
     ///
-    /// @param nextSignatureVerifier_ The new verifier contract address.
-    function updateSignatureVerifier(ISignatureVerifier nextSignatureVerifier_) public onlyOwner {
-        require(address(nextSignatureVerifier_) != address(0x0), "Gateway: invalid signature verifier");
-        signatureVerifier = nextSignatureVerifier_;
-        emit LogSignatureVerifierUpdated(nextSignatureVerifier_);
+    /// @param nextSignatureVerifier The new verifier contract address.
+    function updateSignatureVerifier(ISignatureVerifier nextSignatureVerifier) public onlyOwner {
+        require(address(nextSignatureVerifier) != address(0x0), "Gateway: invalid signature verifier");
+        _signatureVerifier = nextSignatureVerifier;
+        emit LogSignatureVerifierUpdated(nextSignatureVerifier);
     }
 
     /// @notice Allow the owner to update the ERC20 token contract.
     ///
-    /// @param nextToken_ The new ERC20 token contract's address.
-    function updateToken(address nextToken_) public onlyOwner {
-        require(address(nextToken_) != address(0x0), "Gateway: invalid token");
-        token = nextToken_;
-        emit LogTokenUpdated(nextToken_);
+    /// @param nextToken The new ERC20 token contract's address.
+    function updateToken(address nextToken) public onlyOwner {
+        require(address(nextToken) != address(0x0), "Gateway: invalid token");
+        _token = nextToken;
+        emit LogTokenUpdated(nextToken);
     }
 
     /// @notice Allow the owner to update the previous gateway used for
     /// backwards compatibility.
     ///
-    /// @param nextPreviousGateway_ The new gateway contract's address.
-    function updatePreviousGateway(address nextPreviousGateway_) public onlyOwner {
-        require(address(nextPreviousGateway_) != address(0x0), "Gateway: invalid address");
-        previousGateway = nextPreviousGateway_;
-        emit LogPreviousGatewayUpdated(nextPreviousGateway_);
+    /// @param nextPreviousGateway The new gateway contract's address.
+    function updatePreviousGateway(address nextPreviousGateway) public onlyOwner {
+        require(address(nextPreviousGateway) != address(0x0), "Gateway: invalid address");
+        _previousGateway = nextPreviousGateway;
+        emit LogPreviousGatewayUpdated(nextPreviousGateway);
     }
 
     // PREVIOUS GATEWAY ////////////////////////////////////////////////////////
 
     modifier onlyPreviousGateway() {
+        address previousGateway_ = previousGateway();
+
         // If there's no previous gateway, the second require should also fail,
         // but this require will provide a more informative reason.
-        require(previousGateway != address(0x0), "Gateway: no previous gateway");
+        require(previousGateway_ != address(0x0), "Gateway: no previous gateway");
 
-        require(_msgSender() == previousGateway, "Gateway: not authorized");
+        require(_msgSender() == previousGateway_, "Gateway: not authorized");
         _;
     }
 
-    function status(bytes32 hash_) public view returns (bool) {
-        if (_status[hash_]) {
+    function status(bytes32 hash) public view returns (bool) {
+        if (_status[hash]) {
             return true;
         }
 
-        if (previousGateway != address(0x0)) {
-            return GatewayStateManagerV3(previousGateway)._status(hash_);
+        address previousGateway_ = previousGateway();
+        if (previousGateway_ != address(0x0)) {
+            return GatewayStateManagerV3(previousGateway_).status(hash);
         }
 
         return false;

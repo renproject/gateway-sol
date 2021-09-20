@@ -17,19 +17,19 @@ abstract contract IGatewayRegistry {
     uint256 public chainId;
     string public chainName;
 
-    function getMintGatewaySymbols(uint256 from_, uint256 count_) external view virtual returns (string[] memory);
+    function getMintGatewaySymbols(uint256 from, uint256 count) external view virtual returns (string[] memory);
 
-    function getLockGatewaySymbols(uint256 from_, uint256 count_) external view virtual returns (string[] memory);
+    function getLockGatewaySymbols(uint256 from, uint256 count) external view virtual returns (string[] memory);
 
-    function getMintGatewayByToken(address token_) external view virtual returns (IMintGateway);
+    function getMintGatewayByToken(address token) external view virtual returns (IMintGateway);
 
-    function getMintGatewayBySymbol(string calldata tokenSymbol_) external view virtual returns (IMintGateway);
+    function getMintGatewayBySymbol(string calldata tokenSymbol) external view virtual returns (IMintGateway);
 
-    function getRenAssetBySymbol(string calldata tokenSymbol_) external view virtual returns (IERC20);
+    function getRenAssetBySymbol(string calldata tokenSymbol) external view virtual returns (IERC20);
 
-    function getLockGatewayByToken(address token_) external view virtual returns (ILockGateway);
+    function getLockGatewayByToken(address token) external view virtual returns (ILockGateway);
 
-    function getLockGatewayBySymbol(string calldata tokenSymbol_) external view virtual returns (ILockGateway);
+    function getLockGatewayBySymbol(string calldata tokenSymbol) external view virtual returns (ILockGateway);
 
-    function getLockAssetBySymbol(string calldata tokenSymbol_) external view virtual returns (IERC20);
+    function getLockAssetBySymbol(string calldata tokenSymbol) external view virtual returns (IERC20);
 }

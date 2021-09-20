@@ -10,63 +10,77 @@ import {ILockGateway} from "../Gateways/interfaces/ILockGateway.sol";
 import {RenAssetProxyBeaconV1, MintGatewayProxyBeaconV1, LockGatewayProxyBeaconV1} from "./ProxyBeacon.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract RenAssetFactory is Initializable {
-    RenAssetProxyBeaconV1 public renAssetProxyBeacon;
-    MintGatewayProxyBeaconV1 public mintGatewayProxyBeacon;
-    LockGatewayProxyBeaconV1 public lockGatewayProxyBeacon;
+contract RenAssetFactoryState {
+    RenAssetProxyBeaconV1 internal _renAssetProxyBeacon;
+    MintGatewayProxyBeaconV1 internal _mintGatewayProxyBeacon;
+    LockGatewayProxyBeaconV1 internal _lockGatewayProxyBeacon;
+}
+
+contract RenAssetFactory is Initializable, RenAssetFactoryState {
+    function renAssetProxyBeacon() public view returns (RenAssetProxyBeaconV1) {
+        return _renAssetProxyBeacon;
+    }
+
+    function mintGatewayProxyBeacon() public view returns (MintGatewayProxyBeaconV1) {
+        return _mintGatewayProxyBeacon;
+    }
+
+    function lockGatewayProxyBeacon() public view returns (LockGatewayProxyBeaconV1) {
+        return _lockGatewayProxyBeacon;
+    }
 
     function __RenAssetFactory_init(
         address renAssetProxyBeacon_,
         address mintGatewayProxyBeacon_,
         address lockGatewayProxyBeacon_
     ) public initializer {
-        renAssetProxyBeacon = RenAssetProxyBeaconV1(renAssetProxyBeacon_);
-        mintGatewayProxyBeacon = MintGatewayProxyBeaconV1(mintGatewayProxyBeacon_);
-        lockGatewayProxyBeacon = LockGatewayProxyBeaconV1(lockGatewayProxyBeacon_);
+        _renAssetProxyBeacon = RenAssetProxyBeaconV1(renAssetProxyBeacon_);
+        _mintGatewayProxyBeacon = MintGatewayProxyBeaconV1(mintGatewayProxyBeacon_);
+        _lockGatewayProxyBeacon = LockGatewayProxyBeaconV1(lockGatewayProxyBeacon_);
     }
 
     function _deployRenAsset(
-        uint256 chainId_,
-        string calldata asset_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_,
-        string memory version_
+        uint256 chainId,
+        string calldata asset,
+        string memory name,
+        string memory symbol,
+        uint8 decimals,
+        string memory version
     ) internal returns (IERC20) {
         bytes memory encodedParameters = abi.encodeWithSignature(
-            "__RenAsset_init(uint256,string,string,string,uint8)",
-            chainId_,
-            version_,
-            name_,
-            symbol_,
-            decimals_
+            "__RenAssetinit(uint256,string,string,string,uint8)",
+            chainId,
+            version,
+            name,
+            symbol,
+            decimals
         );
 
-        bytes32 create2Salt = keccak256(abi.encodePacked(asset_, version_));
+        bytes32 create2Salt = keccak256(abi.encodePacked(asset, version));
 
-        address renAsset = renAssetProxyBeacon.deployProxy(create2Salt, encodedParameters);
+        address renAsset = renAssetProxyBeacon().deployProxy(create2Salt, encodedParameters);
 
         return IERC20(renAsset);
     }
 
     function _deployMintGateway(
-        string memory chainName_,
-        string calldata asset_,
-        address signatureVerifier_,
+        string memory chainName,
+        string calldata asset,
+        address signatureVerifier,
         address token,
-        string memory version_
+        string memory version
     ) internal returns (IMintGateway) {
         bytes memory encodedParameters = abi.encodeWithSignature(
             "__MintGateway_init(string,string,address,address)",
-            chainName_,
-            asset_,
-            signatureVerifier_,
+            chainName,
+            asset,
+            signatureVerifier,
             token
         );
 
-        bytes32 create2Salt = keccak256(abi.encodePacked(asset_, version_));
+        bytes32 create2Salt = keccak256(abi.encodePacked(asset, version));
 
-        address mintGateway = mintGatewayProxyBeacon.deployProxy(create2Salt, encodedParameters);
+        address mintGateway = mintGatewayProxyBeacon().deployProxy(create2Salt, encodedParameters);
 
         Ownable(mintGateway).transferOwnership(msg.sender);
 
@@ -74,23 +88,23 @@ contract RenAssetFactory is Initializable {
     }
 
     function _deployLockGateway(
-        string memory chainName_,
-        string calldata asset_,
-        address signatureVerifier_,
+        string memory chainName,
+        string calldata asset,
+        address signatureVerifier,
         address token,
-        string memory version_
+        string memory version
     ) internal returns (ILockGateway) {
         bytes memory encodedParameters = abi.encodeWithSignature(
             "__LockGateway_init(string,string,address,address)",
-            chainName_,
-            asset_,
-            signatureVerifier_,
+            chainName,
+            asset,
+            signatureVerifier,
             token
         );
 
-        bytes32 create2Salt = keccak256(abi.encodePacked(asset_, version_));
+        bytes32 create2Salt = keccak256(abi.encodePacked(asset, version));
 
-        address lockGateway = lockGatewayProxyBeacon.deployProxy(create2Salt, encodedParameters);
+        address lockGateway = lockGatewayProxyBeacon().deployProxy(create2Salt, encodedParameters);
 
         Ownable(lockGateway).transferOwnership(msg.sender);
 

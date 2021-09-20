@@ -4,33 +4,33 @@ pragma solidity ^0.8.7;
 
 abstract contract IMintGateway {
     // For backwards compatiblity reasons, the sigHash is cast to a uint256.
-    event LogMint(address indexed to_, uint256 amount_, uint256 indexed _sigHash, bytes32 indexed _nHash);
+    event LogMint(address indexed to, uint256 amount, uint256 indexed sigHash, bytes32 indexed nHash);
 
-    // For backwards compatibility, `_to` is bytes instead of a string, and the third parameter is unused.
-    event LogBurn(bytes _to, uint256 _amount, uint256 indexed _gap, bytes indexed _indexedTo);
+    // For backwards compatibility, `to` is bytes instead of a string, and the third parameter is unused.
+    event LogBurn(bytes to, uint256 amount, uint256 indexed gap, bytes indexed indexedTo);
     event LogBurnWithPayload(
-        string recipientAddress_,
-        string recipientChain_,
-        bytes recipientPayload_,
-        uint256 amount_,
+        string recipientAddress,
+        string recipientChain,
+        bytes recipientPayload,
+        uint256 amount,
         // Indexed versions of previous parameters.
-        string indexed recipientAddressIndexed_,
-        string indexed recipientChainIndexed_
+        string indexed recipientAddressIndexed,
+        string indexed recipientChainIndexed
     );
 
     function mint(
-        bytes32 pHash_,
-        uint256 amount_,
-        bytes32 nHash_,
-        bytes memory sig_
+        bytes32 pHash,
+        uint256 amount,
+        bytes32 nHash,
+        bytes memory sig
     ) public virtual returns (uint256);
 
     function burnWithPayload(
-        string memory recipientAddress_,
-        string memory recipientChain_,
-        bytes memory recipientPayload_,
-        uint256 amount_
+        string memory recipientAddress,
+        string memory recipientChain,
+        bytes memory recipientPayload,
+        uint256 amount
     ) public virtual returns (uint256);
 
-    function burn(bytes memory recipient_, uint256 amount_) public virtual returns (uint256);
+    function burn(bytes memory recipient, uint256 amount) public virtual returns (uint256);
 }

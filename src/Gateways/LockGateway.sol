@@ -35,110 +35,96 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         string calldata chain_,
         string calldata asset_,
         address signatureVerifier_,
-        address token
+        address token_
     ) public initializer {
         OwnableUpgradeable.__Ownable_init();
-        GatewayStateManagerV3.__GatewayStateManager_init(chain_, asset_, signatureVerifier_, token);
+        GatewayStateManagerV3.__GatewayStateManager_init(chain_, asset_, signatureVerifier_, token_);
     }
 
     // Public functions ////////////////////////////////////////////////////////
-
-    function nextN() public view returns (uint256) {
-        return GatewayStateV3.eventNonce;
-    }
 
     /// @notice burn destroys tokens after taking a fee for the `_feeRecipient`,
     ///         allowing the associated assets to be released on their native
     ///         chain.
     ///
-    /// @param recipientAddress_ The address to which the locked assets will be
+    /// @param recipientAddress The address to which the locked assets will be
     ///        minted to. The address should be a plain-text address, without
     ///        decoding to bytes first.
-    /// @param recipientChain_ The target chain to which the assets are being
+    /// @param recipientChain The target chain to which the assets are being
     ///        moved to.
-    /// @param recipientPayload_ An optional payload to be passed to the
+    /// @param recipientPayload An optional payload to be passed to the
     ///        recipient chain along with the address.
-    /// @param amount_ The amount of the token being locked, in the asset's
+    /// @param amount The amount of the token being locked, in the asset's
     ///        smallest unit. (e.g. satoshis for BTC)
     function lock(
-        string memory recipientAddress_,
-        string memory recipientChain_,
-        bytes memory recipientPayload_,
-        uint256 amount_
+        string memory recipientAddress,
+        string memory recipientChain,
+        bytes memory recipientPayload,
+        uint256 amount
     ) public returns (uint256) {
         // The recipient must not be empty. Better validation is possible,
         // but would need to be customized for each destination ledger.
-        require(bytes(recipientAddress_).length != 0, "LockGateway: to address is empty");
+        require(bytes(recipientAddress).length != 0, "LockGateway: to address is empty");
 
         // Burn the tokens. If the user doesn't have enough tokens, this will
         // throw.
-        uint256 amountActual = IERC20(GatewayStateV3.token).safeTransferFromWithFees(
-            msg.sender,
-            address(this),
-            amount_
-        );
+        uint256 amountActual = IERC20(token()).safeTransferFromWithFees(msg.sender, address(this), amount);
 
-        uint256 lockNonce = GatewayStateV3.eventNonce;
+        uint256 lockNonce = eventNonce();
 
         emit LogLockToChain(
-            recipientAddress_,
-            recipientChain_,
-            recipientPayload_,
+            recipientAddress,
+            recipientChain,
+            recipientPayload,
             amountActual,
             lockNonce,
-            recipientAddress_,
-            recipientChain_
+            recipientAddress,
+            recipientChain
         );
 
-        GatewayStateV3.eventNonce = lockNonce + 1;
+        _eventNonce = lockNonce + 1;
 
-        return amount_;
+        return amount;
     }
 
     /// @notice mint verifies a mint approval signature from RenVM and creates
     ///         tokens after taking a fee for the `_feeRecipient`.
     ///
-    /// @param pHash_ (payload hash) The hash of the payload associated with the
+    /// @param pHash (payload hash) The hash of the payload associated with the
     ///        mint.
-    /// @param amount_ The amount of the token being minted, in its smallest
+    /// @param amount The amount of the token being minted, in its smallest
     ///        value. (e.g. satoshis for BTC).
-    /// @param nHash_ (nonce hash) The hash of the nonce, amount and pHash.
-    /// @param sig_ The signature of the hash of the following values:
+    /// @param nHash (nonce hash) The hash of the nonce, amount and pHash.
+    /// @param sig The signature of the hash of the following values:
     ///        (pHash, amount, msg.sender, nHash), signed by the mintAuthority.
     function release(
-        bytes32 pHash_,
-        uint256 amount_,
-        bytes32 nHash_,
-        bytes memory sig_
+        bytes32 pHash,
+        uint256 amount,
+        bytes32 nHash,
+        bytes memory sig
     ) public returns (uint256) {
         // Calculate the hash signed by RenVM. This binds the payload hash,
         // amount, msg.sender and nonce hash to the signature.
-        bytes32 sigHash = RenVMHashes.calculateSigHash(
-            pHash_,
-            amount_,
-            GatewayStateV3.selectorHash,
-            msg.sender,
-            nHash_
-        );
+        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, selectorHash(), msg.sender, nHash);
 
         // Check that the signature hasn't been redeemed.
-        require(status(sigHash) == false && status(nHash_) == false, "LockGateway: signature already spent");
+        require(status(sigHash) == false && status(nHash) == false, "LockGateway: signature already spent");
 
         // If the signature fails verification, throw an error.
-        if (!GatewayStateV3.signatureVerifier.verifySignature(sigHash, sig_)) {
+        if (!signatureVerifier().verifySignature(sigHash, sig)) {
             revert("LockGateway: invalid signature");
         }
 
         // Update the status for both the signature hash and the nHash.
         _status[sigHash] = true;
-        _status[nHash_] = true;
+        _status[nHash] = true;
 
         // Mint the amount to the msg.sender.
-        IERC20(GatewayStateV3.token).safeTransfer(msg.sender, amount_);
+        IERC20(token()).safeTransfer(msg.sender, amount);
 
         // Emit a log with a unique identifier 'n'.
-        emit LogRelease(msg.sender, amount_, sigHash, nHash_);
+        emit LogRelease(msg.sender, amount, sigHash, nHash);
 
-        return amount_;
+        return amount;
     }
 }

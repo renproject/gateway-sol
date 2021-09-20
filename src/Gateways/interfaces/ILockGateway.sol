@@ -3,28 +3,28 @@
 pragma solidity ^0.8.7;
 
 abstract contract ILockGateway {
-    event LogRelease(address indexed recipient_, uint256 amount_, bytes32 indexed sigHash_, bytes32 indexed nHash_);
+    event LogRelease(address indexed recipient, uint256 amount, bytes32 indexed sigHash, bytes32 indexed nHash);
     event LogLock(
-        string recipientAddress_,
-        string recipientChain_,
-        bytes recipientPayload_,
-        uint256 amount_,
+        string recipientAddress,
+        string recipientChain,
+        bytes recipientPayload,
+        uint256 amount,
         // Indexed versions of previous parameters.
-        string indexed recipientAddressIndexed_,
-        string indexed recipientChainIndexed_
+        string indexed recipientAddressIndexed,
+        string indexed recipientChainIndexed
     );
 
     function lock(
-        string memory recipientAddress_,
-        string memory recipientChain_,
-        bytes memory recipientPayload_,
-        uint256 amount_
+        string memory recipientAddress,
+        string memory recipientChain,
+        bytes memory recipientPayload,
+        uint256 amount
     ) public virtual returns (uint256);
 
     function release(
-        bytes32 pHash_,
-        uint256 amount_,
-        bytes32 nHash_,
-        bytes memory sig_
+        bytes32 pHash,
+        uint256 amount,
+        bytes32 nHash,
+        bytes memory sig
     ) public virtual returns (uint256);
 }

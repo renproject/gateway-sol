@@ -12,7 +12,7 @@ interface ISignatureVerifier {
 }
 
 contract SignatureVerifierStateV1 {
-    address public mintAuthority;
+    address internal _mintAuthority;
     uint256[49] private __gap;
 }
 
@@ -27,34 +27,39 @@ contract SignatureVerifierV1 is Initializable, OwnableUpgradeable, SignatureVeri
         updateMintAuthority(mintAuthority_);
     }
 
+    function mintAuthority() public view returns (address) {
+        return _mintAuthority;
+    }
+
     // GOVERNANCE //////////////////////////////////////////////////////////////
 
     modifier onlyOwnerOrMintAuthority() {
-        require(_msgSender() == owner() || _msgSender() == mintAuthority, "SignatureVerifier: not authorized");
+        require(_msgSender() == owner() || _msgSender() == mintAuthority(), "SignatureVerifier: not authorized");
         _;
     }
 
     /// @notice Allow the owner or mint authority to update the mint authority.
     ///
-    /// @param nextMintAuthority_ The new mint authority address.
-    function updateMintAuthority(address nextMintAuthority_) public onlyOwnerOrMintAuthority {
-        require(nextMintAuthority_ != address(0), "SignatureVerifier: mintAuthority cannot be set to address zero");
-        mintAuthority = nextMintAuthority_;
-        emit LogMintAuthorityUpdated(mintAuthority);
+    /// @param nextMintAuthority The new mint authority address.
+    function updateMintAuthority(address nextMintAuthority) public onlyOwnerOrMintAuthority {
+        require(nextMintAuthority != address(0), "SignatureVerifier: mintAuthority cannot be set to address zero");
+        _mintAuthority = nextMintAuthority;
+        emit LogMintAuthorityUpdated(_mintAuthority);
     }
 
     /// @notice verifySignature checks the the provided signature matches the
     /// provided parameters.
-    function verifySignature(bytes32 _sigHash, bytes memory _sig) public view returns (bool) {
-        require(mintAuthority != address(0x0), "SignatureVerifier: mintAuthority not initialized");
-        return mintAuthority == ECDSA.recover(_sigHash, _sig);
+    function verifySignature(bytes32 sigHash, bytes memory sig) public view returns (bool) {
+        address mingAuthority_ = mintAuthority();
+        require(mingAuthority_ != address(0x0), "SignatureVerifier: mintAuthority not initialized");
+        return mingAuthority_ == ECDSA.recover(sigHash, sig);
     }
 }
 
 contract SignatureVerifierProxy is TransparentUpgradeableProxy {
     constructor(
-        address _logic,
-        address admin_,
-        bytes memory _data
-    ) payable TransparentUpgradeableProxy(_logic, admin_, _data) {}
+        address logic,
+        address admin,
+        bytes memory data
+    ) payable TransparentUpgradeableProxy(logic, admin, data) {}
 }

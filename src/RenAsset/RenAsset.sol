@@ -25,14 +25,14 @@ contract RenAssetStateV2 {
 contract RenAssetV2 is Initializable, ERC20Upgradeable, ERC20WithPermit, OwnableUpgradeable, RenAssetStateV2 {
     /* solium-disable-next-line no-empty-blocks */
     function __RenAsset_init(
-        uint256 chainId_,
+        uint256 chainId,
         string memory version_,
         string memory name_,
         string memory symbol_,
         uint8 decimals_
     ) public initializer {
         ERC20Upgradeable.__ERC20_init(name_, symbol_);
-        ERC20WithPermit.__ERC20WithPermit_init(chainId_, version_, name_, symbol_);
+        ERC20WithPermit.__ERC20WithPermit_init(chainId, version_, name_, symbol_);
         OwnableUpgradeable.__Ownable_init();
         RenAssetStateV2._decimals = decimals_;
     }

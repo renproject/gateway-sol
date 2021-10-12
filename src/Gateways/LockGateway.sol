@@ -11,7 +11,7 @@ import {SafeTransferWithFees} from "./common/SafeTransferWithFees.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
 import {ILockGateway} from "./interfaces/ILockGateway.sol";
-import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./common/RenVMSignatureVerifier.sol";
+import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./RenVMSignatureVerifier.sol";
 
 /// LockGatewayV3 handles verifying lock and release requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature.

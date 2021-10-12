@@ -14,7 +14,7 @@ import {IMintGateway} from "../Gateways/interfaces/IMintGateway.sol";
 import {ILockGateway} from "../Gateways/interfaces/ILockGateway.sol";
 import {ValidString} from "../libraries/ValidString.sol";
 import {RenAssetFactory} from "./RenAssetFactory.sol";
-import {StringSet} from "./StringSet.sol";
+import {StringSet} from "../libraries/StringSet.sol";
 
 contract GatewayRegistryStateV2 {
     struct GatewayDetails {

@@ -9,7 +9,7 @@ import {RenAssetV2} from "../RenAsset/RenAsset.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
 import {IMintGateway} from "./interfaces/IMintGateway.sol";
-import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./common/RenVMSignatureVerifier.sol";
+import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./RenVMSignatureVerifier.sol";
 
 /// MintGateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner

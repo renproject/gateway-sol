@@ -8,42 +8,19 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {RenAssetV2} from "../RenAsset/RenAsset.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
+import {IMintGateway} from "./interfaces/IMintGateway.sol";
+import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./common/RenVMSignatureVerifier.sol";
 
-/// @notice Gateway handles verifying mint and burn requests. A mintAuthority
+/// MintGateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
-contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, GatewayStateManagerV3 {
-    /// @dev For backwards compatiblity reasons, the sigHash is cast to a
-    /// uint256.
-    event LogMint(address indexed to, uint256 amount, uint256 indexed sigHash, bytes32 indexed nHash);
-
-    /// @dev Once `LogBurnToChain` is enabled on mainnet, LogBurn may be
-    /// replaced by LogBurnToChain with empty payload and chain fields.
-    /// @dev For backwards compatibility, `to` is bytes instead of a string.
-    event LogBurn(
-        bytes to,
-        uint256 amount,
-        uint256 indexed burnNonce,
-        // Indexed versions of previous parameters.
-        bytes indexed indexedTo
-    );
-    event LogBurnToChain(
-        string recipientAddress,
-        string recipientChain,
-        bytes recipientPayload,
-        uint256 amount,
-        uint256 indexed burnNonce,
-        // Indexed versions of previous parameters.
-        string indexed recipientAddressIndexed,
-        string indexed recipientChainIndexed
-    );
-
+contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, GatewayStateManagerV3, IMintGateway {
     function __MintGateway_init(
         string calldata chain_,
         string calldata asset_,
         address signatureVerifier_,
         address token_
-    ) public initializer {
+    ) external initializer {
         OwnableUpgradeable.__Ownable_init();
         GatewayStateManagerV3.__GatewayStateManager_init(chain_, asset_, signatureVerifier_, token_);
     }
@@ -51,7 +28,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
     // Governance functions ////////////////////////////////////////////////////
 
     /// @notice Allow the owner to update the owner of the RenERC20 token.
-    function transferTokenOwnership(address nextTokenOwner_) public onlyOwner {
+    function transferTokenOwnership(address nextTokenOwner_) external onlyOwner {
         RenAssetV2(token()).transferOwnership(address(nextTokenOwner_));
     }
 
@@ -72,7 +49,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         uint256 amount,
         bytes32 nHash,
         bytes memory sig
-    ) public returns (uint256) {
+    ) external override returns (uint256) {
         return _mint(pHash, amount, nHash, sig, _msgSender());
     }
 
@@ -96,20 +73,20 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         string memory recipientChain,
         bytes memory recipientPayload,
         uint256 amount
-    ) public returns (uint256) {
+    ) external override returns (uint256) {
         return _burnWithPayload(recipientAddress, recipientChain, recipientPayload, amount, _msgSender());
     }
 
     /// @notice burn is a convenience function that is equivalent to calling
     ///         `burnWithPayload` with an empty payload and chain, releasing
     ///         the asset to the native chain.
-    function burn(string memory recipient, uint256 amount) public virtual returns (uint256) {
+    function burn(string memory recipient, uint256 amount) external virtual returns (uint256) {
         return _burnWithPayload(recipient, "", "", amount, _msgSender());
     }
 
     /// Same as `burn` with the recipient parameter being `bytes` instead of
     /// a `string`. For backwards compatibility with the MintGatewayV2.
-    function burn(bytes memory recipient, uint256 amount) public virtual returns (uint256) {
+    function burn(bytes memory recipient, uint256 amount) external virtual override returns (uint256) {
         return _burnWithPayload(string(recipient), "", "", amount, _msgSender());
     }
 
@@ -119,7 +96,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         bytes32 nHash,
         bytes memory sig,
         address caller
-    ) public onlyPreviousGateway returns (uint256) {
+    ) external onlyPreviousGateway returns (uint256) {
         return _mint(pHash, amount, nHash, sig, caller);
     }
 
@@ -127,7 +104,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         bytes memory recipient,
         uint256 amount,
         address caller
-    ) public onlyPreviousGateway returns (uint256) {
+    ) external onlyPreviousGateway returns (uint256) {
         return _burnWithPayload(string(recipient), "", "", amount, caller);
     }
 
@@ -145,10 +122,10 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, selectorHash(), caller, nHash);
 
         // Check that the signature hasn't been redeemed.
-        require(status(sigHash) == false && status(nHash) == false, "MintGateway: signature already spent");
+        require(!status(sigHash) && !status(nHash), "MintGateway: signature already spent");
 
         // If the signature fails verification, throw an error.
-        if (!signatureVerifier().verifySignature(sigHash, sig)) {
+        if (signatureVerifier().isValidSignature(sigHash, sig) != CORRECT_SIGNATURE_RETURN_VALUE_) {
             revert("MintGateway: invalid signature");
         }
 

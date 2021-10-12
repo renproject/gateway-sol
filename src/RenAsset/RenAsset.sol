@@ -19,9 +19,9 @@ contract RenAssetStateV2 {
     uint256[48] private __gap;
 }
 
-/// @notice RenERC20 represents a digital asset that has been bridged on to
-/// the Ethereum ledger. It exposes mint and burn functions that can only be
-/// called by it's associated Gateway contract.
+/// RenAsset represents a digital asset that has been bridged by RenVM. It
+/// exposes mint and burn functions that can only be called by it's associated
+/// MintGateway contract.
 contract RenAssetV2 is Initializable, ERC20Upgradeable, ERC20WithPermit, OwnableUpgradeable, RenAssetStateV2 {
     /* solium-disable-next-line no-empty-blocks */
     function __RenAsset_init(
@@ -30,7 +30,7 @@ contract RenAssetV2 is Initializable, ERC20Upgradeable, ERC20WithPermit, Ownable
         string memory name_,
         string memory symbol_,
         uint8 decimals_
-    ) public initializer {
+    ) external initializer {
         ERC20Upgradeable.__ERC20_init(name_, symbol_);
         ERC20WithPermit.__ERC20WithPermit_init(chainId, version_, name_, symbol_);
         OwnableUpgradeable.__Ownable_init();
@@ -43,13 +43,13 @@ contract RenAssetV2 is Initializable, ERC20Upgradeable, ERC20WithPermit, Ownable
 
     /// @notice mint can only be called by the tokens' associated Gateway
     /// contract. See Gateway's mint function instead.
-    function mint(address _to, uint256 _amount) public onlyOwner {
+    function mint(address _to, uint256 _amount) external onlyOwner {
         _mint(_to, _amount);
     }
 
     /// @notice burn can only be called by the tokens' associated Gateway
     /// contract. See Gateway's burn functions instead.
-    function burn(address _from, uint256 _amount) public onlyOwner {
+    function burn(address _from, uint256 _amount) external onlyOwner {
         _burn(_from, _amount);
     }
 

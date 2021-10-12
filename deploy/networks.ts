@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
@@ -15,7 +16,7 @@ const renvmTestnetConfig = {
 };
 
 const renvmDevnetConfig = {
-    mintAuthority: "0x 1A5650DAd360803ea7912b7a0a747446b554a5BE",
+    mintAuthority: "0x1A5650DAd360803ea7912b7a0a747446b554a5BE",
     tokenPrefix: "dev" as const,
 };
 
@@ -35,6 +36,10 @@ interface NetworkConfig {
         symbol: string;
         token: string;
         gateway: string;
+
+        // Testnet deployment details
+        decimals?: number;
+        totalSupply?: string;
     }>;
 
     overrides?: CallOptions;
@@ -42,7 +47,7 @@ interface NetworkConfig {
 
 export const networks: { [network: string]: NetworkConfig } = {
     hardhat: {
-        mintAuthority: "0x" + "00".repeat(20),
+        mintAuthority: "0x" + randomBytes(20).toString("hex"),
         tokenPrefix: "dev",
         chainName: "Ethereum",
 
@@ -97,6 +102,33 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0x459086F2376525BdCebA5bDDA135e4E9d3FeF5bf",
                 gateway: "0xCc4FF5b8A4A7adb35F00ff0CBf53784e07c3C52F",
             },
+        ],
+
+        lockGateways: [
+            {
+                symbol: "REN",
+                token: "0x408e41876cccdc0f92210600ef50372656052a38",
+                gateway: "",
+            },
+            {
+                symbol: "DAI",
+                token: "0x6b175474e89094c44da98b954eedeac495271d0f",
+                gateway: "",
+            },
+
+            { symbol: "USDC", token: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", gateway: "" }, // Circle USD, 6 decimals
+            { symbol: "USDT", token: "0xdac17f958d2ee523a2206206994597c13d831ec7", gateway: "" }, // Tether, 6 decimals
+            { symbol: "EURT", token: "0xc581b735a1688071a1746c968e0798d642ede491", gateway: "" }, // Euro Tether, 6 decimals
+            { symbol: "BUSD", token: "0x4Fabb145d64652a948d72533023f6E7A623C7C53", gateway: "" }, // Binance USD, 18 decimals
+            { symbol: "MIM", token: "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3", gateway: "" }, // Magic Internet Money, 18 decimals
+            { symbol: "CRV", token: "0xd533a949740bb3306d119cc777fa900ba034cd52", gateway: "" }, // Curve, 18 decimals
+            { symbol: "LINK", token: "0x514910771af9ca656af840dff83e8264ecf986ca", gateway: "" }, // Chainlink, 18 decimals
+            { symbol: "UNI", token: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984", gateway: "" }, // Uniswap, 18 decimals
+            { symbol: "SUSHI", token: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2", gateway: "" }, // Sushiswap, 18 decimals
+            { symbol: "FTT", token: "0x50d1c9771902476076ecfc8b2a83ad6b9355a4c9", gateway: "" }, // FTX, 18 decimals
+            { symbol: "ROOK", token: "0xfa5047c9c78b8877af97bdcb85db743fd7313d4a", gateway: "" }, // KeeperDAO, 18 decimals
+            { symbol: "BADGER", token: "0x3472a5a71965499acd81997a54bba8d852c6e53d", gateway: "" }, // Badger DAO, 18 decimals
+            { symbol: "KNC", token: "0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202", gateway: "" }, // Kyber Network, 18 decimals
         ],
     },
 
@@ -158,10 +190,28 @@ export const networks: { [network: string]: NetworkConfig } = {
 
         lockGateways: [
             {
+                symbol: "REN",
+                token: "0x2CD647668494c1B15743AB283A0f980d90a87394",
+                gateway: "",
+            },
+            {
                 symbol: "DAI",
                 token: "0x4f96fe3b7a6cf9725f59d353f723c1bdb64ca6aa",
                 gateway: "",
             },
+            { totalSupply: "30,000,000,000", symbol: "USDC", token: "", gateway: "", decimals: 6 }, // Circle USD
+            { totalSupply: "33,000,000,000", symbol: "USDT", token: "", gateway: "", decimals: 6 }, // Tether
+            { totalSupply: "00,150,000,000", symbol: "EURT", token: "", gateway: "", decimals: 6 }, // Euro Tether
+            { totalSupply: "13,000,000,000", symbol: "BUSD", token: "", gateway: "", decimals: 18 }, // Binance USD
+            { totalSupply: "01,280,000,000", symbol: "MIM", token: "", gateway: "", decimals: 18 }, // Magic Internet Money
+            { totalSupply: "01,600,000,000", symbol: "CRV", token: "", gateway: "", decimals: 18 }, // Curve
+            { totalSupply: "01,000,000,000", symbol: "LINK", token: "", gateway: "", decimals: 18 }, // Chainlink
+            { totalSupply: "01,000,000,000", symbol: "UNI", token: "", gateway: "", decimals: 18 }, // Uniswap
+            { totalSupply: "00,235,000,000", symbol: "SUSHI", token: "", gateway: "", decimals: 18 }, // Sushiswap
+            { totalSupply: "00,336,000,000", symbol: "FTT", token: "", gateway: "", decimals: 18 }, // FTX
+            { totalSupply: "00,001,240,000", symbol: "ROOK", token: "", gateway: "", decimals: 18 }, // KeeperDAO
+            { totalSupply: "00,021,000,000", symbol: "BADGER", token: "", gateway: "", decimals: 18 }, // Badger DAO
+            { totalSupply: "00,174,000,000", symbol: "KNC", token: "", gateway: "", decimals: 18 }, // Kyber Network
         ],
     },
 
@@ -443,6 +493,20 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "",
                 gateway: "",
             },
+
+            { symbol: "USDC", token: "", gateway: "", decimals: 6 }, // Circle USD, 6 decimals
+            { symbol: "USDT", token: "", gateway: "", decimals: 6 }, // Tether, 6 decimals
+            { symbol: "EURT", token: "", gateway: "", decimals: 6 }, // Euro Tether, 6 decimals
+            { symbol: "BUSD", token: "", gateway: "", decimals: 18 }, // Binance USD, 18 decimals
+            { symbol: "MIM", token: "", gateway: "", decimals: 18 }, // Magic Internet Money, 18 decimals
+            { symbol: "CRV", token: "", gateway: "", decimals: 18 }, // Curve, 18 decimals
+            { symbol: "LINK", token: "", gateway: "", decimals: 18 }, // Chainlink, 18 decimals
+            { symbol: "UNI", token: "", gateway: "", decimals: 18 }, // Uniswap, 18 decimals
+            { symbol: "SUSHI", token: "", gateway: "", decimals: 18 }, // Sushiswap, 18 decimals
+            { symbol: "FTT", token: "", gateway: "", decimals: 18 }, // FTX, 18 decimals
+            { symbol: "ROOK", token: "", gateway: "", decimals: 18 }, // KeeperDAO, 18 decimals
+            { symbol: "BADGER", token: "", gateway: "", decimals: 18 }, // Badger DAO, 18 decimals
+            { symbol: "KNC", token: "", gateway: "", decimals: 18 }, // Kyber Network, 18 decimals
         ],
     },
 
@@ -571,6 +635,19 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "",
                 gateway: "",
             },
+            { symbol: "USDC", token: "", gateway: "", decimals: 6 }, // Circle USD, 6 decimals
+            { symbol: "USDT", token: "", gateway: "", decimals: 6 }, // Tether, 6 decimals
+            { symbol: "EURT", token: "", gateway: "", decimals: 6 }, // Euro Tether, 6 decimals
+            { symbol: "BUSD", token: "", gateway: "", decimals: 18 }, // Binance USD, 18 decimals
+            { symbol: "MIM", token: "", gateway: "", decimals: 18 }, // Magic Internet Money, 18 decimals
+            { symbol: "CRV", token: "", gateway: "", decimals: 18 }, // Curve, 18 decimals
+            { symbol: "LINK", token: "", gateway: "", decimals: 18 }, // Chainlink, 18 decimals
+            { symbol: "UNI", token: "", gateway: "", decimals: 18 }, // Uniswap, 18 decimals
+            { symbol: "SUSHI", token: "", gateway: "", decimals: 18 }, // Sushiswap, 18 decimals
+            { symbol: "FTT", token: "", gateway: "", decimals: 18 }, // FTX, 18 decimals
+            { symbol: "ROOK", token: "", gateway: "", decimals: 18 }, // KeeperDAO, 18 decimals
+            { symbol: "BADGER", token: "", gateway: "", decimals: 18 }, // Badger DAO, 18 decimals
+            { symbol: "KNC", token: "", gateway: "", decimals: 18 }, // Kyber Network, 18 decimals
         ],
     },
 
@@ -700,6 +777,20 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "",
                 gateway: "",
             },
+
+            { symbol: "USDC", token: "", gateway: "", decimals: 6 }, // Circle USD, 6 decimals
+            { symbol: "USDT", token: "", gateway: "", decimals: 6 }, // Tether, 6 decimals
+            { symbol: "EURT", token: "", gateway: "", decimals: 6 }, // Euro Tether, 6 decimals
+            { symbol: "BUSD", token: "", gateway: "", decimals: 18 }, // Binance USD, 18 decimals
+            { symbol: "MIM", token: "", gateway: "", decimals: 18 }, // Magic Internet Money, 18 decimals
+            { symbol: "CRV", token: "", gateway: "", decimals: 18 }, // Curve, 18 decimals
+            { symbol: "LINK", token: "", gateway: "", decimals: 18 }, // Chainlink, 18 decimals
+            { symbol: "UNI", token: "", gateway: "", decimals: 18 }, // Uniswap, 18 decimals
+            { symbol: "SUSHI", token: "", gateway: "", decimals: 18 }, // Sushiswap, 18 decimals
+            { symbol: "FTT", token: "", gateway: "", decimals: 18 }, // FTX, 18 decimals
+            { symbol: "ROOK", token: "", gateway: "", decimals: 18 }, // KeeperDAO, 18 decimals
+            { symbol: "BADGER", token: "", gateway: "", decimals: 18 }, // Badger DAO, 18 decimals
+            { symbol: "KNC", token: "", gateway: "", decimals: 18 }, // Kyber Network, 18 decimals
         ],
     },
 
@@ -828,6 +919,20 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "",
                 gateway: "",
             },
+
+            { symbol: "USDC", token: "", gateway: "", decimals: 6 }, // Circle USD, 6 decimals
+            { symbol: "USDT", token: "", gateway: "", decimals: 6 }, // Tether, 6 decimals
+            { symbol: "EURT", token: "", gateway: "", decimals: 6 }, // Euro Tether, 6 decimals
+            { symbol: "BUSD", token: "", gateway: "", decimals: 18 }, // Binance USD, 18 decimals
+            { symbol: "MIM", token: "", gateway: "", decimals: 18 }, // Magic Internet Money, 18 decimals
+            { symbol: "CRV", token: "", gateway: "", decimals: 18 }, // Curve, 18 decimals
+            { symbol: "LINK", token: "", gateway: "", decimals: 18 }, // Chainlink, 18 decimals
+            { symbol: "UNI", token: "", gateway: "", decimals: 18 }, // Uniswap, 18 decimals
+            { symbol: "SUSHI", token: "", gateway: "", decimals: 18 }, // Sushiswap, 18 decimals
+            { symbol: "FTT", token: "", gateway: "", decimals: 18 }, // FTX, 18 decimals
+            { symbol: "ROOK", token: "", gateway: "", decimals: 18 }, // KeeperDAO, 18 decimals
+            { symbol: "BADGER", token: "", gateway: "", decimals: 18 }, // Badger DAO, 18 decimals
+            { symbol: "KNC", token: "", gateway: "", decimals: 18 }, // Kyber Network, 18 decimals
         ],
     },
 
@@ -956,6 +1061,20 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "",
                 gateway: "",
             },
+
+            { symbol: "USDC", token: "", gateway: "", decimals: 6 }, // Circle USD, 6 decimals
+            { symbol: "USDT", token: "", gateway: "", decimals: 6 }, // Tether, 6 decimals
+            { symbol: "EURT", token: "", gateway: "", decimals: 6 }, // Euro Tether, 6 decimals
+            { symbol: "BUSD", token: "", gateway: "", decimals: 18 }, // Binance USD, 18 decimals
+            { symbol: "MIM", token: "", gateway: "", decimals: 18 }, // Magic Internet Money, 18 decimals
+            { symbol: "CRV", token: "", gateway: "", decimals: 18 }, // Curve, 18 decimals
+            { symbol: "LINK", token: "", gateway: "", decimals: 18 }, // Chainlink, 18 decimals
+            { symbol: "UNI", token: "", gateway: "", decimals: 18 }, // Uniswap, 18 decimals
+            { symbol: "SUSHI", token: "", gateway: "", decimals: 18 }, // Sushiswap, 18 decimals
+            { symbol: "FTT", token: "", gateway: "", decimals: 18 }, // FTX, 18 decimals
+            { symbol: "ROOK", token: "", gateway: "", decimals: 18 }, // KeeperDAO, 18 decimals
+            { symbol: "BADGER", token: "", gateway: "", decimals: 18 }, // Badger DAO, 18 decimals
+            { symbol: "KNC", token: "", gateway: "", decimals: 18 }, // Kyber Network, 18 decimals
         ],
     },
 
@@ -1090,6 +1209,20 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "",
                 gateway: "",
             },
+
+            { symbol: "USDC", token: "", gateway: "", decimals: 6 }, // Circle USD, 6 decimals
+            { symbol: "USDT", token: "", gateway: "", decimals: 6 }, // Tether, 6 decimals
+            { symbol: "EURT", token: "", gateway: "", decimals: 6 }, // Euro Tether, 6 decimals
+            { symbol: "BUSD", token: "", gateway: "", decimals: 18 }, // Binance USD, 18 decimals
+            { symbol: "MIM", token: "", gateway: "", decimals: 18 }, // Magic Internet Money, 18 decimals
+            { symbol: "CRV", token: "", gateway: "", decimals: 18 }, // Curve, 18 decimals
+            { symbol: "LINK", token: "", gateway: "", decimals: 18 }, // Chainlink, 18 decimals
+            { symbol: "UNI", token: "", gateway: "", decimals: 18 }, // Uniswap, 18 decimals
+            { symbol: "SUSHI", token: "", gateway: "", decimals: 18 }, // Sushiswap, 18 decimals
+            { symbol: "FTT", token: "", gateway: "", decimals: 18 }, // FTX, 18 decimals
+            { symbol: "ROOK", token: "", gateway: "", decimals: 18 }, // KeeperDAO, 18 decimals
+            { symbol: "BADGER", token: "", gateway: "", decimals: 18 }, // Badger DAO, 18 decimals
+            { symbol: "KNC", token: "", gateway: "", decimals: 18 }, // Kyber Network, 18 decimals
         ],
 
         overrides: {

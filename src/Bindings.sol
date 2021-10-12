@@ -12,9 +12,10 @@ import "./GatewayRegistry/ProxyBeacon.sol";
 import "./GatewayRegistry/RenAssetFactory.sol";
 import "./GatewayRegistry/GatewayRegistry.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20PresetMinterPauserUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinterPauserUpgradeable.sol";
 
-/// @notice Bindings imports all of the contracts for generating bindings.
+// import {ERC20PresetMinterPauserUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinterPauserUpgradeable.sol";
+
+/// Bindings imports all of the contracts for generating bindings.
 /* solium-disable-next-line no-empty-blocks */
 contract Bindings {
 

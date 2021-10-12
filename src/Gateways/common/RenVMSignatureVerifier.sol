@@ -6,23 +6,32 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
-interface ISignatureVerifier {
-    function verifySignature(bytes32 _sigHash, bytes memory _sig) external view returns (bool);
+/* solium-disable-next-line no-empty-blocks */
+interface IRenVMSignatureVerifier is IERC1271 {
+
 }
 
-contract SignatureVerifierStateV1 {
+contract RenVMSignatureVerifierStateV1 {
     address internal _mintAuthority;
     uint256[49] private __gap;
 }
 
-/// @notice Gateway handles verifying mint and burn requests. A mintAuthority
-/// approves new assets to be minted by providing a digital signature. An owner
-/// of an asset can request for it to be burnt.
-contract SignatureVerifierV1 is Initializable, OwnableUpgradeable, SignatureVerifierStateV1 {
+// ERC-1271 uses 4-byte value instead of a boolean so that if a bug causes
+// another function to be called (e.g. by proxy misconfiguration or fallbacks),
+// a truthy value would not be interpreted as a successful check.
+// See https://github.com/ethereum/EIPs/issues/1271#issuecomment-442328339.
+bytes4 constant CORRECT_SIGNATURE_RETURN_VALUE_ = 0x1626ba7e;
+
+contract RenVMSignatureVerifierV1 is Initializable, OwnableUpgradeable, RenVMSignatureVerifierStateV1, IERC1271 {
     event LogMintAuthorityUpdated(address indexed _newMintAuthority);
 
-    function __SignatureVerifier_init(address mintAuthority_) public initializer {
+    // bytes4(keccak256("isValidSignature(bytes32,bytes)")
+    bytes4 public constant CORRECT_SIGNATURE_RETURN_VALUE = 0x1626ba7e; // CORRECT_SIGNATURE_RETURN_VALUE_
+    bytes4 public constant INCORRECT_SIGNATURE_RETURN_VALUE = 0x000000;
+
+    function __RenVMSignatureVerifier_init(address mintAuthority_) external initializer {
         __Ownable_init();
         updateMintAuthority(mintAuthority_);
     }
@@ -49,14 +58,23 @@ contract SignatureVerifierV1 is Initializable, OwnableUpgradeable, SignatureVeri
 
     /// @notice verifySignature checks the the provided signature matches the
     /// provided parameters.
-    function verifySignature(bytes32 sigHash, bytes memory sig) public view returns (bool) {
+    function isValidSignature(bytes32 sigHash, bytes memory signature)
+        external
+        view
+        override
+        returns (bytes4 magicValue)
+    {
         address mingAuthority_ = mintAuthority();
         require(mingAuthority_ != address(0x0), "SignatureVerifier: mintAuthority not initialized");
-        return mingAuthority_ == ECDSA.recover(sigHash, sig);
+        if (mingAuthority_ == ECDSA.recover(sigHash, signature)) {
+            return CORRECT_SIGNATURE_RETURN_VALUE;
+        } else {
+            return INCORRECT_SIGNATURE_RETURN_VALUE;
+        }
     }
 }
 
-contract SignatureVerifierProxy is TransparentUpgradeableProxy {
+contract RenVMSignatureVerifierProxy is TransparentUpgradeableProxy {
     constructor(
         address logic,
         address admin,

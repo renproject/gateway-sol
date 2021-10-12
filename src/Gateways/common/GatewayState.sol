@@ -6,7 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {ISignatureVerifier} from "./SignatureVerifier.sol";
+import {IRenVMSignatureVerifier} from "./RenVMSignatureVerifier.sol";
 import {ValidString} from "../../libraries/ValidString.sol";
 import {RenVMHashes} from "./RenVMHashes.sol";
 
@@ -22,7 +22,7 @@ contract GatewayStateV3 {
     /// @notice Each Gateway is tied to a specific asset.
     address internal _token;
 
-    ISignatureVerifier internal _signatureVerifier;
+    IRenVMSignatureVerifier internal _signatureVerifier;
 
     address internal _previousGateway;
 
@@ -31,13 +31,10 @@ contract GatewayStateV3 {
     uint256[43] private __gap;
 }
 
-/// @notice Gateway handles verifying mint and burn requests. A mintAuthority
-/// approves new assets to be minted by providing a digital signature. An owner
-/// of an asset can request for it to be burnt.
 contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStateV3 {
     event LogChainUpdated(string _chain, bytes32 _selectorHash);
     event LogAssetUpdated(string _asset, bytes32 _selectorHash);
-    event LogSignatureVerifierUpdated(ISignatureVerifier indexed _newSignatureVerifier);
+    event LogSignatureVerifierUpdated(IRenVMSignatureVerifier indexed _newSignatureVerifier);
     event LogTokenUpdated(address indexed _newToken);
     event LogPreviousGatewayUpdated(address indexed _newPreviousGateway);
 
@@ -50,7 +47,7 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
         __Ownable_init();
         updateChain(chain_);
         updateAsset(asset_);
-        updateSignatureVerifier(ISignatureVerifier(signatureVerifier_));
+        updateSignatureVerifier(IRenVMSignatureVerifier(signatureVerifier_));
         updateToken(token_);
     }
 
@@ -72,7 +69,7 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
         return _token;
     }
 
-    function signatureVerifier() public view returns (ISignatureVerifier) {
+    function signatureVerifier() public view returns (IRenVMSignatureVerifier) {
         return _signatureVerifier;
     }
 
@@ -117,7 +114,7 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
     /// @notice Allow the owner to update the signature verifier contract.
     ///
     /// @param nextSignatureVerifier The new verifier contract address.
-    function updateSignatureVerifier(ISignatureVerifier nextSignatureVerifier) public onlyOwner {
+    function updateSignatureVerifier(IRenVMSignatureVerifier nextSignatureVerifier) public onlyOwner {
         require(address(nextSignatureVerifier) != address(0x0), "Gateway: invalid signature verifier");
         _signatureVerifier = nextSignatureVerifier;
         emit LogSignatureVerifierUpdated(nextSignatureVerifier);
@@ -136,7 +133,7 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
     /// backwards compatibility.
     ///
     /// @param nextPreviousGateway The new gateway contract's address.
-    function updatePreviousGateway(address nextPreviousGateway) public onlyOwner {
+    function updatePreviousGateway(address nextPreviousGateway) external onlyOwner {
         require(address(nextPreviousGateway) != address(0x0), "Gateway: invalid address");
         _previousGateway = nextPreviousGateway;
         emit LogPreviousGatewayUpdated(nextPreviousGateway);

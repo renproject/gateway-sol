@@ -53,7 +53,7 @@ contract BasicBridge {
         IERC20 lockAsset = registry.getLockAssetBySymbol(symbol);
         ILockGateway gateway = registry.getLockGatewayBySymbol(symbol);
         lockAsset.safeTransferFrom(msg.sender, address(this), amount);
-        lockAsset.approve(address(gateway), amount);
+        lockAsset.safeIncreaseAllowance(address(gateway), amount);
         gateway.lock(recipientAddress, recipientChain, recipientPayload, amount);
     }
 
@@ -71,7 +71,8 @@ contract BasicBridge {
         registry.getRenAssetBySymbol(symbol).safeTransfer(recipient, amountReleased);
     }
 
-    function transferWithLog(address payable to) public payable {
+    function transferWithLog(address payable to) external payable {
+        require(to != address(0x0), "BasicBridge: invalid empty recipient");
         uint256 amount = msg.value;
         (bool sent, ) = to.call{value: amount}("");
         require(sent, "eth transfer failed");

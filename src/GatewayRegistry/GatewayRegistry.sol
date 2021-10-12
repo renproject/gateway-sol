@@ -134,7 +134,7 @@ contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
     }
 }
 
-/// @notice GatewayRegistry is a mapping from assets to their associated
+/// GatewayRegistry is a mapping from assets to their associated
 /// RenERC20 and Gateway contracts.
 contract GatewayRegistryV2 is
     Initializable,
@@ -155,7 +155,7 @@ contract GatewayRegistryV2 is
         address mintGatewayProxyBeacon_,
         address lockGatewayProxyBeacon_,
         address adminAddress
-    ) public initializer onlyValidString(chainName_) {
+    ) external initializer onlyValidString(chainName_) {
         __RenAssetFactory_init(renAssetProxyBeacon_, mintGatewayProxyBeacon_, lockGatewayProxyBeacon_);
         _chainName = chainName_;
         _chainId = chainId_;
@@ -216,7 +216,7 @@ contract GatewayRegistryV2 is
     ///
     /// @param nextSignatureVerifier The new verifier contract address.
     function updateSignatureVerifier(address nextSignatureVerifier)
-        public
+        external
         onlyAtLeastOneRole(CAN_ADD_GATEWAYS, CAN_UPDATE_GATEWAYS)
     {
         require(nextSignatureVerifier != address(0x0), "Gateway: invalid signature verifier");

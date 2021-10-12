@@ -21,7 +21,7 @@ abstract contract ERC20WithPermitState {
     uint256[48] private __gap;
 }
 
-/// @notice Taken from the DAI token.
+/// Taken from the DAI token.
 contract ERC20WithPermit is Initializable, ERC20Upgradeable, ERC20WithPermitState {
     function __ERC20WithPermit_init(
         uint256 chainId,
@@ -46,7 +46,7 @@ contract ERC20WithPermit is Initializable, ERC20Upgradeable, ERC20WithPermitStat
         return _nonces[holder];
     }
 
-    function version() public view returns (string memory) {
+    function version() external view returns (string memory) {
         return _version;
     }
 

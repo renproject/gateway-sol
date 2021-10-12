@@ -5,19 +5,20 @@ pragma solidity ^0.8.7;
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 contract ProxyBeaconV1 is AccessControl, UpgradeableBeacon {
     bytes32 public constant PROXY_DEPLOYER = keccak256("PROXY_DEPLOYER");
 
-    constructor(address implementation, address adminAddress_) UpgradeableBeacon(implementation) {
+    constructor(address implementation_, address adminAddress_) UpgradeableBeacon(implementation_) {
         AccessControl._setupRole(AccessControl.DEFAULT_ADMIN_ROLE, adminAddress_);
         transferOwnership(adminAddress_);
     }
 
     function deployProxy(bytes32 create2Salt, bytes calldata encodedParameters)
-        public
+        external
         onlyRole(PROXY_DEPLOYER)
         returns (address)
     {

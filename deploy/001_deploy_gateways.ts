@@ -1,6 +1,7 @@
+import BigNumber from "bignumber.js";
 import { BaseContract, ContractTransaction } from "ethers";
 import { keccak256 } from "ethers/lib/utils";
-import { CallOptions, DeployFunction, Deployment } from "hardhat-deploy/types";
+import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
@@ -11,29 +12,45 @@ import {
     Ownable,
     RenAssetProxyBeaconV1,
     RenProxyAdmin,
-    SignatureVerifierV1,
+    RenVMSignatureVerifierV1,
+    TestToken,
     TransparentUpgradeableProxy,
 } from "../typechain";
 import { networks } from "./networks";
 
 const Ox0 = "0x0000000000000000000000000000000000000000";
+const CREATE2_DEPLOYER = "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf";
 
-const CREATE2_SALT = keccak256(Buffer.from("REN-RC1"));
+const create2SaltMsg = (network: string) => (network.match(/Testnet$/) ? "REN.RC1" : `REN.RC1-${network}`);
+const create2Salt = (network: string) => keccak256(Buffer.from(create2SaltMsg(network)));
+
+const setupGetExistingDeployment =
+    (hre: HardhatRuntimeEnvironment) =>
+    async <T extends BaseContract>(name: string): Promise<T | null> => {
+        const { deployments, getNamedAccounts, ethers } = hre;
+        const { getOrNull } = deployments;
+
+        const { deployer } = await getNamedAccounts();
+        const result = await getOrNull(name);
+
+        return result ? await ethers.getContractAt<T>(name, result.address, deployer) : result;
+    };
 
 const setupCreate2 =
     (hre: HardhatRuntimeEnvironment, overrides?: CallOptions) =>
     async <T extends BaseContract>(name: string, args: any[]): Promise<T> => {
-        const { deployments, getNamedAccounts, ethers } = hre;
+        const { deployments, getNamedAccounts, ethers, network } = hre;
         const { deploy } = deployments;
 
         const { deployer } = await getNamedAccounts();
-        console.log(`Deploying ${name} from ${deployer}`);
+        const salt = create2Salt(network.name);
+        console.log(`Deploying ${name} from ${deployer} (salt: keccak256(${create2SaltMsg(network.name)}))`);
 
         const result = await deploy(name, {
             from: deployer,
             args: args,
             log: true,
-            deterministicDeployment: CREATE2_SALT,
+            deterministicDeployment: salt,
             skipIfAlreadyDeployed: true,
             ...overrides,
         });
@@ -44,7 +61,7 @@ const setupCreate2 =
         try {
             owner = await (contract as any as Ownable).owner();
         } catch (error) {}
-        if (owner && owner.toLowerCase() === "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf") {
+        if (owner && owner.toLowerCase() === CREATE2_DEPLOYER) {
             throw new Error(`${name}'s owner was initialized to CREATE2 deployer!`);
         }
 
@@ -54,7 +71,7 @@ const setupCreate2 =
                 await (contract as any as AccessControlEnumerableUpgradeable).DEFAULT_ADMIN_ROLE()
             );
         } catch (error) {}
-        if (roleAdmin && roleAdmin.toLowerCase() === "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf") {
+        if (roleAdmin && roleAdmin.toLowerCase() === CREATE2_DEPLOYER) {
             throw new Error(`${name}'s role admin was initialized to CREATE2 deployer!`);
         }
 
@@ -94,7 +111,7 @@ const setupDeployProxy =
         await initialize(implementation);
 
         const existingProxyDeployment = (await deployments.getOrNull(proxyName)) as unknown as BaseContract;
-        let proxy;
+        let proxy: TransparentUpgradeableProxy;
         if (existingProxyDeployment) {
             console.log(`Reusing ${proxyName} at ${existingProxyDeployment.address}`);
             proxy = await ethers.getContractAt<TransparentUpgradeableProxy>(
@@ -103,11 +120,12 @@ const setupDeployProxy =
                 deployer
             );
             const currentImplementation = await proxyAdmin.getProxyImplementation(proxy.address);
+            console.log(proxyName, "points to", currentImplementation);
             if (currentImplementation.toLowerCase() !== implementation.address.toLowerCase()) {
                 console.log(
                     `Updating ${proxyName} to point to ${implementation.address} instead of ${currentImplementation}`
                 );
-                await proxyAdmin.upgrade(proxy.address, implementation.address, { gasLimit: 2000000 });
+                await waitForTx(async () => proxyAdmin.upgrade(proxy.address, implementation.address));
             }
         } else {
             proxy = await create2(proxyName, [implementation.address, proxyAdmin.address, []]);
@@ -120,14 +138,23 @@ const setupDeployProxy =
         return final;
     };
 
+/**
+ * Submits a transaction and waits for it to be mined.
+ */
 const waitForTx = async (callTx: () => Promise<ContractTransaction>, msg?: string) => {
+    if (msg) {
+        console.log(msg);
+    }
     const tx = await callTx();
+    process.stdout.write(`Waiting for ${tx.hash}...`);
     await tx.wait();
+    // Clear the line
+    process.stdout.write(`\x1B[2K\r`);
+    console.log(`Transaction confirmed: ${tx.hash}`);
 };
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-    const { deployments, getNamedAccounts, ethers, network } = hre;
-    const { deploy } = deployments;
+    const { getNamedAccounts, ethers, network } = hre;
 
     console.log(`Deploying to ${network.name}...`);
 
@@ -139,6 +166,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     }
 
     const create2 = setupCreate2(hre);
+    const getExistingDeployment = setupGetExistingDeployment(hre);
 
     const { deployer } = await getNamedAccounts();
 
@@ -156,32 +184,56 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     // Deploy RenAssetProxyBeacon ////////////////////////////////////////////////
     const renAssetImplementation = await create2("RenAssetV2", []);
-    const renAssetProxyBeacon = await create2<RenAssetProxyBeaconV1>("RenAssetProxyBeaconV1", [
-        renAssetImplementation.address,
-        deployer,
-    ]);
+    const existingRenAssetProxyBeacon = await getExistingDeployment<RenAssetProxyBeaconV1>("RenAssetProxyBeaconV1");
+    const renAssetProxyBeacon =
+        existingRenAssetProxyBeacon ||
+        (await create2<RenAssetProxyBeaconV1>("RenAssetProxyBeaconV1", [
+            CREATE2_DEPLOYER, // Temporary value, gets overwritten in the next step.
+            deployer,
+        ]));
+    if (Ox(await renAssetProxyBeacon.implementation()) !== Ox(renAssetImplementation.address)) {
+        await waitForTx(() => renAssetProxyBeacon.upgradeTo(renAssetImplementation.address));
+    }
 
     // Deploy MintGatewayProxyBeacon /////////////////////////////////////////////
     const mintGatewayImplementation = await create2("MintGatewayV3", []);
-    const mintGatewayProxyBeacon = await create2<MintGatewayProxyBeaconV1>("MintGatewayProxyBeaconV1", [
-        mintGatewayImplementation.address,
-        deployer,
-    ]);
+    const existingsMintGatewayProxyBeacon = await getExistingDeployment<MintGatewayProxyBeaconV1>(
+        "MintGatewayProxyBeaconV1"
+    );
+    const mintGatewayProxyBeacon =
+        existingsMintGatewayProxyBeacon ||
+        (await create2<MintGatewayProxyBeaconV1>("MintGatewayProxyBeaconV1", [
+            CREATE2_DEPLOYER, // Temporary value, gets overwritten in the next step.
+            deployer,
+        ]));
+    if (Ox(await mintGatewayProxyBeacon.implementation()) !== Ox(mintGatewayImplementation.address)) {
+        await waitForTx(() => mintGatewayProxyBeacon.upgradeTo(mintGatewayImplementation.address));
+    }
 
     // Deploy LockGatewayProxyBeacon /////////////////////////////////////////////
     const lockGatewayImplementation = await create2("LockGatewayV3", []);
-    const lockGatewayProxyBeacon = await create2<LockGatewayProxyBeaconV1>("LockGatewayProxyBeaconV1", [
-        lockGatewayImplementation.address,
-        deployer,
-    ]);
+    const existingsLockGatewayProxyBeacon = await getExistingDeployment<LockGatewayProxyBeaconV1>(
+        "LockGatewayProxyBeaconV1"
+    );
+    const lockGatewayProxyBeacon =
+        existingsLockGatewayProxyBeacon ||
+        (await create2<LockGatewayProxyBeaconV1>("LockGatewayProxyBeaconV1", [
+            CREATE2_DEPLOYER, // Temporary value, gets overwritten in the next step.
+            deployer,
+        ]));
+    if (Ox(await lockGatewayProxyBeacon.implementation()) !== Ox(lockGatewayImplementation.address)) {
+        await waitForTx(() => lockGatewayProxyBeacon.upgradeTo(lockGatewayImplementation.address));
+    }
 
-    const signatureVerifier = await deployProxy<SignatureVerifierV1>(
-        "SignatureVerifierV1",
-        "SignatureVerifierProxy",
+    const signatureVerifier = await deployProxy<RenVMSignatureVerifierV1>(
+        "RenVMSignatureVerifierV1",
+        "RenVMSignatureVerifierProxy",
         async (signatureVerifier) => {
             const currentMintAuthority = Ox(await signatureVerifier.mintAuthority());
+            console.log("currentMintAuthority", currentMintAuthority);
+            console.log("mintAuthority", Ox(mintAuthority));
             if (currentMintAuthority !== Ox(mintAuthority)) {
-                await waitForTx(async () => signatureVerifier.__SignatureVerifier_init(mintAuthority));
+                await waitForTx(async () => signatureVerifier.__RenVMSignatureVerifier_init(mintAuthority));
             } else {
                 console.log(`Already initialized.`);
             }
@@ -210,13 +262,28 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
             }
         }
     );
-    if (Ox(await gatewayRegistry.signatureVerifier()) !== Ox(signatureVerifier.address)) {
-        console.log(`Updating signature verifier in gateway registry`);
+    const existingSignatureVerifier = Ox(await gatewayRegistry.signatureVerifier());
+    if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
+        console.log(
+            `Updating signature verifier in gateway registry. Was ${existingSignatureVerifier}, updating to ${Ox(
+                signatureVerifier.address
+            )}.`
+        );
         await waitForTx(async () =>
             gatewayRegistry.updateSignatureVerifier(signatureVerifier.address, {
                 ...config.overrides,
             })
         );
+    }
+
+    if (Ox(await gatewayRegistry.renAssetProxyBeacon()) !== Ox(renAssetProxyBeacon.address)) {
+        throw new Error(`GatewayRegistry's renAssetProxyBeacon address is not correct.`);
+    }
+    if (Ox(await gatewayRegistry.mintGatewayProxyBeacon()) !== Ox(mintGatewayProxyBeacon.address)) {
+        throw new Error(`GatewayRegistry's mintGatewayProxyBeacon address is not correct.`);
+    }
+    if (Ox(await gatewayRegistry.lockGatewayProxyBeacon()) !== Ox(lockGatewayProxyBeacon.address)) {
+        throw new Error(`GatewayRegistry's lockGatewayProxyBeacon address is not correct.`);
     }
 
     if (!(await renAssetProxyBeacon.hasRole(await renAssetProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address))) {
@@ -269,7 +336,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
                         "1",
                         {
                             ...config.overrides,
-                            gasLimit: 5000000,
                         }
                     )
                 );
@@ -286,21 +352,37 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         }
     }
 
-    for (const { symbol, gateway, token } of config.lockGateways || []) {
-        const existingGateway = Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
+    for (const { symbol, gateway, token, decimals, totalSupply } of config.lockGateways || []) {
+        const existingGateway = Ox(await gatewayRegistry.getLockGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getLockAssetBySymbol(symbol));
-        if ((await gatewayRegistry.getLockGatewayBySymbol(symbol)) === Ox0) {
+        let deployedToken = token;
+        if (existingGateway === Ox0) {
+            if (!token) {
+                console.log(`Deploying TestToken(${symbol}, ${decimals}, ${totalSupply})`);
+                const supply = new BigNumber(
+                    totalSupply !== undefined ? totalSupply.replace(/,/g, "") : 1000000
+                ).multipliedBy(new BigNumber(10).exponentiatedBy(decimals !== undefined ? decimals : 18));
+                const deployedTokenInstance = await create2<TestToken>("TestToken", [
+                    symbol,
+                    symbol,
+                    decimals,
+                    supply.toFixed(),
+                    deployer,
+                ]);
+                deployedToken = deployedTokenInstance.address;
+            }
+
             if (!gateway) {
-                console.log(`Calling deployLockGateway(${symbol}, ${token}, '1')`);
+                console.log(`Calling deployLockGateway(${symbol}, ${deployedToken}, '1')`);
                 await waitForTx(() =>
-                    gatewayRegistry.deployLockGateway(symbol, token, "1", {
+                    gatewayRegistry.deployLockGateway(symbol, deployedToken, "1", {
                         ...config.overrides,
                     })
                 );
             } else {
-                console.log(`Calling addLockGateway(${symbol}, ${token}, ${gateway})`);
+                console.log(`Calling addLockGateway(${symbol}, ${deployedToken}, ${gateway})`);
                 await waitForTx(() =>
-                    gatewayRegistry.addLockGateway(symbol, token, gateway, {
+                    gatewayRegistry.addLockGateway(symbol, deployedToken, gateway, {
                         ...config.overrides,
                     })
                 );
@@ -398,7 +480,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     // await usdcGateway.lock('8123', 'Bitcoin', [], '10', {from: deployer});
 
     console.log("mint gateway symbols:", await gatewayRegistry.getMintGatewaySymbols(0, 0));
-    console.log("lock gateway symbols:", await gatewayRegistry.getLockGatewaySymbols(0, 0));
+    const lockSymbols = await gatewayRegistry.getLockGatewaySymbols(0, 0);
+    console.log("lock gateway symbols:", lockSymbols);
+    for (const lockSymbol of lockSymbols) {
+        const lockToken = await gatewayRegistry.getLockAssetBySymbol(lockSymbol);
+        console.log(`${lockSymbol}: ${lockToken}`);
+    }
 
     await create2("BasicBridge", [gatewayRegistry.address]);
 };
@@ -412,8 +499,8 @@ func.tags = [
     "MintGatewayProxyBeacon",
     "LockGatewayV3",
     "LockGatewayProxyBeacon",
-    "SignatureVerifierV1",
-    "SignatureVerifierProxy",
+    "RenVMSignatureVerifierV1",
+    "RenVMSignatureVerifierProxy",
     "GatewayRegistryV2",
     "BasicBridge",
     "ERC20PresetMinterPauserUpgradeable",

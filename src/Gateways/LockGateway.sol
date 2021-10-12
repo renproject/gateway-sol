@@ -10,33 +10,21 @@ import {RenAssetV2} from "../RenAsset/RenAsset.sol";
 import {SafeTransferWithFees} from "./common/SafeTransferWithFees.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
+import {ILockGateway} from "./interfaces/ILockGateway.sol";
+import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./common/RenVMSignatureVerifier.sol";
 
-/// @notice Gateway handles verifying mint and burn requests. A mintAuthority
-/// approves new assets to be minted by providing a digital signature. An owner
-/// of an asset can request for it to be burnt.
-contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, GatewayStateManagerV3 {
+/// LockGatewayV3 handles verifying lock and release requests. A mintAuthority
+/// approves new assets to be minted by providing a digital signature.
+contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, GatewayStateManagerV3, ILockGateway {
     using SafeERC20 for IERC20;
     using SafeTransferWithFees for IERC20;
-
-    event LogRelease(address indexed recipient, uint256 amount, bytes32 indexed sigHash, bytes32 indexed nHash);
-
-    event LogLockToChain(
-        string recipientAddress,
-        string recipientChain,
-        bytes recipientPayload,
-        uint256 amount,
-        uint256 indexed lockNonce,
-        // Indexed versions of previous parameters.
-        string indexed recipientAddressIndexed,
-        string indexed recipientChainIndexed
-    );
 
     function __LockGateway_init(
         string calldata chain_,
         string calldata asset_,
         address signatureVerifier_,
         address token_
-    ) public initializer {
+    ) external initializer {
         OwnableUpgradeable.__Ownable_init();
         GatewayStateManagerV3.__GatewayStateManager_init(chain_, asset_, signatureVerifier_, token_);
     }
@@ -61,7 +49,7 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         string memory recipientChain,
         bytes memory recipientPayload,
         uint256 amount
-    ) public returns (uint256) {
+    ) external override returns (uint256) {
         // The recipient must not be empty. Better validation is possible,
         // but would need to be customized for each destination ledger.
         require(bytes(recipientAddress).length != 0, "LockGateway: to address is empty");
@@ -102,16 +90,18 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
         uint256 amount,
         bytes32 nHash,
         bytes memory sig
-    ) public returns (uint256) {
+    ) external override returns (uint256) {
         // Calculate the hash signed by RenVM. This binds the payload hash,
         // amount, msg.sender and nonce hash to the signature.
         bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, selectorHash(), msg.sender, nHash);
 
         // Check that the signature hasn't been redeemed.
-        require(status(sigHash) == false && status(nHash) == false, "LockGateway: signature already spent");
+        require(!status(sigHash) && !status(nHash), "LockGateway: signature already spent");
 
         // If the signature fails verification, throw an error.
-        if (!signatureVerifier().verifySignature(sigHash, sig)) {
+        if (
+            GatewayStateManagerV3.signatureVerifier().isValidSignature(sigHash, sig) != CORRECT_SIGNATURE_RETURN_VALUE_
+        ) {
             revert("LockGateway: invalid signature");
         }
 

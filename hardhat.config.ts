@@ -169,7 +169,21 @@ const config: HardhatUserConfig = {
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },
+            gasPrice: 1000000000,
         },
+    },
+    deterministicDeployment: (network: string) => {
+        // Skip on hardhat's local network.
+        if (network === "31337") {
+            return undefined;
+        }
+        return {
+            factory: "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf",
+            deployer: "0x90899d3cc800c0a9196aec83da43e46582cb7435",
+            // Must be deployed manually.
+            funding: "0",
+            signedTx: "0x00",
+        };
     },
     paths: {
         sources: "src",

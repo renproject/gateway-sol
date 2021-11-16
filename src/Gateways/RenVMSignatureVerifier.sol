@@ -64,9 +64,9 @@ contract RenVMSignatureVerifierV1 is Initializable, OwnableUpgradeable, RenVMSig
         override
         returns (bytes4 magicValue)
     {
-        address mingAuthority_ = mintAuthority();
-        require(mingAuthority_ != address(0x0), "SignatureVerifier: mintAuthority not initialized");
-        if (mingAuthority_ == ECDSA.recover(sigHash, signature)) {
+        address mintAuthority_ = mintAuthority();
+        require(mintAuthority_ != address(0x0), "SignatureVerifier: mintAuthority not initialized");
+        if (mintAuthority_ == ECDSA.recover(sigHash, signature)) {
             return CORRECT_SIGNATURE_RETURN_VALUE;
         } else {
             return INCORRECT_SIGNATURE_RETURN_VALUE;

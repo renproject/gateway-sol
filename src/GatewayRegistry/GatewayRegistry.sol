@@ -35,14 +35,12 @@ contract GatewayRegistryStateV2 {
 
     uint256 internal _chainId;
     string internal _chainName;
+
+    address internal _transferWithLog;
 }
 
 contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
     using StringSet for StringSet.Set;
-
-    function signatureVerifier() public view returns (address) {
-        return _signatureVerifier;
-    }
 
     function chainId() public view returns (uint256) {
         return _chainId;
@@ -50,6 +48,14 @@ contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
 
     function chainName() public view returns (string memory) {
         return _chainName;
+    }
+
+    function getSignatureVerifier() public view returns (address) {
+        return _signatureVerifier;
+    }
+
+    function getTransferWithLog() external view returns (address) {
+        return _transferWithLog;
     }
 
     /// @dev To get all the registered Gateway contracts set count to `0`.
@@ -154,7 +160,8 @@ contract GatewayRegistryV2 is
         address renAssetProxyBeacon_,
         address mintGatewayProxyBeacon_,
         address lockGatewayProxyBeacon_,
-        address adminAddress
+        address adminAddress,
+        address transferWithLog
     ) external initializer onlyValidString(chainName_) {
         __RenAssetFactory_init(renAssetProxyBeacon_, mintGatewayProxyBeacon_, lockGatewayProxyBeacon_);
         _chainName = chainName_;
@@ -162,6 +169,7 @@ contract GatewayRegistryV2 is
         AccessControlEnumerableUpgradeable._setupRole(AccessControlUpgradeable.DEFAULT_ADMIN_ROLE, adminAddress);
         AccessControlEnumerableUpgradeable._setupRole(CAN_UPDATE_GATEWAYS, adminAddress);
         AccessControlEnumerableUpgradeable._setupRole(CAN_ADD_GATEWAYS, adminAddress);
+        _transferWithLog = transferWithLog;
     }
 
     /// @dev The symbol is included twice because strings have to be hashed
@@ -182,6 +190,7 @@ contract GatewayRegistryV2 is
     event LogLockGatewayDeleted(string symbol, string indexed indexedSymbol);
 
     event LogSignatureVerifierUpdated(address indexed newSignatureVerifier);
+    event LogTransferWithLogUpdated(address indexed newTransferWithLog);
 
     // MODIFIERS ///////////////////////////////////////////////////////////////
 
@@ -190,38 +199,24 @@ contract GatewayRegistryV2 is
         _;
     }
 
-    /// @notice Modifier to require the caller to have at least one of two roles.
-    modifier onlyAtLeastOneRole(bytes32 role1, bytes32 role2) {
-        address account = _msgSender();
-        if (!hasRole(role1, account) && !hasRole(role2, account)) {
-            revert(
-                string(
-                    abi.encodePacked(
-                        "AccessControl: account ",
-                        StringsUpgradeable.toHexString(uint160(account), 20),
-                        " is missing roles ",
-                        StringsUpgradeable.toHexString(uint256(role1), 32),
-                        " or ",
-                        StringsUpgradeable.toHexString(uint256(role2), 32)
-                    )
-                )
-            );
-        }
-        _;
-    }
-
     // GOVERNANCE //////////////////////////////////////////////////////////////
 
     /// @notice Allow the owner to update the signature verifier contract.
     ///
     /// @param nextSignatureVerifier The new verifier contract address.
-    function updateSignatureVerifier(address nextSignatureVerifier)
-        external
-        onlyAtLeastOneRole(CAN_ADD_GATEWAYS, CAN_UPDATE_GATEWAYS)
-    {
+    function updateSignatureVerifier(address nextSignatureVerifier) external onlyRole(CAN_UPDATE_GATEWAYS) {
         require(nextSignatureVerifier != address(0x0), "Gateway: invalid signature verifier");
         _signatureVerifier = nextSignatureVerifier;
         emit LogSignatureVerifierUpdated(_signatureVerifier);
+    }
+
+    /// @notice Allow the owner to update the TransferWithLog contract.
+    ///
+    /// @param nextTransferWithLog The new TransferWithLog contract address.
+    function updateTransferWithLog(address nextTransferWithLog) external onlyRole(CAN_UPDATE_GATEWAYS) {
+        require(nextTransferWithLog != address(0x0), "Gateway: invalid transfer with log");
+        _transferWithLog = nextTransferWithLog;
+        emit LogTransferWithLogUpdated(_transferWithLog);
     }
 
     // MINT GATEWAYS ///////////////////////////////////////////////////////////
@@ -236,7 +231,7 @@ contract GatewayRegistryV2 is
         string calldata symbol,
         address renAsset,
         address mintGateway
-    ) public onlyValidString(symbol) onlyAtLeastOneRole(CAN_ADD_GATEWAYS, CAN_UPDATE_GATEWAYS) {
+    ) public onlyValidString(symbol) onlyRole(CAN_ADD_GATEWAYS) {
         if (mintGatewaySymbols.contains(symbol)) {
             // If there is an existing gateway for the symbol, delete it. Note
             // that this will check that the sender has the CAN_UPDATE_GATEWAYS
@@ -264,11 +259,13 @@ contract GatewayRegistryV2 is
     ) external onlyRole(CAN_ADD_GATEWAYS) {
         string memory chainName_ = chainName();
         require(bytes(chainName_).length > 0, "GatewayRegistry: chain details not set");
-        if (lockGatewaySymbols.contains(symbol)) {
+        if (mintGatewaySymbols.contains(symbol)) {
             _checkRole(CAN_UPDATE_GATEWAYS, _msgSender());
         }
 
-        address mintGateway = address(_deployMintGateway(chainName_, symbol, signatureVerifier(), renAsset, version));
+        address mintGateway = address(
+            _deployMintGateway(chainName_, symbol, getSignatureVerifier(), renAsset, version)
+        );
         addMintGateway(symbol, renAsset, mintGateway);
     }
 
@@ -281,12 +278,14 @@ contract GatewayRegistryV2 is
     ) external onlyRole(CAN_ADD_GATEWAYS) {
         string memory chainName_ = chainName();
         require(bytes(chainName_).length > 0, "GatewayRegistry: chain details not set");
-        if (lockGatewaySymbols.contains(symbol)) {
+        if (mintGatewaySymbols.contains(symbol)) {
             revert(string(abi.encodePacked("GatewayRegistry: ", symbol, " mint gateway already registered")));
         }
 
         address renAsset = address(_deployRenAsset(chainId(), symbol, erc20Name, erc20Symbol, erc20Decimals, version));
-        address mintGateway = address(_deployMintGateway(chainName_, symbol, signatureVerifier(), renAsset, version));
+        address mintGateway = address(
+            _deployMintGateway(chainName_, symbol, getSignatureVerifier(), renAsset, version)
+        );
         Ownable(renAsset).transferOwnership(mintGateway);
         addMintGateway(symbol, renAsset, mintGateway);
     }
@@ -320,7 +319,7 @@ contract GatewayRegistryV2 is
         string calldata symbol,
         address lockAsset,
         address lockGateway
-    ) public onlyValidString(symbol) onlyAtLeastOneRole(CAN_ADD_GATEWAYS, CAN_UPDATE_GATEWAYS) {
+    ) public onlyValidString(symbol) onlyRole(CAN_ADD_GATEWAYS) {
         if (lockGatewaySymbols.contains(symbol)) {
             // If there is an existing gateway for the symbol, delete it. Note
             // that this will check that the sender has the CAN_UPDATE_GATEWAYS
@@ -354,7 +353,9 @@ contract GatewayRegistryV2 is
             _checkRole(CAN_UPDATE_GATEWAYS, _msgSender());
         }
 
-        address lockGateway = address(_deployLockGateway(chainName_, symbol, signatureVerifier(), lockToken, version));
+        address lockGateway = address(
+            _deployLockGateway(chainName_, symbol, getSignatureVerifier(), lockToken, version)
+        );
         addLockGateway(symbol, lockToken, lockGateway);
     }
 

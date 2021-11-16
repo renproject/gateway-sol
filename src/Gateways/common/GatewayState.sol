@@ -6,7 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {IRenVMSignatureVerifier} from "./RenVMSignatureVerifier.sol";
+import {IRenVMSignatureVerifier} from "../RenVMSignatureVerifier.sol";
 import {ValidString} from "../../libraries/ValidString.sol";
 import {RenVMHashes} from "./RenVMHashes.sol";
 

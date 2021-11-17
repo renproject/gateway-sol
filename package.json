@@ -7,9 +7,7 @@
     "license": "GPL-3.0",
     "dependencies": {
         "@openzeppelin/contracts": "^4.3.2",
-        "@openzeppelin/contracts-upgradeable": "^4.3.2",
-        "patch-package": "^6.4.7",
-        "postinstall-postinstall": "^2.1.0"
+        "@openzeppelin/contracts-upgradeable": "^4.3.2"
     },
     "devDependencies": {
         "@ethersproject/providers": "^5.5.0",
@@ -22,12 +20,14 @@
         "@typechain/ethers-v5": "^8.0.2",
         "@typechain/hardhat": "^3.0.0",
         "@types/chai": "^4.2.22",
+        "@types/chai-as-promised": "^7.1.4",
         "@types/mocha": "^9.0.0",
         "@types/node": "16.11.7",
         "@typescript-eslint/eslint-plugin": "^5.3.1",
         "@typescript-eslint/parser": "^5.3.1",
         "bignumber.js": "^9.0.1",
         "chai": "^4.3.4",
+        "chai-as-promised": "^7.1.1",
         "chai-ethers": "^0.0.1",
         "chalk": "^4.1.2",
         "cross-env": "^7.0.3",
@@ -72,7 +72,6 @@
         "fork:dev": "node ./config/_scripts.js fork:dev",
         "fork:node": "node ./config/_scripts.js fork:node",
         "fork:test": "node ./config/_scripts.js fork:test",
-        "bindings:go": "solc-0.8.7 --optimize darknode-sol=`pwd`/node_modules/darknode-sol @openzeppelin/upgrades=`pwd`/node_modules/@openzeppelin/upgrades @openzeppelin/contracts=`pwd`/node_modules/@openzeppelin/contracts --combined-json bin,abi,userdoc,devdoc,metadata $(find src -type f -name '*.sol') > go-abi.json && abigen --alias status=status2 -pkg bindings --out bindings.go --combined-json go-abi.json; rm go-abi.json",
-        "postinstall": "patch-package"
+        "bindings:go": "solc-0.8.7 --optimize darknode-sol=`pwd`/node_modules/darknode-sol @openzeppelin/upgrades=`pwd`/node_modules/@openzeppelin/upgrades @openzeppelin/contracts=`pwd`/node_modules/@openzeppelin/contracts --combined-json bin,abi,userdoc,devdoc,metadata $(find src -type f -name '*.sol') > go-abi.json && abigen --alias status=status2 -pkg bindings --out bindings.go --combined-json go-abi.json; rm go-abi.json"
     }
 }

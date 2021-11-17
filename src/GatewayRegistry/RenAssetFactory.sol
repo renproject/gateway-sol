@@ -42,10 +42,10 @@ contract RenAssetFactory is Initializable, RenAssetFactoryState {
     function _deployRenAsset(
         uint256 chainId,
         string calldata asset,
-        string memory name,
-        string memory symbol,
+        string calldata name,
+        string calldata symbol,
         uint8 decimals,
-        string memory version
+        string calldata version
     ) internal returns (IERC20) {
         bytes memory encodedParameters = abi.encodeWithSignature(
             "__RenAsset_init(uint256,string,string,string,uint8)",
@@ -68,7 +68,7 @@ contract RenAssetFactory is Initializable, RenAssetFactoryState {
         string calldata asset,
         address signatureVerifier,
         address token,
-        string memory version
+        string calldata version
     ) internal returns (IMintGateway) {
         bytes memory encodedParameters = abi.encodeWithSignature(
             "__MintGateway_init(string,string,address,address)",
@@ -92,7 +92,7 @@ contract RenAssetFactory is Initializable, RenAssetFactoryState {
         string calldata asset,
         address signatureVerifier,
         address token,
-        string memory version
+        string calldata version
     ) internal returns (ILockGateway) {
         bytes memory encodedParameters = abi.encodeWithSignature(
             "__LockGateway_init(string,string,address,address)",

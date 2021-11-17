@@ -47,14 +47,17 @@ contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
     }
 
     function chainName() public view returns (string memory) {
+        require(bytes(_chainName).length > 0, "GatewayRegistry: not initialized");
         return _chainName;
     }
 
     function getSignatureVerifier() public view returns (address) {
+        require(_signatureVerifier != address(0x0), "GatewayRegistry: not initialized");
         return _signatureVerifier;
     }
 
     function getTransferWithLog() external view returns (address) {
+        require(_transferWithLog != address(0x0), "GatewayRegistry: not initialized");
         return _transferWithLog;
     }
 
@@ -82,7 +85,7 @@ contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
         string[] memory gateways = new string[](count);
 
         for (uint256 i = from; i < from + count; i++) {
-            gateways[i] = set.at(i);
+            gateways[i - from] = set.at(i);
         }
 
         return gateways;
@@ -161,6 +164,7 @@ contract GatewayRegistryV2 is
         address mintGatewayProxyBeacon_,
         address lockGatewayProxyBeacon_,
         address adminAddress,
+        address signatureVerifier_,
         address transferWithLog
     ) external initializer onlyValidString(chainName_) {
         __RenAssetFactory_init(renAssetProxyBeacon_, mintGatewayProxyBeacon_, lockGatewayProxyBeacon_);
@@ -169,6 +173,7 @@ contract GatewayRegistryV2 is
         AccessControlEnumerableUpgradeable._setupRole(AccessControlUpgradeable.DEFAULT_ADMIN_ROLE, adminAddress);
         AccessControlEnumerableUpgradeable._setupRole(CAN_UPDATE_GATEWAYS, adminAddress);
         AccessControlEnumerableUpgradeable._setupRole(CAN_ADD_GATEWAYS, adminAddress);
+        _signatureVerifier = signatureVerifier_;
         _transferWithLog = transferWithLog;
     }
 
@@ -199,13 +204,40 @@ contract GatewayRegistryV2 is
         _;
     }
 
+    function checkRoleVerbose(
+        bytes32 role,
+        string memory roleName,
+        address account
+    ) internal view {
+        if (!hasRole(role, account)) {
+            revert(
+                string(
+                    abi.encodePacked(
+                        "GatewayRegistry: account ",
+                        StringsUpgradeable.toHexString(uint160(account), 20),
+                        " is missing role ",
+                        roleName
+                    )
+                )
+            );
+        }
+    }
+
+    modifier onlyRoleVerbose(bytes32 role, string memory roleName) {
+        checkRoleVerbose(role, roleName, _msgSender());
+        _;
+    }
+
     // GOVERNANCE //////////////////////////////////////////////////////////////
 
     /// @notice Allow the owner to update the signature verifier contract.
     ///
     /// @param nextSignatureVerifier The new verifier contract address.
-    function updateSignatureVerifier(address nextSignatureVerifier) external onlyRole(CAN_UPDATE_GATEWAYS) {
-        require(nextSignatureVerifier != address(0x0), "Gateway: invalid signature verifier");
+    function updateSignatureVerifier(address nextSignatureVerifier)
+        external
+        onlyRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS")
+    {
+        require(nextSignatureVerifier != address(0x0), "GatewayRegistry: invalid signature verifier");
         _signatureVerifier = nextSignatureVerifier;
         emit LogSignatureVerifierUpdated(_signatureVerifier);
     }
@@ -213,8 +245,11 @@ contract GatewayRegistryV2 is
     /// @notice Allow the owner to update the TransferWithLog contract.
     ///
     /// @param nextTransferWithLog The new TransferWithLog contract address.
-    function updateTransferWithLog(address nextTransferWithLog) external onlyRole(CAN_UPDATE_GATEWAYS) {
-        require(nextTransferWithLog != address(0x0), "Gateway: invalid transfer with log");
+    function updateTransferWithLog(address nextTransferWithLog)
+        external
+        onlyRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS")
+    {
+        require(nextTransferWithLog != address(0x0), "GatewayRegistry: invalid transfer with log");
         _transferWithLog = nextTransferWithLog;
         emit LogTransferWithLogUpdated(_transferWithLog);
     }
@@ -231,17 +266,26 @@ contract GatewayRegistryV2 is
         string calldata symbol,
         address renAsset,
         address mintGateway
-    ) public onlyValidString(symbol) onlyRole(CAN_ADD_GATEWAYS) {
+    ) public onlyValidString(symbol) onlyRoleVerbose(CAN_ADD_GATEWAYS, "CAN_ADD_GATEWAYS") {
         if (mintGatewaySymbols.contains(symbol)) {
-            // If there is an existing gateway for the symbol, delete it. Note
-            // that this will check that the sender has the CAN_UPDATE_GATEWAYS
-            // role.
+            // If there is an existing gateway for the symbol, delete it. The
+            // caller must also have the CAN_UPDATE_GATEWAYS role.
             removeMintGateway(symbol);
         }
 
         // Check that token, Gateway and symbol haven't already been registered.
-        require(!mintGatewaySymbols.contains(symbol), "GatewayRegistry: symbol already registered");
-        require(bytes(mintSymbolByToken[renAsset]).length == 0, "GatewayRegistry: token already registered");
+        if (bytes(mintSymbolByToken[renAsset]).length > 0) {
+            revert(
+                string(
+                    abi.encodePacked(
+                        "GatewayRegistry: ",
+                        symbol,
+                        " token already registered as ",
+                        mintSymbolByToken[renAsset]
+                    )
+                )
+            );
+        }
 
         // Add to list of gateways.
         mintGatewaySymbols.add(symbol);
@@ -255,12 +299,12 @@ contract GatewayRegistryV2 is
     function deployMintGateway(
         string calldata symbol,
         address renAsset,
-        string memory version
-    ) external onlyRole(CAN_ADD_GATEWAYS) {
+        string calldata version
+    ) external onlyRoleVerbose(CAN_ADD_GATEWAYS, "CAN_ADD_GATEWAYS") {
         string memory chainName_ = chainName();
-        require(bytes(chainName_).length > 0, "GatewayRegistry: chain details not set");
         if (mintGatewaySymbols.contains(symbol)) {
-            _checkRole(CAN_UPDATE_GATEWAYS, _msgSender());
+            // Check role before expensive contract deployment.
+            checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
         }
 
         address mintGateway = address(
@@ -271,20 +315,19 @@ contract GatewayRegistryV2 is
 
     function deployMintGatewayAndRenAsset(
         string calldata symbol,
-        string memory erc20Name,
-        string memory erc20Symbol,
+        string calldata erc20Name,
+        string calldata erc20Symbol,
         uint8 erc20Decimals,
-        string memory version
-    ) external onlyRole(CAN_ADD_GATEWAYS) {
-        string memory chainName_ = chainName();
-        require(bytes(chainName_).length > 0, "GatewayRegistry: chain details not set");
+        string calldata version
+    ) external onlyRoleVerbose(CAN_ADD_GATEWAYS, "CAN_ADD_GATEWAYS") {
         if (mintGatewaySymbols.contains(symbol)) {
-            revert(string(abi.encodePacked("GatewayRegistry: ", symbol, " mint gateway already registered")));
+            // Check role before expensive contract deployment.
+            checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
         }
 
         address renAsset = address(_deployRenAsset(chainId(), symbol, erc20Name, erc20Symbol, erc20Decimals, version));
         address mintGateway = address(
-            _deployMintGateway(chainName_, symbol, getSignatureVerifier(), renAsset, version)
+            _deployMintGateway(chainName(), symbol, getSignatureVerifier(), renAsset, version)
         );
         Ownable(renAsset).transferOwnership(mintGateway);
         addMintGateway(symbol, renAsset, mintGateway);
@@ -294,7 +337,10 @@ contract GatewayRegistryV2 is
     ///         RenERC20 contract.
     ///
     /// @param symbol The symbol of the token to deregister.
-    function removeMintGateway(string calldata symbol) public onlyRole(CAN_UPDATE_GATEWAYS) {
+    function removeMintGateway(string calldata symbol)
+        public
+        onlyRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS")
+    {
         require(mintGatewayDetailsBySymbol[symbol].token != address(0x0), "GatewayRegistry: gateway not registered");
 
         address renAsset = mintGatewayDetailsBySymbol[symbol].token;
@@ -319,17 +365,26 @@ contract GatewayRegistryV2 is
         string calldata symbol,
         address lockAsset,
         address lockGateway
-    ) public onlyValidString(symbol) onlyRole(CAN_ADD_GATEWAYS) {
+    ) public onlyValidString(symbol) onlyRoleVerbose(CAN_ADD_GATEWAYS, "CAN_ADD_GATEWAYS") {
         if (lockGatewaySymbols.contains(symbol)) {
-            // If there is an existing gateway for the symbol, delete it. Note
-            // that this will check that the sender has the CAN_UPDATE_GATEWAYS
-            // role.
+            // If there is an existing gateway for the symbol, delete it. The
+            // caller must also have the CAN_UPDATE_GATEWAYS role.
             removeLockGateway(symbol);
         }
 
-        // Check that token, Gateway and symbol haven't already been registered.
-        require(!lockGatewaySymbols.contains(symbol), "GatewayRegistry: symbol already registered");
-        require(bytes(lockSymbolByToken[lockAsset]).length == 0, "GatewayRegistry: token already registered");
+        // Check that token hasn't already been registered.
+        if (bytes(lockSymbolByToken[lockAsset]).length > 0) {
+            revert(
+                string(
+                    abi.encodePacked(
+                        "GatewayRegistry: ",
+                        symbol,
+                        " token already registered as ",
+                        lockSymbolByToken[lockAsset]
+                    )
+                )
+            );
+        }
 
         // Add to list of gateways.
         lockGatewaySymbols.add(symbol);
@@ -343,18 +398,15 @@ contract GatewayRegistryV2 is
     function deployLockGateway(
         string calldata symbol,
         address lockToken,
-        string memory version
-    ) external onlyRole(CAN_ADD_GATEWAYS) {
-        string memory chainName_ = chainName();
-
-        require(bytes(chainName_).length > 0, "GatewayRegistry: chain details not set");
-
+        string calldata version
+    ) external onlyRoleVerbose(CAN_ADD_GATEWAYS, "CAN_ADD_GATEWAYS") {
         if (lockGatewaySymbols.contains(symbol)) {
-            _checkRole(CAN_UPDATE_GATEWAYS, _msgSender());
+            // Check role before expensive contract deployment.
+            checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
         }
 
         address lockGateway = address(
-            _deployLockGateway(chainName_, symbol, getSignatureVerifier(), lockToken, version)
+            _deployLockGateway(chainName(), symbol, getSignatureVerifier(), lockToken, version)
         );
         addLockGateway(symbol, lockToken, lockGateway);
     }
@@ -363,7 +415,10 @@ contract GatewayRegistryV2 is
     ///         asset contract.
     ///
     /// @param symbol The symbol of the token to deregister.
-    function removeLockGateway(string calldata symbol) public onlyRole(CAN_UPDATE_GATEWAYS) {
+    function removeLockGateway(string calldata symbol)
+        public
+        onlyRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS")
+    {
         require(lockGatewaySymbols.contains(symbol), "GatewayRegistry: gateway not registered");
 
         address lockAsset = lockGatewayDetailsBySymbol[symbol].token;

@@ -2,6 +2,8 @@ import { randomBytes } from "crypto";
 import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+import { randomAddress } from "./deploymentUtils";
+
 export enum Chain {
     Hardhat = "Hardhat",
 
@@ -184,7 +186,7 @@ const renvmDevnetConfig = {
 
 export const networks: { [network: string]: NetworkConfig } = {
     hardhat: {
-        mintAuthority: "0x" + randomBytes(20).toString("hex"),
+        mintAuthority: randomAddress(),
         tokenPrefix: "dev",
         chainName: Chain.Hardhat,
 
@@ -209,6 +211,18 @@ export const networks: { [network: string]: NetworkConfig } = {
                 decimals: 8,
                 token: "",
                 gateway: "",
+            },
+        ],
+        lockGateways: [
+            {
+                symbol: "DAI",
+                token: { totalSupply: "500,000,000" },
+                decimals: 18,
+            },
+            {
+                symbol: "REN",
+                token: { totalSupply: "1,000,000,000" },
+                decimals: 18,
             },
         ],
     },

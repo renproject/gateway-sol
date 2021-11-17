@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import hre from "hardhat";
+import { BaseContract } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import log from "loglevel";
 
@@ -13,16 +13,20 @@ import { RenVMProvider } from "@renproject/provider";
 import RenJS, { Gateway, GatewayTransaction } from "@renproject/ren";
 import { Ox } from "@renproject/utils";
 
+import { deployGatewaySol } from "../../deploy/001_deploy_gateways";
 import {
-    deployGatewaySol,
     setupCreate2,
-} from "../../deploy/001_deploy_gateways";
+    setupDeployProxy,
+    setupGetExistingDeployment,
+    setupWaitForTx,
+} from "../../deploy/deploymentUtils";
 import {
-    ERC20PresetMinterPauserUpgradeable,
-    RenAssetV2,
+    ERC20PresetMinterPauserUpgradeable__factory,
+    RenProxyAdmin,
+    RenProxyAdmin__factory,
+    TestToken,
+    TestToken__factory,
 } from "../../typechain";
-
-export const Ox0 = "0x0000000000000000000000000000000000000000";
 
 export const LocalEthereumNetwork = (
     selector: string,
@@ -99,8 +103,9 @@ export const completeGateway = async (gateway: Gateway, amount?: BigNumber) => {
 };
 
 export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
-    const { ethers, getUnnamedAccounts } = hre;
+    const { ethers, getUnnamedAccounts, getNamedAccounts } = hre;
 
+    const { deployer } = await getNamedAccounts();
     const [user] = await getUnnamedAccounts();
 
     const mockRenVMProvider = new MockProvider();
@@ -137,11 +142,13 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
 
     await bscGatewayRegistry.deployMintGatewayAndRenAsset("ETH", "renETH", "renETH", 18, "1");
 
-    const usdc = await setupCreate2(
-        hre,
-        undefined,
-        log
-    )<ERC20PresetMinterPauserUpgradeable>("ERC20PresetMinterPauserUpgradeable", []);
+    const create2 = setupCreate2(hre, undefined, log);
+    const getExistingDeployment = setupGetExistingDeployment(hre);
+    const waitForTx = setupWaitForTx(log);
+    const renProxyAdmin = await create2<RenProxyAdmin__factory>("RenProxyAdmin", [deployer]);
+    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, log);
+
+    const usdc = await create2<ERC20PresetMinterPauserUpgradeable__factory>("ERC20PresetMinterPauserUpgradeable", []);
     await usdc.initialize("USDC", "USDC");
     const usdcDecimals = await usdc.decimals();
     await usdc.mint(user, new BigNumber(100).shiftedBy(usdcDecimals).toFixed());
@@ -187,9 +194,33 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
     renJS.withChains(bitcoin, ethereum, bsc);
 
     return {
+        create2,
+        deployProxy,
+        ethGatewayRegistry,
+        renProxyAdmin,
         bitcoin,
         ethereum,
         bsc,
         renJS,
     };
+};
+
+export const deployToken = async (hre: HardhatRuntimeEnvironment, symbol: string): Promise<TestToken> => {
+    const { getNamedAccounts } = hre;
+    const { deployer } = await getNamedAccounts();
+
+    log.setLevel("ERROR");
+    const create2 = setupCreate2(hre, String(Math.random()), log);
+
+    const decimals = 18;
+    const supply = new BigNumber(1000000).shiftedBy(18);
+
+    return await create2<TestToken__factory>("TestToken", [symbol, symbol, 18, supply.toFixed(), deployer]);
+};
+
+export const getFixture = async <C extends BaseContract>(hre: HardhatRuntimeEnvironment, name: string): Promise<C> => {
+    const { deployments, ethers } = hre;
+    await deployments.fixture(name);
+    const address = (await deployments.get(name)).address;
+    return ethers.getContractAt<C>(name, address);
 };

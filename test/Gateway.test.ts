@@ -1,7 +1,15 @@
 import BigNumber from "bignumber.js";
+import { expect } from "chai";
+import { BaseContract } from "ethers";
 import hre from "hardhat";
 
-import { RenAssetV2 } from "../typechain";
+import {
+    MigratedMintGateway,
+    MigratedMintGateway__factory,
+    MintGatewayV3,
+    MintGatewayV3__factory,
+    RenAssetV2,
+} from "../typechain";
 import { completeGateway, setupNetworks } from "./utils";
 
 const setup = hre.deployments.createFixture(async () => {
@@ -9,14 +17,7 @@ const setup = hre.deployments.createFixture(async () => {
 
     await deployments.fixture("GatewayRegistryV2");
 
-    const { bitcoin, ethereum, bsc, renJS } = await setupNetworks(hre);
-
-    return {
-        bitcoin,
-        ethereum,
-        bsc,
-        renJS,
-    };
+    return await setupNetworks(hre);
 });
 
 describe("RenJS", () => {

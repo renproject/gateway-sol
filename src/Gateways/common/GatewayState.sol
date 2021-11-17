@@ -10,6 +10,8 @@ import {IRenVMSignatureVerifier} from "../RenVMSignatureVerifier.sol";
 import {ValidString} from "../../libraries/ValidString.sol";
 import {RenVMHashes} from "./RenVMHashes.sol";
 
+import {console} from "hardhat/console.sol";
+
 contract GatewayStateV3 {
     // Selector hash details.
     string internal _chain;

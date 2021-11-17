@@ -29,6 +29,7 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
 
     /// @notice Allow the owner to update the owner of the RenERC20 token.
     function transferTokenOwnership(address nextTokenOwner_) external onlyOwner {
+        require(nextTokenOwner_ != address(0x0), "MintGateway: invalid next token owner");
         RenAssetV2(token()).transferOwnership(address(nextTokenOwner_));
     }
 
@@ -101,11 +102,13 @@ contract MintGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
     }
 
     function _burnFromPreviousGateway(
-        bytes memory recipient,
+        string memory recipientAddress,
+        string memory recipientChain,
+        bytes memory recipientPayload,
         uint256 amount,
         address caller
     ) external onlyPreviousGateway returns (uint256) {
-        return _burnWithPayload(string(recipient), "", "", amount, caller);
+        return _burnWithPayload(string(recipientAddress), recipientChain, recipientPayload, amount, caller);
     }
 
     // INTERNAL FUNCTIONS //////////////////////////////////////////////////////

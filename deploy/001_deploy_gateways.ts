@@ -1,172 +1,37 @@
 import BigNumber from "bignumber.js";
 import chalk from "chalk";
-import { BaseContract, ContractTransaction } from "ethers";
-import { keccak256 } from "ethers/lib/utils";
-import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
-    AccessControlEnumerableUpgradeable,
-    BasicBridge,
-    ERC20PresetMinterPauserUpgradeable,
-    GatewayRegistryV2,
+    BasicBridge__factory,
+    GatewayRegistryV2__factory,
     LockGatewayProxyBeaconV1,
+    LockGatewayProxyBeaconV1__factory,
     MintGatewayProxyBeaconV1,
-    Ownable,
+    MintGatewayProxyBeaconV1__factory,
     RenAssetProxyBeaconV1,
+    RenAssetProxyBeaconV1__factory,
+    RenAssetV2__factory,
     RenProxyAdmin,
-    RenVMSignatureVerifierV1,
-    TestToken,
-    TransparentUpgradeableProxy,
+    RenProxyAdmin__factory,
+    RenVMSignatureVerifierV1__factory,
+    TestToken__factory,
 } from "../typechain";
+import {
+    ConsoleInterface,
+    CREATE2_DEPLOYER,
+    Ox0,
+    setupCreate2,
+    setupDeployProxy,
+    setupGetExistingDeployment,
+    setupWaitForTx,
+} from "./deploymentUtils";
 import { NetworkConfig, networks } from "./networks";
-
-const Ox0 = "0x0000000000000000000000000000000000000000";
-const CREATE2_DEPLOYER = "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf";
-interface Console {
-    log(message?: any, ...optionalParams: any[]): void;
-    error(message?: any, ...optionalParams: any[]): void;
-}
-
-const create2Salt = (network: string) => (network.match(/Testnet$/) ? "REN.RC1" : `REN.RC1-${network}`);
-
-const setupGetExistingDeployment =
-    (hre: HardhatRuntimeEnvironment) =>
-    async <T extends BaseContract>(name: string): Promise<T | null> => {
-        const { deployments, getNamedAccounts, ethers, network } = hre;
-        const { getOrNull } = deployments;
-
-        if (network.name === "hardhat") {
-            return null;
-        }
-
-        const { deployer } = await getNamedAccounts();
-        const result = await getOrNull(name);
-
-        return result ? await ethers.getContractAt<T>(name, result.address, deployer) : result;
-    };
-
-export const setupCreate2 =
-    (hre: HardhatRuntimeEnvironment, create2SaltOverride?: string, logger: Console = console) =>
-    async <T extends BaseContract>(name: string, args: any[], overrides?: CallOptions): Promise<T> => {
-        const { deployments, getNamedAccounts, ethers, network } = hre;
-        const { deploy } = deployments;
-
-        const { deployer } = await getNamedAccounts();
-        const salt = keccak256(Buffer.from(create2SaltOverride || create2Salt(network.name)));
-        logger.log(`Deploying ${name} from ${deployer} (salt: keccak256(${create2Salt(network.name)}))`);
-
-        const result = await deploy(name, {
-            from: deployer,
-            args: args,
-            log: true,
-            deterministicDeployment: salt,
-            skipIfAlreadyDeployed: true,
-            ...overrides,
-        });
-        logger.log(`Deployed ${name} at ${result.address}.`);
-        const contract = await ethers.getContractAt<T>(name, result.address, deployer);
-
-        let owner;
-        try {
-            owner = await (contract as any as Ownable).owner();
-        } catch (error) {}
-        if (owner && owner.toLowerCase() === CREATE2_DEPLOYER) {
-            throw new Error(`${name}'s owner was initialized to CREATE2 deployer!`);
-        }
-
-        let roleAdmin;
-        try {
-            roleAdmin = await (contract as any as AccessControlEnumerableUpgradeable).getRoleAdmin(
-                await (contract as any as AccessControlEnumerableUpgradeable).DEFAULT_ADMIN_ROLE()
-            );
-        } catch (error) {}
-        if (roleAdmin && roleAdmin.toLowerCase() === CREATE2_DEPLOYER) {
-            throw new Error(`${name}'s role admin was initialized to CREATE2 deployer!`);
-        }
-
-        return contract;
-    };
-
-const setupDeployProxy =
-    (
-        hre: HardhatRuntimeEnvironment,
-        create2: <T extends BaseContract>(name: string, args: any[]) => Promise<T>,
-        proxyAdmin: RenProxyAdmin,
-        logger: Console = console
-    ) =>
-    async <T extends BaseContract>(
-        contractName: string,
-        proxyName: string,
-        initialize: (t: T) => Promise<void>
-    ): Promise<T> => {
-        const { deployments, getNamedAccounts, ethers } = hre;
-
-        const { deployer } = await getNamedAccounts();
-
-        // const existingImplementationDeployment = (await deployments.getOrNull(contractName)) as unknown as T;
-        // let implementation: T;
-        // if (existingImplementationDeployment) {
-        //     logger.log(`Reusing ${contractName} at ${existingImplementationDeployment.address}`);
-
-        //     implementation = await ethers.getContractAt<T>(
-        //         contractName,
-        //         existingImplementationDeployment.address,
-        //         deployer
-        //     );
-        // } else {
-        const implementation: T = await create2<T>(contractName, []);
-        // }
-
-        logger.log(`Initializing ${contractName} instance (optional).`);
-        await initialize(implementation);
-
-        const existingProxyDeployment = await setupGetExistingDeployment(hre)<TransparentUpgradeableProxy>(proxyName);
-        logger.log("existingProxyDeployment", existingProxyDeployment);
-        let proxy: TransparentUpgradeableProxy;
-        if (existingProxyDeployment) {
-            logger.log(`Reusing ${proxyName} at ${existingProxyDeployment.address}`);
-            proxy = existingProxyDeployment;
-            const currentImplementation = await proxyAdmin.getProxyImplementation(proxy.address);
-            logger.log(proxyName, "points to", currentImplementation);
-            if (currentImplementation.toLowerCase() !== implementation.address.toLowerCase()) {
-                logger.log(
-                    `Updating ${proxyName} to point to ${implementation.address} instead of ${currentImplementation}`
-                );
-                await setupWaitForTx(logger)(async () => proxyAdmin.upgrade(proxy.address, implementation.address));
-            }
-        } else {
-            proxy = await create2(proxyName, [implementation.address, proxyAdmin.address, []]);
-        }
-        const final = await ethers.getContractAt<T>(contractName, proxy.address, deployer);
-
-        logger.log(`Initializing ${contractName} proxy.`);
-        await initialize(final);
-
-        return final;
-    };
-
-/**
- * Submits a transaction and waits for it to be mined.
- */
-const setupWaitForTx =
-    (logger: Console = console) =>
-    async (callTx: () => Promise<ContractTransaction>, msg?: string) => {
-        if (msg) {
-            logger.log(msg);
-        }
-        const tx = await callTx();
-        process.stdout.write(`Waiting for ${tx.hash}...`);
-        await tx.wait();
-        // Clear the line
-        process.stdout.write(`\x1B[2K\r`);
-        logger.log(`Transaction confirmed: ${tx.hash}`);
-    };
 
 export const deployGatewaySol = async function (
     hre: HardhatRuntimeEnvironment,
     config?: NetworkConfig,
-    logger: Console = console
+    logger: ConsoleInterface = console
 ) {
     const { getNamedAccounts, ethers, network } = hre;
 
@@ -181,30 +46,15 @@ export const deployGatewaySol = async function (
 
     const { mintAuthority, chainName, create2SaltOverride, overrides } = config;
     const chainId: number = (await ethers.provider.getNetwork()).chainId;
+    const { deployer } = await getNamedAccounts();
 
     const create2 = setupCreate2(hre, create2SaltOverride, logger);
     const getExistingDeployment = setupGetExistingDeployment(hre);
     const waitForTx = setupWaitForTx(logger);
 
-    const { deployer } = await getNamedAccounts();
-
-    // let tx = await ethers.provider.getSigner().sendTransaction({
-    //     from: deployer,
-    //     to: deployer,
-    //     nonce: 174,
-    //     value: 0,
-    //     gasPrice: 2000000000,
-    //     gasLimit: 22000,
-    // });
-    // await tx.wait();
-
-    logger.log("chainName", chainName);
-    logger.log("chainId", chainId);
-    logger.log("mintAuthority", mintAuthority);
-
     // Deploy RenProxyAdmin ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenProxyAdmin"));
-    const renProxyAdmin: RenProxyAdmin = await create2<RenProxyAdmin>("RenProxyAdmin", [deployer]);
+    const renProxyAdmin: RenProxyAdmin = await create2<RenProxyAdmin__factory>("RenProxyAdmin", [deployer]);
     const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, logger);
 
     // This should only be false on hardhat.
@@ -212,11 +62,11 @@ export const deployGatewaySol = async function (
 
     // Deploy RenAssetProxyBeacon ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenAsset beacon"));
-    const renAssetImplementation = await create2("RenAssetV2", []);
+    const renAssetImplementation = await create2<RenAssetV2__factory>("RenAssetV2", []);
     const existingRenAssetProxyBeacon = await getExistingDeployment<RenAssetProxyBeaconV1>("RenAssetProxyBeaconV1");
     const renAssetProxyBeacon =
         existingRenAssetProxyBeacon ||
-        (await create2<RenAssetProxyBeaconV1>("RenAssetProxyBeaconV1", [
+        (await create2<RenAssetProxyBeaconV1__factory>("RenAssetProxyBeaconV1", [
             // Temporary value, gets overwritten in the next step. This is to
             // ensure that the address doesn't change between networks even when
             // the implementation changes.
@@ -236,7 +86,7 @@ export const deployGatewaySol = async function (
     );
     const mintGatewayProxyBeacon =
         existingMintGatewayProxyBeacon ||
-        (await create2<MintGatewayProxyBeaconV1>("MintGatewayProxyBeaconV1", [
+        (await create2<MintGatewayProxyBeaconV1__factory>("MintGatewayProxyBeaconV1", [
             // Temporary value, gets overwritten in the next step. This is to
             // ensure that the address doesn't change between networks even when
             // the implementation changes.
@@ -256,7 +106,7 @@ export const deployGatewaySol = async function (
     );
     const lockGatewayProxyBeacon =
         existingLockGatewayProxyBeacon ||
-        (await create2<LockGatewayProxyBeaconV1>("LockGatewayProxyBeaconV1", [
+        (await create2<LockGatewayProxyBeaconV1__factory>("LockGatewayProxyBeaconV1", [
             // Temporary value, gets overwritten in the next step. This is to
             // ensure that the address doesn't change between networks even when
             // the implementation changes.
@@ -269,7 +119,7 @@ export const deployGatewaySol = async function (
     }
 
     logger.log(chalk.yellow("Signature Verifier"));
-    const signatureVerifier = await deployProxy<RenVMSignatureVerifierV1>(
+    const signatureVerifier = await deployProxy<RenVMSignatureVerifierV1__factory>(
         "RenVMSignatureVerifierV1",
         "RenVMSignatureVerifierProxy",
         async (signatureVerifier) => {
@@ -289,25 +139,30 @@ export const deployGatewaySol = async function (
 
     // Deploy GatewayRegistry ////////////////////////////////////////////////////
     logger.log(chalk.yellow("GatewayRegistry"));
-    const gatewayRegistry = await deployProxy<GatewayRegistryV2>(
+    const gatewayRegistry = await deployProxy<GatewayRegistryV2__factory>(
         "GatewayRegistryV2",
         "GatewayRegistryProxy",
         async (gatewayRegistry) => {
-            const currentChainName = await gatewayRegistry.chainName();
-            if (currentChainName !== chainName) {
-                await waitForTx(async () =>
-                    gatewayRegistry.__GatewayRegistry_init(
-                        chainName,
-                        chainId,
-                        renAssetProxyBeacon.address,
-                        mintGatewayProxyBeacon.address,
-                        lockGatewayProxyBeacon.address,
-                        deployer,
-                        transferWithLog.address
-                    )
-                );
-            } else {
+            try {
+                await gatewayRegistry.chainName();
                 logger.log(`Already initialized.`);
+            } catch (error: any) {
+                if (error.message.match(/GatewayRegistry: not initialized/)) {
+                    await waitForTx(async () =>
+                        gatewayRegistry.__GatewayRegistry_init(
+                            chainName,
+                            chainId,
+                            renAssetProxyBeacon.address,
+                            mintGatewayProxyBeacon.address,
+                            lockGatewayProxyBeacon.address,
+                            deployer,
+                            signatureVerifier.address,
+                            transferWithLog.address
+                        )
+                    );
+                } else {
+                    throw error;
+                }
             }
         }
     );
@@ -424,6 +279,8 @@ export const deployGatewaySol = async function (
         }
     }
 
+    // Test Tokens are deployed when a particular lock-asset doesn't exist on a
+    // testnet.
     logger.log(`Handling ${(config.lockGateways || []).length} lock assets.`);
     for (const { symbol, gateway, token, decimals } of config.lockGateways || []) {
         logger.log(chalk.yellow(`Lock asset: ${symbol}`));
@@ -432,12 +289,12 @@ export const deployGatewaySol = async function (
         const totalSupply = typeof token === "object" ? token.totalSupply : undefined;
         let deployedToken = typeof token === "string" ? token : "";
         if (existingGateway === Ox0) {
-            if (!token) {
+            if (typeof token !== "string") {
                 logger.log(`Deploying TestToken(${symbol}, ${decimals}, ${totalSupply})`);
                 const supply = new BigNumber(
                     totalSupply !== undefined ? totalSupply.replace(/,/g, "") : 1000000
                 ).multipliedBy(new BigNumber(10).exponentiatedBy(decimals !== undefined ? decimals : 18));
-                const deployedTokenInstance = await create2<TestToken>("TestToken", [
+                const deployedTokenInstance = await create2<TestToken__factory>("TestToken", [
                     symbol,
                     symbol,
                     decimals,
@@ -558,7 +415,7 @@ export const deployGatewaySol = async function (
         logger.log(`${lockSymbol}: ${lockToken}`);
     }
 
-    const basicBridge = await create2<BasicBridge>("BasicBridge", [gatewayRegistry.address]);
+    const basicBridge = await create2<BasicBridge__factory>("BasicBridge", [gatewayRegistry.address]);
 
     return {
         gatewayRegistry,

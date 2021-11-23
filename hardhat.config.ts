@@ -96,6 +96,7 @@ const config: HardhatUserConfig = {
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },
+            gasPrice: 150 * 1e9,
         },
         ethereumDevnet: {
             url: `https://kovan.infura.io/v3/${INFURA_KEY}`,

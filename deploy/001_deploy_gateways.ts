@@ -50,6 +50,10 @@ export const deployGatewaySol = async function (
     const chainId: number = (await ethers.provider.getNetwork()).chainId;
     const { deployer } = await getNamedAccounts();
 
+    console.log("deployer", deployer);
+
+    // BEFORE: 497.725533816077748462
+
     // console.log("ledger", ledger);
     // const signer = await ethers.provider.getSigner(ledger);
     // await signer.sendTransaction({

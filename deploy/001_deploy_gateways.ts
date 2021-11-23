@@ -50,6 +50,17 @@ export const deployGatewaySol = async function (
     const chainId: number = (await ethers.provider.getNetwork()).chainId;
     const { deployer } = await getNamedAccounts();
 
+    // console.log("ledger", ledger);
+    // const signer = await ethers.provider.getSigner(ledger);
+    // await signer.sendTransaction({
+    //     from: ledger,
+    //     to: ledger,
+    //     value: 0,
+    // });
+    // if (true as any) {
+    //     throw new Error(`Done.`);
+    // }
+
     const create2 = setupCreate2(hre, create2SaltOverride, logger);
     const getExistingDeployment = setupGetExistingDeployment(hre);
     const waitForTx = setupWaitForTx(logger);

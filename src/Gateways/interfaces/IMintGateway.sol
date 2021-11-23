@@ -32,15 +32,17 @@ abstract contract IMintGateway {
         bytes32 pHash,
         uint256 amount,
         bytes32 nHash,
-        bytes memory sig
+        bytes calldata sig
     ) external virtual returns (uint256);
 
     function burnWithPayload(
-        string memory recipientAddress,
-        string memory recipientChain,
-        bytes memory recipientPayload,
+        string calldata recipientAddress,
+        string calldata recipientChain,
+        bytes calldata recipientPayload,
         uint256 amount
     ) external virtual returns (uint256);
 
-    function burn(bytes memory recipient, uint256 amount) external virtual returns (uint256);
+    function burn(string calldata recipient, uint256 amount) external virtual returns (uint256);
+
+    function burn(bytes calldata recipient, uint256 amount) external virtual returns (uint256);
 }

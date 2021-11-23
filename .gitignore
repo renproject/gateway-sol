@@ -44,3 +44,6 @@ types
 
 .yalc
 yalc.lock
+
+# OpenZeppelin hardhat config
+.openzeppelin/unknown-31337.json

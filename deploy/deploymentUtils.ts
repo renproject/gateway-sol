@@ -5,6 +5,23 @@ import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
+    readValidations,
+    withDefaults,
+} from "@openzeppelin/hardhat-upgrades/dist/utils";
+import {
+    assertStorageUpgradeSafe,
+    assertUpgradeSafe,
+    getImplementationAddress,
+    getStorageLayout,
+    getStorageLayoutForAddress,
+    getUnlinkedBytecode,
+    getVersion,
+    Manifest,
+    setProxyKind,
+} from "@openzeppelin/upgrades-core";
+import { SyncOrPromise } from "@renproject/utils";
+
+import {
     AccessControlEnumerableUpgradeable,
     Ownable,
     RenProxyAdmin,
@@ -19,7 +36,7 @@ export interface ConsoleInterface {
     error(message?: any, ...optionalParams: any[]): void;
 }
 
-export const create2Salt = (network: string) => (network.match(/Testnet$/) ? "REN.RC1" : `REN.RC1-${network}`);
+export const create2Salt = (network: string) => `REN.RC1-${network}`;
 
 export const setupGetExistingDeployment =
     (hre: HardhatRuntimeEnvironment) =>
@@ -159,40 +176,73 @@ export const setupDeployProxy =
     >(
         contractName: string,
         proxyName: string,
-        initialize: (t: C) => Promise<void>,
+        options: {
+            initializer: keyof C["callStatic"];
+            constructorArgs: unknown[];
+            kind?: "transparent";
+        },
+        isInitialized: (t: C) => SyncOrPromise<boolean>,
         create2SaltOverrideAlt?: string
     ): Promise<C> => {
-        const { deployments, getNamedAccounts, ethers } = hre;
+        const { getNamedAccounts, ethers } = hre;
 
         const { deployer } = await getNamedAccounts();
 
-        // const existingImplementationDeployment = (await deployments.getOrNull(contractName)) as unknown as T;
-        // let implementation: T;
-        // if (existingImplementationDeployment) {
-        //     logger.log(`Reusing ${contractName} at ${existingImplementationDeployment.address}`);
+        const { initializer, constructorArgs } = options;
 
-        //     implementation = await ethers.getContractAt<T>(
-        //         contractName,
-        //         existingImplementationDeployment.address,
-        //         deployer
-        //     );
-        // } else {
+        const waitForTx = setupWaitForTx(logger);
+
+        const existingProxyDeployment = await setupGetExistingDeployment(hre)<TransparentUpgradeableProxy>(proxyName);
+        let proxy: TransparentUpgradeableProxy;
+
+        // openzeppelin-upgrades checks ////////////////////////////////////////
+        const { provider } = hre.network;
+        const manifest = await Manifest.forNetwork(provider);
+        const ImplFactory = await ethers.getContractFactory(contractName);
+        const validations = await readValidations(hre);
+        const unlinkedBytecode = getUnlinkedBytecode(validations, ImplFactory.bytecode);
+        const encodedArgs = ImplFactory.interface.encodeDeploy([]);
+        const version = getVersion(unlinkedBytecode, ImplFactory.bytecode, encodedArgs);
+        const layout = getStorageLayout(validations, version);
+        const fullOpts = withDefaults(options);
+        assertUpgradeSafe(validations, version, fullOpts);
+        if (existingProxyDeployment) {
+            await setProxyKind(provider, existingProxyDeployment.address, options);
+            const currentImplAddress = await getImplementationAddress(provider, existingProxyDeployment.address);
+            const currentLayout = await getStorageLayoutForAddress(manifest, validations, currentImplAddress);
+            assertStorageUpgradeSafe(currentLayout, layout, fullOpts);
+        }
+        ////////////////////////////////////////////////////////////////////////
+
         const implementation = (await create2<F>(
             contractName,
             [] as any,
             undefined,
             create2SaltOverrideAlt
         )) as unknown as C;
-        // }
 
+        // openzeppelin-upgrades manifest //////////////////////////////////////
+        await manifest.lockedRun(async () => {
+            let data = await manifest.read();
+            data.admin = {
+                address: proxyAdmin.address,
+            };
+            data.impls[version.linkedWithoutMetadata] = {
+                address: implementation.address,
+                layout,
+            };
+            manifest.write(data);
+        });
+        ////////////////////////////////////////////////////////////////////////
+
+        if (!(await isInitialized(implementation))) {
+            await waitForTx(implementation[initializer](...constructorArgs));
+        }
         logger.log(`Initializing ${contractName} instance (optional).`);
-        await initialize(implementation);
 
-        const existingProxyDeployment = await setupGetExistingDeployment(hre)<TransparentUpgradeableProxy>(proxyName);
-        logger.log("existingProxyDeployment", existingProxyDeployment);
-        let proxy: TransparentUpgradeableProxy;
         if (existingProxyDeployment) {
             logger.log(`Reusing ${proxyName} at ${existingProxyDeployment.address}`);
+
             proxy = existingProxyDeployment;
             const currentImplementation = await proxyAdmin.getProxyImplementation(proxy.address);
             logger.log(proxyName, "points to", currentImplementation);
@@ -200,20 +250,38 @@ export const setupDeployProxy =
                 logger.log(
                     `Updating ${proxyName} to point to ${implementation.address} instead of ${currentImplementation}`
                 );
-                await setupWaitForTx(logger)(async () => proxyAdmin.upgrade(proxy.address, implementation.address));
+                await waitForTx(proxyAdmin.upgrade(proxy.address, implementation.address));
             }
         } else {
+            const initData: string = implementation.interface.encodeFunctionData(
+                initializer as string,
+                constructorArgs
+            );
             proxy = await create2<TransparentUpgradeableProxy__factory>(
                 proxyName,
-                [implementation.address, proxyAdmin.address, []],
+                [implementation.address, proxyAdmin.address, initData],
                 undefined,
                 create2SaltOverrideAlt
             );
+
+            // openzeppelin-upgrades manifest //////////////////////////////////
+            await manifest.addProxy({ ...proxy, kind: "transparent" });
+            ////////////////////////////////////////////////////////////////////
         }
         const final = await ethers.getContractAt<C>(contractName, proxy.address, deployer);
 
         logger.log(`Initializing ${contractName} proxy.`);
-        await initialize(final);
+
+        if (!(await isInitialized(final))) {
+            const initData: string = final.interface.encodeFunctionData(initializer as string, constructorArgs);
+            await waitForTx(
+                ethers.provider.getSigner().sendTransaction({
+                    from: deployer,
+                    to: final.address,
+                    data: initData,
+                })
+            );
+        }
 
         return final;
     };
@@ -223,11 +291,11 @@ export const setupDeployProxy =
  */
 export const setupWaitForTx =
     (logger: ConsoleInterface = console) =>
-    async (callTx: () => Promise<ContractTransaction>, msg?: string) => {
+    async (txOrPromise: Promise<ContractTransaction> | ContractTransaction, msg?: string) => {
         if (msg) {
             logger.log(msg);
         }
-        const tx = await callTx();
+        const tx = await txOrPromise;
         process.stdout.write(`Waiting for ${tx.hash}...`);
         await tx.wait();
         // Clear the line

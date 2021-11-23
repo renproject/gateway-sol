@@ -3,18 +3,21 @@
 pragma solidity ^0.8.7;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
-/* solium-disable-next-line no-empty-blocks */
 interface IRenVMSignatureVerifier is IERC1271 {
-
+    // See IERC1271
 }
 
 contract RenVMSignatureVerifierStateV1 {
     address internal _mintAuthority;
+
+    // Leave a gap so that storage values added in future upgrages don't corrupt
+    // the storage of contracts that inherit from this contract.
     uint256[49] private __gap;
 }
 
@@ -24,16 +27,30 @@ contract RenVMSignatureVerifierStateV1 {
 // See https://github.com/ethereum/EIPs/issues/1271#issuecomment-442328339.
 bytes4 constant CORRECT_SIGNATURE_RETURN_VALUE_ = 0x1626ba7e;
 
-contract RenVMSignatureVerifierV1 is Initializable, OwnableUpgradeable, RenVMSignatureVerifierStateV1, IERC1271 {
+contract RenVMSignatureVerifierV1 is
+    Initializable,
+    ContextUpgradeable,
+    OwnableUpgradeable,
+    RenVMSignatureVerifierStateV1,
+    IERC1271,
+    IRenVMSignatureVerifier
+{
+    string public constant NAME = "RenVMSignatureVerifier";
+
     event LogMintAuthorityUpdated(address indexed _newMintAuthority);
 
     // bytes4(keccak256("isValidSignature(bytes32,bytes)")
     bytes4 public constant CORRECT_SIGNATURE_RETURN_VALUE = 0x1626ba7e; // CORRECT_SIGNATURE_RETURN_VALUE_
     bytes4 public constant INCORRECT_SIGNATURE_RETURN_VALUE = 0x000000;
 
-    function __RenVMSignatureVerifier_init(address mintAuthority_) external initializer {
+    function __RenVMSignatureVerifier_init(address mintAuthority_, address contractOwner) external initializer {
+        __Context_init();
         __Ownable_init();
         updateMintAuthority(mintAuthority_);
+
+        if (owner() != contractOwner) {
+            transferOwnership(contractOwner);
+        }
     }
 
     function mintAuthority() public view returns (address) {
@@ -56,14 +73,11 @@ contract RenVMSignatureVerifierV1 is Initializable, OwnableUpgradeable, RenVMSig
         emit LogMintAuthorityUpdated(_mintAuthority);
     }
 
+    // PUBLIC //////////////////////////////////////////////////////////////////
+
     /// @notice verifySignature checks the the provided signature matches the
-    /// provided parameters.
-    function isValidSignature(bytes32 sigHash, bytes memory signature)
-        external
-        view
-        override
-        returns (bytes4 magicValue)
-    {
+    /// provided parameters. Returns a 4-byte value as defined by ERC1271.
+    function isValidSignature(bytes32 sigHash, bytes calldata signature) external view override returns (bytes4) {
         address mintAuthority_ = mintAuthority();
         require(mintAuthority_ != address(0x0), "SignatureVerifier: mintAuthority not initialized");
         if (mintAuthority_ == ECDSA.recover(sigHash, signature)) {

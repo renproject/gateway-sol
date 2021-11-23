@@ -3,13 +3,6 @@ import { expect } from "chai";
 import { BaseContract } from "ethers";
 import hre from "hardhat";
 
-import {
-    MigratedMintGateway,
-    MigratedMintGateway__factory,
-    MintGatewayV3,
-    MintGatewayV3__factory,
-    RenAssetV2,
-} from "../typechain";
 import { completeGateway, setupNetworks } from "./utils";
 
 const setup = hre.deployments.createFixture(async () => {
@@ -23,9 +16,6 @@ const setup = hre.deployments.createFixture(async () => {
 describe("RenJS", () => {
     it("mint and burn", async function () {
         this.timeout(1000 * 1000);
-
-        const { getUnnamedAccounts, ethers } = hre;
-        const [user] = await getUnnamedAccounts();
 
         const { bitcoin, renJS, ethereum, bsc } = await setup();
 
@@ -86,5 +76,30 @@ describe("RenJS", () => {
             to: ethereum.Account(),
         });
         await completeGateway(ethBurn);
+    });
+
+    it("mint and burn", async function () {
+        this.timeout(1000 * 1000);
+
+        const { bitcoin, renJS, ethereum, bsc, mockRenVMProvider } = await setup();
+
+        const inAmount = new BigNumber(Math.random() + 1)
+            .shiftedBy(bitcoin.assetDecimals(bitcoin.assets.default))
+            .integerValue(BigNumber.ROUND_DOWN);
+
+        const mint = await renJS.gateway({
+            asset: bitcoin.assets.default,
+            from: bitcoin.GatewayAddress(),
+            to: ethereum.Account(),
+        });
+        const outAmount = await mint.fees.estimateOutput(inAmount);
+
+        const oldPrivateKey = mockRenVMProvider.privateKey;
+        mockRenVMProvider.updatePrivateKey();
+
+        await expect(completeGateway(mint, inAmount)).to.be.rejectedWith(/MintGateway: invalid signature/);
+
+        // Reset private key
+        mockRenVMProvider.updatePrivateKey(oldPrivateKey);
     });
 });

@@ -14,20 +14,24 @@ abstract contract ERC20WithPermitState {
 
     // --- EIP712 niceties ---
     bytes32 internal _domainSeparator;
+
+    // Leave a gap so that storage values added in future upgrages don't corrupt
+    // the storage of contracts that inherit from this contract.
+    uint256[47] private __gap;
+}
+
+/// Taken from the DAI token (https://github.com/makerdao/dss/blob/c8d4c806691dacb903ff281b81f316bea974e4c7/src/dai.sol)
+/// See also EIP-2612 (https://eips.ethereum.org/EIPS/eip-2612).
+contract ERC20WithPermit is Initializable, ERC20Upgradeable, ERC20WithPermitState {
     // PERMIT_TYPEHASH is the value returned from
     // keccak256("Permit(address holder,address spender,uint256 nonce,uint256 expiry,bool allowed)")
     bytes32 public constant PERMIT_TYPEHASH = 0xea2aa0a1be11a07ed86d755c93467f4f82362b452371d1ba94d1715123511acb;
 
-    uint256[48] private __gap;
-}
-
-/// Taken from the DAI token.
-contract ERC20WithPermit is Initializable, ERC20Upgradeable, ERC20WithPermitState {
     function __ERC20WithPermit_init(
         uint256 chainId,
-        string memory version_,
-        string memory name_,
-        string memory symbol_
+        string calldata version_,
+        string calldata name_,
+        string calldata symbol_
     ) public initializer {
         __ERC20_init(name_, symbol_);
         _version = version_;
@@ -79,6 +83,8 @@ contract ERC20WithPermit is Initializable, ERC20Upgradeable, ERC20WithPermitStat
         require(nonce == nonces(holder), "ERC20WithRate: invalid nonce");
         _nonces[holder] = nonce + 1;
         uint256 amount = allowed ? uint256(int256(-1)) : 0;
+
+        // Approve
         _approve(holder, spender, amount);
     }
 }

@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.7;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {MathUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 /**
  * @title SafeERC20
@@ -15,11 +15,11 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
  * To use this library you can add a `using SafeERC20 for IERC20;` statement to your contract,
  * which allows you to call the safe operations as `token.safeTransfer(...)`, etc.
  */
-library SafeTransferWithFees {
-    using SafeERC20 for IERC20;
+library SafeTransferWithFeesUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     function safeTransferFromWithFees(
-        IERC20 token,
+        IERC20Upgradeable token,
         address from,
         address to,
         uint256 value
@@ -28,8 +28,10 @@ library SafeTransferWithFees {
         token.safeTransferFrom(from, to, value);
         uint256 balanceAfter = token.balanceOf(to);
 
+        // Overflow check added by Solidity compiler.
+        // The result is also only used if it's less than `value`.
         uint256 balanceIncrease = balanceAfter - balanceBefore;
 
-        return Math.min(value, balanceIncrease);
+        return MathUpgradeable.min(value, balanceIncrease);
     }
 }

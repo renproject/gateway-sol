@@ -34,7 +34,7 @@ pragma solidity ^0.8.7;
 library StringSet {
     struct Set {
         string[] _values;
-        mapping(string => uint256) _indexes;
+        mapping(string => uint256) _indexes; // 1-indexed
     }
 
     function add(Set storage set, string memory value) internal returns (bool) {
@@ -54,6 +54,7 @@ library StringSet {
             uint256 toDeleteIndex = valueIndex - 1;
             uint256 lastIndex = set._values.length - 1;
 
+            // Swap the item with the last element so that it can be popped.
             if (lastIndex != toDeleteIndex) {
                 string memory lastvalue = set._values[lastIndex];
                 set._values[toDeleteIndex] = lastvalue;

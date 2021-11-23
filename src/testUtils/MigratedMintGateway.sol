@@ -24,15 +24,15 @@ contract MigratedMintGateway is Initializable, OwnableUpgradeable, GatewayStateV
         bytes32 pHash,
         uint256 amount,
         bytes32 nHash,
-        bytes memory sig
+        bytes calldata sig
     ) external override returns (uint256) {
         return nextGateway._mintFromPreviousGateway(pHash, amount, nHash, sig, _msgSender());
     }
 
     function burnWithPayload(
-        string memory recipientAddress,
-        string memory recipientChain,
-        bytes memory recipientPayload,
+        string calldata recipientAddress,
+        string calldata recipientChain,
+        bytes calldata recipientPayload,
         uint256 amount
     ) external override returns (uint256) {
         return
@@ -45,11 +45,11 @@ contract MigratedMintGateway is Initializable, OwnableUpgradeable, GatewayStateV
             );
     }
 
-    function burn(string memory recipient, uint256 amount) external virtual returns (uint256) {
+    function burn(string calldata recipient, uint256 amount) external virtual override returns (uint256) {
         return nextGateway._burnFromPreviousGateway(recipient, "", "", amount, _msgSender());
     }
 
-    function burn(bytes memory recipient, uint256 amount) external virtual override returns (uint256) {
+    function burn(bytes calldata recipient, uint256 amount) external virtual override returns (uint256) {
         return nextGateway._burnFromPreviousGateway(string(recipient), "", "", amount, _msgSender());
     }
 }

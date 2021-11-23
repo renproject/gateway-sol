@@ -5,14 +5,14 @@ pragma solidity ^0.8.7;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import {IMintGateway} from "../Gateways/interfaces/IMintGateway.sol";
 import {ILockGateway} from "../Gateways/interfaces/ILockGateway.sol";
-import {ValidString} from "../libraries/ValidString.sol";
+import {String} from "../libraries/String.sol";
 import {RenAssetFactory} from "./RenAssetFactory.sol";
 import {StringSet} from "../libraries/StringSet.sol";
 
@@ -37,6 +37,11 @@ contract GatewayRegistryStateV2 {
     string internal _chainName;
 
     address internal _transferWithLog;
+
+    // Leave a gap so that storage values added in future upgrages don't corrupt
+    // the storage of contracts that inherit from this contract.
+    // Note that StringSet.Set occupies two slots.
+    uint256[38] private __gap;
 }
 
 contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
@@ -47,7 +52,7 @@ contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
     }
 
     function chainName() public view returns (string memory) {
-        require(bytes(_chainName).length > 0, "GatewayRegistry: not initialized");
+        require(String.isNotEmpty(_chainName), "GatewayRegistry: not initialized");
         return _chainName;
     }
 
@@ -84,8 +89,8 @@ contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
 
         string[] memory gateways = new string[](count);
 
-        for (uint256 i = from; i < from + count; i++) {
-            gateways[i - from] = set.at(i);
+        for (uint256 i = 0; i < count; i++) {
+            gateways[i] = set.at(i + from);
         }
 
         return gateways;
@@ -154,45 +159,58 @@ contract GatewayRegistryV2 is
 {
     using StringSet for StringSet.Set;
 
+    string public constant NAME = "GatewayRegistry";
     bytes32 public constant CAN_UPDATE_GATEWAYS = keccak256("CAN_UPDATE_GATEWAYS");
     bytes32 public constant CAN_ADD_GATEWAYS = keccak256("CAN_ADD_GATEWAYS");
 
     function __GatewayRegistry_init(
         string calldata chainName_,
         uint256 chainId_,
-        address renAssetProxyBeacon_,
-        address mintGatewayProxyBeacon_,
-        address lockGatewayProxyBeacon_,
         address adminAddress,
         address signatureVerifier_,
-        address transferWithLog
+        address transferWithLog,
+        address renAssetProxyBeacon_,
+        address mintGatewayProxyBeacon_,
+        address lockGatewayProxyBeacon_
     ) external initializer onlyValidString(chainName_) {
+        __AccessControlEnumerable_init();
         __RenAssetFactory_init(renAssetProxyBeacon_, mintGatewayProxyBeacon_, lockGatewayProxyBeacon_);
         _chainName = chainName_;
         _chainId = chainId_;
+        _signatureVerifier = signatureVerifier_;
+        _transferWithLog = transferWithLog;
+
         AccessControlEnumerableUpgradeable._setupRole(AccessControlUpgradeable.DEFAULT_ADMIN_ROLE, adminAddress);
         AccessControlEnumerableUpgradeable._setupRole(CAN_UPDATE_GATEWAYS, adminAddress);
         AccessControlEnumerableUpgradeable._setupRole(CAN_ADD_GATEWAYS, adminAddress);
-        _signatureVerifier = signatureVerifier_;
-        _transferWithLog = transferWithLog;
     }
 
     /// @dev The symbol is included twice because strings have to be hashed
     /// first in order to be used as a log index/topic.
     event LogMintGatewayUpdated(
         string symbol,
-        string indexed indexedSymbol,
         address indexed token,
-        address indexed gatewayContract
+        address indexed gatewayContract,
+        // Indexed versions of previous parameters.
+        string indexed indexedSymbol
     );
-    event LogMintGatewayDeleted(string symbol, string indexed indexedSymbol);
+    event LogMintGatewayDeleted(
+        string symbol,
+        // Indexed versions of previous parameters.
+        string indexed indexedSymbol
+    );
     event LogLockGatewayUpdated(
         string symbol,
-        string indexed indexedSymbol,
         address indexed token,
-        address indexed gatewayContract
+        address indexed gatewayContract,
+        // Indexed versions of previous parameters.
+        string indexed indexedSymbol
     );
-    event LogLockGatewayDeleted(string symbol, string indexed indexedSymbol);
+    event LogLockGatewayDeleted(
+        string symbol,
+        // Indexed versions of previous parameters.
+        string indexed indexedSymbol
+    );
 
     event LogSignatureVerifierUpdated(address indexed newSignatureVerifier);
     event LogTransferWithLogUpdated(address indexed newTransferWithLog);
@@ -200,7 +218,7 @@ contract GatewayRegistryV2 is
     // MODIFIERS ///////////////////////////////////////////////////////////////
 
     modifier onlyValidString(string calldata str_) {
-        require(ValidString.isValidString(str_), "GatewayRegistry: empty or invalid string input");
+        require(String.isValidString(str_), "GatewayRegistry: empty or invalid string input");
         _;
     }
 
@@ -274,7 +292,7 @@ contract GatewayRegistryV2 is
         }
 
         // Check that token, Gateway and symbol haven't already been registered.
-        if (bytes(mintSymbolByToken[renAsset]).length > 0) {
+        if (String.isNotEmpty(mintSymbolByToken[renAsset])) {
             revert(
                 string(
                     abi.encodePacked(
@@ -293,7 +311,7 @@ contract GatewayRegistryV2 is
         mintGatewayDetailsBySymbol[symbol] = GatewayDetails({token: renAsset, gateway: mintGateway});
         mintSymbolByToken[renAsset] = symbol;
 
-        emit LogMintGatewayUpdated(symbol, symbol, renAsset, mintGateway);
+        emit LogMintGatewayUpdated(symbol, renAsset, mintGateway, symbol);
     }
 
     function deployMintGateway(
@@ -329,7 +347,7 @@ contract GatewayRegistryV2 is
         address mintGateway = address(
             _deployMintGateway(chainName(), symbol, getSignatureVerifier(), renAsset, version)
         );
-        Ownable(renAsset).transferOwnership(mintGateway);
+        OwnableUpgradeable(renAsset).transferOwnership(mintGateway);
         addMintGateway(symbol, renAsset, mintGateway);
     }
 
@@ -341,9 +359,8 @@ contract GatewayRegistryV2 is
         public
         onlyRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS")
     {
-        require(mintGatewayDetailsBySymbol[symbol].token != address(0x0), "GatewayRegistry: gateway not registered");
-
         address renAsset = mintGatewayDetailsBySymbol[symbol].token;
+        require(renAsset != address(0x0), "GatewayRegistry: gateway not registered");
 
         // Remove token and Gateway contract
         delete mintSymbolByToken[renAsset];
@@ -373,7 +390,7 @@ contract GatewayRegistryV2 is
         }
 
         // Check that token hasn't already been registered.
-        if (bytes(lockSymbolByToken[lockAsset]).length > 0) {
+        if (String.isNotEmpty(lockSymbolByToken[lockAsset])) {
             revert(
                 string(
                     abi.encodePacked(
@@ -392,7 +409,7 @@ contract GatewayRegistryV2 is
         lockGatewayDetailsBySymbol[symbol] = GatewayDetails({token: lockAsset, gateway: lockGateway});
         lockSymbolByToken[lockAsset] = symbol;
 
-        emit LogLockGatewayUpdated(symbol, symbol, lockAsset, lockGateway);
+        emit LogLockGatewayUpdated(symbol, lockAsset, lockGateway, symbol);
     }
 
     function deployLockGateway(

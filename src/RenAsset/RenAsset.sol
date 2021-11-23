@@ -2,44 +2,51 @@
 
 pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
 import {ERC20WithPermit} from "./ERC20WithPermit.sol";
+import {ERC20WithPermit} from "./ERC20WithPermit.sol";
+import {String} from "../libraries/String.sol";
 
-import "./ERC20WithPermit.sol";
-import {ValidString} from "../libraries/ValidString.sol";
-
-contract RenAssetStateV2 {
-    string public constant NAME = "RenAsset";
-
+abstract contract RenAssetStateV2 {
     uint8 internal _decimals;
 
-    uint256[48] private __gap;
+    // Leave a gap so that storage values added in future upgrages don't corrupt
+    // the storage of contracts that inherit from this contract.
+    uint256[49] private __gap;
 }
 
 /// RenAsset represents a digital asset that has been bridged by RenVM. It
 /// exposes mint and burn functions that can only be called by it's associated
 /// MintGateway contract.
-contract RenAssetV2 is Initializable, ERC20Upgradeable, ERC20WithPermit, OwnableUpgradeable, RenAssetStateV2 {
-    /* solium-disable-next-line no-empty-blocks */
+contract RenAssetV2 is Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC20WithPermit, RenAssetStateV2 {
+    string public constant NAME = "RenAsset";
+
+    // If these parameters are changed, RenAssetFactory must be updated as well.
     function __RenAsset_init(
         uint256 chainId,
-        string memory version_,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_
+        string calldata version_,
+        string calldata name_,
+        string calldata symbol_,
+        uint8 decimals_,
+        address contractOwner
     ) external initializer {
-        require(ValidString.isValidString(version_), "RenAsset: invalid version");
-        require(ValidString.isValidString(name_), "RenAsset: invalid name");
-        require(ValidString.isValidString(symbol_), "RenAsset: invalid symbol");
+        require(String.isValidString(version_), "RenAsset: invalid version");
+        require(String.isValidString(name_), "RenAsset: invalid name");
+        require(String.isValidString(symbol_), "RenAsset: invalid symbol");
 
-        ERC20Upgradeable.__ERC20_init(name_, symbol_);
-        ERC20WithPermit.__ERC20WithPermit_init(chainId, version_, name_, symbol_);
-        OwnableUpgradeable.__Ownable_init();
+        __Ownable_init();
+        __ERC20_init(name_, symbol_);
+        __ERC20WithPermit_init(chainId, version_, name_, symbol_);
+
         RenAssetStateV2._decimals = decimals_;
+
+        if (owner() != contractOwner) {
+            transferOwnership(contractOwner);
+        }
     }
 
     function decimals() public view override returns (uint8) {
@@ -63,16 +70,6 @@ contract RenAssetV2 is Initializable, ERC20Upgradeable, ERC20WithPermit, Ownable
         // mistake caused by the Ethereum transaction's `to` needing to be
         // the token's address.
         require(recipient != address(this), "RenERC20: can't transfer to token address");
-        require(
-            balanceOf(_msgSender()) >= amount,
-            string(
-                abi.encodePacked(
-                    "ERC20: transfer from ",
-                    StringsUpgradeable.toHexString(uint160(_msgSender()), 20),
-                    " amount exceeds allowance"
-                )
-            )
-        );
         return super.transfer(recipient, amount);
     }
 

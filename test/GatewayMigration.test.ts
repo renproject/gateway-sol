@@ -39,19 +39,27 @@ describe("Gateway Migration", () => {
                 await ethGatewayRegistry.getMintGatewayBySymbol("BTC")
             )
         ).connect(await ethers.getSigner(deployer));
+        const signatureVerifier = await ethGatewayRegistry.getSignatureVerifier();
         const gateway_1 = await deployProxy<MintGatewayV3__factory>(
             "MintGatewayV3",
             "TransparentUpgradeableProxy",
+            {
+                initializer: "__MintGateway_init",
+                constructorArgs: ["Ethereum", "BTC", signatureVerifier, renBTC.address, deployer] as Parameters<
+                    MintGatewayV3["__MintGateway_init"]
+                >,
+            },
             async (gateway) => {
-                await gateway.__MintGateway_init(
-                    "Ethereum",
-                    "BTC",
-                    await ethGatewayRegistry.getSignatureVerifier(),
-                    renBTC.address
-                );
+                try {
+                    await gateway.selectorHash();
+                    return true;
+                } catch (error) {
+                    return false;
+                }
             },
             "gateway_1"
         );
+
         await existingGateway.transferTokenOwnership(gateway_1.address);
         await ethGatewayRegistry.addMintGateway("BTC", renBTC.address, gateway_1.address);
 
@@ -86,18 +94,25 @@ describe("Gateway Migration", () => {
         const gateway_2 = await deployProxy<MintGatewayV3__factory>(
             "MintGatewayV3",
             "TransparentUpgradeableProxy",
+            {
+                initializer: "__MintGateway_init",
+                constructorArgs: ["Ethereum", "BTC", signatureVerifier, renBTC.address, deployer] as Parameters<
+                    MintGatewayV3["__MintGateway_init"]
+                >,
+            },
             async (gateway) => {
-                await gateway.__MintGateway_init(
-                    "Ethereum",
-                    "BTC",
-                    await ethGatewayRegistry.getSignatureVerifier(),
-                    renBTC.address
-                );
+                try {
+                    await gateway.selectorHash();
+                    return true;
+                } catch (error) {
+                    return false;
+                }
             },
             "gateway_2"
         );
         await gateway_1.transferTokenOwnership(gateway_2.address);
-        await ethGatewayRegistry.addMintGateway("BTC", renBTC.address, gateway_2.address);
+
+        // await ethGatewayRegistry.addMintGateway("BTC", renBTC.address, gateway_2.address);
 
         const migratedMintGateway = await create2<MigratedMintGateway__factory>(
             "MigratedMintGateway",

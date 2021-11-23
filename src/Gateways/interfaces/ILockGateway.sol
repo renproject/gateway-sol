@@ -16,9 +16,9 @@ abstract contract ILockGateway {
     );
 
     function lock(
-        string memory recipientAddress,
-        string memory recipientChain,
-        bytes memory recipientPayload,
+        string calldata recipientAddress,
+        string calldata recipientChain,
+        bytes calldata recipientPayload,
         uint256 amount
     ) external virtual returns (uint256);
 
@@ -26,6 +26,6 @@ abstract contract ILockGateway {
         bytes32 pHash,
         uint256 amount,
         bytes32 nHash,
-        bytes memory sig
+        bytes calldata sig
     ) external virtual returns (uint256);
 }

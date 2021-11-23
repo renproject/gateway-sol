@@ -28,8 +28,6 @@ chai.use(ChaiAsPromised);
 const setup = hre.deployments.createFixture(async () => {
     const { deployments, ethers, getNamedAccounts, getUnnamedAccounts } = hre;
 
-    const { deployer } = await getNamedAccounts();
-
     log.setLevel("ERROR");
     const create2 = setupCreate2(hre, undefined, log);
 
@@ -102,7 +100,8 @@ describe("GatewayRegistry", function () {
 
     describe("gateway adder and updater", () => {
         it("gateway adder", async () => {
-            const { ethers } = hre;
+            const { ethers, getNamedAccounts } = hre;
+            const { deployer } = await getNamedAccounts();
 
             let { create2, gatewayRegistryV2, gatewayAdder } = await setup();
             gatewayRegistryV2 = gatewayRegistryV2.connect(await ethers.getSigner(gatewayAdder));
@@ -137,7 +136,8 @@ describe("GatewayRegistry", function () {
                 "Hardhat",
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                test2.address
+                test2.address,
+                deployer
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway.address);
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
@@ -149,7 +149,8 @@ describe("GatewayRegistry", function () {
                 "Hardhat",
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                renTEST2.address
+                renTEST2.address,
+                deployer
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway.address);
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
@@ -232,7 +233,8 @@ describe("GatewayRegistry", function () {
         });
 
         it("gateway adder and updater", async () => {
-            const { ethers } = hre;
+            const { ethers, getNamedAccounts } = hre;
+            const { deployer } = await getNamedAccounts();
 
             let { create2, gatewayRegistryV2, gatewayUpdater } = await setup();
             gatewayRegistryV2 = gatewayRegistryV2.connect(await ethers.getSigner(gatewayUpdater));
@@ -276,7 +278,8 @@ describe("GatewayRegistry", function () {
                 "Hardhat",
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                test2.address
+                test2.address,
+                deployer
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway_1.address);
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
@@ -285,7 +288,8 @@ describe("GatewayRegistry", function () {
                 "Hardhat",
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                test2.address
+                test2.address,
+                deployer
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway_2.address);
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
@@ -297,7 +301,8 @@ describe("GatewayRegistry", function () {
                 "Hardhat",
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                renTEST2.address
+                renTEST2.address,
+                deployer
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway_1.address);
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
@@ -306,7 +311,8 @@ describe("GatewayRegistry", function () {
                 "Hardhat",
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                renTEST2.address
+                renTEST2.address,
+                deployer
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway_2.address);
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;

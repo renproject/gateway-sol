@@ -2,38 +2,59 @@
 
 pragma solidity ^0.8.7;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {RenAssetV2} from "../RenAsset/RenAsset.sol";
-import {SafeTransferWithFees} from "./common/SafeTransferWithFees.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+
+import {SafeTransferWithFeesUpgradeable} from "./common/SafeTransferWithFees.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
 import {ILockGateway} from "./interfaces/ILockGateway.sol";
 import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./RenVMSignatureVerifier.sol";
+import {RenAssetV2} from "../RenAsset/RenAsset.sol";
+import {String} from "../libraries/String.sol";
 
-/// LockGatewayV3 handles verifying lock and release requests. A mintAuthority
-/// approves new assets to be minted by providing a digital signature.
-contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, GatewayStateManagerV3, ILockGateway {
-    using SafeERC20 for IERC20;
-    using SafeTransferWithFees for IERC20;
+/// LockGatewayV3 handles verifying lock and release requests. A mint authority
+/// approves assets being released by providing a digital signature.
+/// The balance of assets is assumed not to change without a transfer, so
+/// rebasing assets and assets with a demurrage fee are not supported.
+contract LockGatewayV3 is
+    Initializable,
+    ContextUpgradeable,
+    OwnableUpgradeable,
+    GatewayStateV3,
+    GatewayStateManagerV3,
+    ILockGateway
+{
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeTransferWithFeesUpgradeable for IERC20Upgradeable;
 
+    string public constant NAME = "LockGateway";
+
+    // If these parameters are changed, RenAssetFactory must be updated as well.
     function __LockGateway_init(
         string calldata chain_,
         string calldata asset_,
         address signatureVerifier_,
-        address token_
+        address token_,
+        address contractOwner
     ) external initializer {
-        OwnableUpgradeable.__Ownable_init();
-        GatewayStateManagerV3.__GatewayStateManager_init(chain_, asset_, signatureVerifier_, token_);
+        __Context_init();
+        __Ownable_init();
+        __GatewayStateManager_init(chain_, asset_, signatureVerifier_, token_);
+
+        if (owner() != contractOwner) {
+            transferOwnership(contractOwner);
+        }
     }
 
     // Public functions ////////////////////////////////////////////////////////
 
-    /// @notice burn destroys tokens after taking a fee for the `_feeRecipient`,
-    ///         allowing the associated assets to be released on their native
-    ///         chain.
+    /// @notice Transfers tokens into custody by this contract so that they
+    ///         can be minted on another chain.
     ///
     /// @param recipientAddress The address to which the locked assets will be
     ///        minted to. The address should be a plain-text address, without
@@ -45,75 +66,100 @@ contract LockGatewayV3 is Initializable, OwnableUpgradeable, GatewayStateV3, Gat
     /// @param amount The amount of the token being locked, in the asset's
     ///        smallest unit. (e.g. satoshis for BTC)
     function lock(
-        string memory recipientAddress,
-        string memory recipientChain,
-        bytes memory recipientPayload,
+        string calldata recipientAddress,
+        string calldata recipientChain,
+        bytes calldata recipientPayload,
         uint256 amount
     ) external override returns (uint256) {
         // The recipient must not be empty. Better validation is possible,
         // but would need to be customized for each destination ledger.
-        require(bytes(recipientAddress).length != 0, "LockGateway: to address is empty");
+        require(String.isNotEmpty(recipientAddress), "LockGateway: to address is empty");
 
-        // Burn the tokens. If the user doesn't have enough tokens, this will
-        // throw.
-        uint256 transferredAmount = IERC20(token()).safeTransferFromWithFees(msg.sender, address(this), amount);
+        // Lock the tokens. If the user doesn't have enough tokens, this will
+        // throw. Note that some assets may transfer less than the provided
+        // `amount`, due to transfer fees.
+        uint256 transferredAmount = IERC20Upgradeable(token()).safeTransferFromWithFees(
+            _msgSender(),
+            address(this),
+            amount
+        );
 
-        uint256 lockNonce = eventNonce();
+        // Get the latest nonce (also known as lock reference).
+        uint256 nonce_ = eventNonce();
 
         emit LogLockToChain(
             recipientAddress,
             recipientChain,
             recipientPayload,
             transferredAmount,
-            lockNonce,
+            nonce_,
             recipientAddress,
             recipientChain
         );
 
-        _eventNonce = lockNonce + 1;
+        _eventNonce = nonce_ + 1;
 
-        return amount;
+        return transferredAmount;
     }
 
-    /// @notice mint verifies a mint approval signature from RenVM and creates
-    ///         tokens after taking a fee for the `_feeRecipient`.
+    /// @notice release verifies a release approval signature from RenVM and
+    ///         transfers the asset out of custody and to the recipient.
     ///
     /// @param pHash (payload hash) The hash of the payload associated with the
-    ///        mint.
-    /// @param amount The amount of the token being minted, in its smallest
-    ///        value. (e.g. satoshis for BTC).
+    ///        release.
+    /// @param amount The amount of the token being released, in its smallest
+    ///        value.
     /// @param nHash (nonce hash) The hash of the nonce, amount and pHash.
     /// @param sig The signature of the hash of the following values:
-    ///        (pHash, amount, msg.sender, nHash), signed by the mintAuthority.
+    ///        (pHash, amount, recipient, nHash), signed by the mintAuthority.
     function release(
         bytes32 pHash,
         uint256 amount,
         bytes32 nHash,
-        bytes memory sig
+        bytes calldata sig
     ) external override returns (uint256) {
+        // The recipient must match the value signed by RenVM.
+        address recipient = _msgSender();
+
         // Calculate the hash signed by RenVM. This binds the payload hash,
-        // amount, msg.sender and nonce hash to the signature.
-        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, selectorHash(), msg.sender, nHash);
+        // amount, recipient and nonce hash to the signature.
+        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, selectorHash(), recipient, nHash);
 
         // Check that the signature hasn't been redeemed.
-        require(!status(sigHash) && !status(nHash), "LockGateway: signature already spent");
+        require(!status(sigHash), "LockGateway: signature already spent");
 
         // If the signature fails verification, throw an error.
+        // `isValidSignature` must return an exact bytes4 value, to avoid
+        // a contract mistakingly returning a truthy value without intending to.
         if (
             GatewayStateManagerV3.signatureVerifier().isValidSignature(sigHash, sig) != CORRECT_SIGNATURE_RETURN_VALUE_
         ) {
-            revert("LockGateway: invalid signature");
+            revert(
+                string(
+                    abi.encodePacked(
+                        "LockGateway: invalid signature. phash: ",
+                        StringsUpgradeable.toHexString(uint256(pHash), 32),
+                        ", amount: ",
+                        StringsUpgradeable.toString(amount),
+                        ", shash",
+                        StringsUpgradeable.toHexString(uint256(selectorHash()), 32),
+                        ", msg.sender: ",
+                        StringsUpgradeable.toHexString(uint160(recipient), 20),
+                        ", nhash: ",
+                        StringsUpgradeable.toHexString(uint256(nHash), 32)
+                    )
+                )
+            );
         }
 
         // Update the status for both the signature hash and the nHash.
         _status[sigHash] = true;
-        _status[nHash] = true;
 
-        // Mint the amount to the msg.sender.
-        IERC20(token()).safeTransfer(msg.sender, amount);
+        // Release the amount to the recipient.
+        IERC20Upgradeable(token()).safeTransfer(recipient, amount);
 
         // Emit a log with a unique identifier 'n'.
-        emit LogRelease(msg.sender, amount, sigHash, nHash);
+        emit LogRelease(recipient, amount, sigHash, nHash);
 
         return amount;
     }

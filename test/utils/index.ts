@@ -196,6 +196,7 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
     return {
         create2,
         deployProxy,
+        mockRenVMProvider,
         ethGatewayRegistry,
         renProxyAdmin,
         bitcoin,

@@ -4,6 +4,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
     BasicBridge__factory,
+    GatewayRegistryV2,
     GatewayRegistryV2__factory,
     LockGatewayProxyBeaconV1,
     LockGatewayProxyBeaconV1__factory,
@@ -14,6 +15,7 @@ import {
     RenAssetV2__factory,
     RenProxyAdmin,
     RenProxyAdmin__factory,
+    RenVMSignatureVerifierV1,
     RenVMSignatureVerifierV1__factory,
     TestToken__factory,
 } from "../typechain";
@@ -75,7 +77,7 @@ export const deployGatewaySol = async function (
         ]));
     if (Ox(await renAssetProxyBeacon.implementation()) !== Ox(renAssetImplementation.address)) {
         logger.log(`Updating RenAsset implementation to ${Ox(renAssetImplementation.address)}`);
-        await waitForTx(() => renAssetProxyBeacon.upgradeTo(renAssetImplementation.address));
+        await waitForTx(renAssetProxyBeacon.upgradeTo(renAssetImplementation.address));
     }
 
     // Deploy MintGatewayProxyBeacon /////////////////////////////////////////////
@@ -95,7 +97,7 @@ export const deployGatewaySol = async function (
         ]));
     if (Ox(await mintGatewayProxyBeacon.implementation()) !== Ox(mintGatewayImplementation.address)) {
         logger.log(`Updating MintGateway implementation to ${Ox(mintGatewayImplementation.address)}`);
-        await waitForTx(() => mintGatewayProxyBeacon.upgradeTo(mintGatewayImplementation.address));
+        await waitForTx(mintGatewayProxyBeacon.upgradeTo(mintGatewayImplementation.address));
     }
 
     // Deploy LockGatewayProxyBeacon /////////////////////////////////////////////
@@ -115,21 +117,27 @@ export const deployGatewaySol = async function (
         ]));
     if (Ox(await lockGatewayProxyBeacon.implementation()) !== Ox(lockGatewayImplementation.address)) {
         logger.log(`Updating LockGateway implementation to ${Ox(lockGatewayImplementation.address)}`);
-        await waitForTx(() => lockGatewayProxyBeacon.upgradeTo(lockGatewayImplementation.address));
+        await waitForTx(lockGatewayProxyBeacon.upgradeTo(lockGatewayImplementation.address));
     }
 
     logger.log(chalk.yellow("Signature Verifier"));
     const signatureVerifier = await deployProxy<RenVMSignatureVerifierV1__factory>(
         "RenVMSignatureVerifierV1",
         "RenVMSignatureVerifierProxy",
+        {
+            initializer: "__RenVMSignatureVerifier_init",
+            constructorArgs: [mintAuthority, deployer] as Parameters<
+                RenVMSignatureVerifierV1["__RenVMSignatureVerifier_init"]
+            >,
+        },
         async (signatureVerifier) => {
             const currentMintAuthority = Ox(await signatureVerifier.mintAuthority());
             logger.log("currentMintAuthority", currentMintAuthority);
             logger.log("mintAuthority", Ox(mintAuthority));
             if (currentMintAuthority !== Ox(mintAuthority)) {
-                await waitForTx(async () => signatureVerifier.__RenVMSignatureVerifier_init(mintAuthority));
+                return false;
             } else {
-                logger.log(`Already initialized.`);
+                return true;
             }
         }
     );
@@ -142,27 +150,25 @@ export const deployGatewaySol = async function (
     const gatewayRegistry = await deployProxy<GatewayRegistryV2__factory>(
         "GatewayRegistryV2",
         "GatewayRegistryProxy",
+        {
+            initializer: "__GatewayRegistry_init",
+            constructorArgs: [
+                chainName,
+                chainId,
+                deployer,
+                signatureVerifier.address,
+                transferWithLog.address,
+                renAssetProxyBeacon.address,
+                mintGatewayProxyBeacon.address,
+                lockGatewayProxyBeacon.address,
+            ] as Parameters<GatewayRegistryV2["__GatewayRegistry_init"]>,
+        },
         async (gatewayRegistry) => {
             try {
                 await gatewayRegistry.chainName();
-                logger.log(`Already initialized.`);
+                return true;
             } catch (error: any) {
-                if (error.message.match(/GatewayRegistry: not initialized/)) {
-                    await waitForTx(async () =>
-                        gatewayRegistry.__GatewayRegistry_init(
-                            chainName,
-                            chainId,
-                            renAssetProxyBeacon.address,
-                            mintGatewayProxyBeacon.address,
-                            lockGatewayProxyBeacon.address,
-                            deployer,
-                            signatureVerifier.address,
-                            transferWithLog.address
-                        )
-                    );
-                } else {
-                    throw error;
-                }
+                return false;
             }
         }
     );
@@ -173,7 +179,7 @@ export const deployGatewaySol = async function (
                 signatureVerifier.address
             )}.`
         );
-        await waitForTx(async () =>
+        await waitForTx(
             gatewayRegistry.updateSignatureVerifier(signatureVerifier.address, {
                 ...overrides,
             })
@@ -187,7 +193,7 @@ export const deployGatewaySol = async function (
                 transferWithLog.address
             )}.`
         );
-        await waitForTx(async () =>
+        await waitForTx(
             gatewayRegistry.updateTransferWithLog(transferWithLog.address, {
                 ...overrides,
             })
@@ -206,7 +212,7 @@ export const deployGatewaySol = async function (
 
     if (!(await renAssetProxyBeacon.hasRole(await renAssetProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address))) {
         logger.log(`Granting deployer role to gateway registry in renAssetProxyBeacon`);
-        await waitForTx(async () =>
+        await waitForTx(
             renAssetProxyBeacon.grantRole(await renAssetProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address, {
                 ...overrides,
             })
@@ -217,7 +223,7 @@ export const deployGatewaySol = async function (
         !(await mintGatewayProxyBeacon.hasRole(await mintGatewayProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address))
     ) {
         logger.log(`Granting deployer role to gateway registry in mintGatewayProxyBeacon`);
-        await waitForTx(async () =>
+        await waitForTx(
             mintGatewayProxyBeacon.grantRole(await mintGatewayProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address, {
                 ...overrides,
             })
@@ -228,7 +234,7 @@ export const deployGatewaySol = async function (
         !(await lockGatewayProxyBeacon.hasRole(await lockGatewayProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address))
     ) {
         logger.log(`Granting deployer role to gateway registry in lockGatewayProxyBeacon`);
-        await waitForTx(async () =>
+        await waitForTx(
             lockGatewayProxyBeacon.grantRole(await lockGatewayProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address, {
                 ...overrides,
             })
@@ -247,7 +253,7 @@ export const deployGatewaySol = async function (
                 logger.log(
                     `Calling deployMintGatewayAndRenAsset(${symbol}, ${prefixedSymbol}, ${prefixedSymbol}, ${decimals}, '1')`
                 );
-                await waitForTx(() =>
+                await waitForTx(
                     gatewayRegistry.deployMintGatewayAndRenAsset(
                         symbol,
                         prefixedSymbol,
@@ -261,14 +267,14 @@ export const deployGatewaySol = async function (
                 );
             } else if (!gateway) {
                 logger.log(`Calling deployMintGateway(${symbol}, ${token}, '1')`);
-                await waitForTx(() =>
+                await waitForTx(
                     gatewayRegistry.deployMintGateway(symbol, token, "1", {
                         ...overrides,
                     })
                 );
             } else {
                 logger.log(`Calling addMintGateway(${symbol}, ${token}, ${gateway})`);
-                await waitForTx(() =>
+                await waitForTx(
                     gatewayRegistry.addMintGateway(symbol, token, gateway, {
                         ...overrides,
                     })
@@ -293,7 +299,7 @@ export const deployGatewaySol = async function (
                 logger.log(`Deploying TestToken(${symbol}, ${decimals}, ${totalSupply})`);
                 const supply = new BigNumber(
                     totalSupply !== undefined ? totalSupply.replace(/,/g, "") : 1000000
-                ).multipliedBy(new BigNumber(10).exponentiatedBy(decimals !== undefined ? decimals : 18));
+                ).shiftedBy(decimals !== undefined ? decimals : 18);
                 const deployedTokenInstance = await create2<TestToken__factory>("TestToken", [
                     symbol,
                     symbol,
@@ -306,14 +312,14 @@ export const deployGatewaySol = async function (
 
             if (!gateway) {
                 logger.log(`Calling deployLockGateway(${symbol}, ${deployedToken}, '1')`);
-                await waitForTx(() =>
+                await waitForTx(
                     gatewayRegistry.deployLockGateway(symbol, deployedToken, "1", {
                         ...overrides,
                     })
                 );
             } else {
                 logger.log(`Calling addLockGateway(${symbol}, ${deployedToken}, ${gateway})`);
-                await waitForTx(() =>
+                await waitForTx(
                     gatewayRegistry.addLockGateway(symbol, deployedToken, gateway, {
                         ...overrides,
                     })

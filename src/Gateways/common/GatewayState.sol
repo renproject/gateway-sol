@@ -3,16 +3,13 @@
 pragma solidity ^0.8.7;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import {IRenVMSignatureVerifier} from "../RenVMSignatureVerifier.sol";
-import {ValidString} from "../../libraries/ValidString.sol";
+import {String} from "../../libraries/String.sol";
 import {RenVMHashes} from "./RenVMHashes.sol";
 
-import {console} from "hardhat/console.sol";
-
-contract GatewayStateV3 {
+abstract contract GatewayStateV3 {
     // Selector hash details.
     string internal _chain;
     string internal _asset;
@@ -30,13 +27,15 @@ contract GatewayStateV3 {
 
     uint256 internal _eventNonce;
 
-    uint256[43] private __gap;
+    // Leave a gap so that storage values added in future upgrages don't corrupt
+    // the storage of contracts that inherit from this contract.
+    uint256[42] private __gap;
 }
 
-contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStateV3 {
-    event LogChainUpdated(string _chain, bytes32 _selectorHash);
-    event LogAssetUpdated(string _asset, bytes32 _selectorHash);
-    event LogSignatureVerifierUpdated(IRenVMSignatureVerifier indexed _newSignatureVerifier);
+abstract contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStateV3 {
+    event LogChainUpdated(string _chain, bytes32 indexed _selectorHash);
+    event LogAssetUpdated(string _asset, bytes32 indexed _selectorHash);
+    event LogSignatureVerifierUpdated(address indexed _newSignatureVerifier);
     event LogTokenUpdated(address indexed _newToken);
     event LogPreviousGatewayUpdated(address indexed _newPreviousGateway);
 
@@ -49,7 +48,7 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
         __Ownable_init();
         updateChain(chain_);
         updateAsset(asset_);
-        updateSignatureVerifier(IRenVMSignatureVerifier(signatureVerifier_));
+        updateSignatureVerifier(signatureVerifier_);
         updateToken(token_);
     }
 
@@ -64,6 +63,7 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
     }
 
     function selectorHash() public view returns (bytes32) {
+        require(_selectorHash != bytes32(0x0), "Gateway: not initialized");
         return _selectorHash;
     }
 
@@ -89,8 +89,7 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
     ///
     /// @param nextChain The new chain.
     function updateChain(string calldata nextChain) public onlyOwner {
-        require(ValidString.isNotEmpty(nextChain), "Gateway: chain can't be empty");
-        require(ValidString.isAlphanumeric(nextChain), "Gateway: symbol must be alphanumeric");
+        require(String.isValidString(nextChain), "Gateway: invalid chain");
 
         _chain = nextChain;
 
@@ -103,8 +102,7 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
     ///
     /// @param nextAsset The new asset.
     function updateAsset(string calldata nextAsset) public onlyOwner {
-        require(ValidString.isNotEmpty(nextAsset), "Gateway: asset can't be empty");
-        require(ValidString.isAlphanumeric(nextAsset), "Gateway: symbol must be alphanumeric");
+        require(String.isValidString(nextAsset), "Gateway: invalid asset");
 
         _asset = nextAsset;
 
@@ -116,9 +114,9 @@ contract GatewayStateManagerV3 is Initializable, OwnableUpgradeable, GatewayStat
     /// @notice Allow the owner to update the signature verifier contract.
     ///
     /// @param nextSignatureVerifier The new verifier contract address.
-    function updateSignatureVerifier(IRenVMSignatureVerifier nextSignatureVerifier) public onlyOwner {
+    function updateSignatureVerifier(address nextSignatureVerifier) public onlyOwner {
         require(address(nextSignatureVerifier) != address(0x0), "Gateway: invalid signature verifier");
-        _signatureVerifier = nextSignatureVerifier;
+        _signatureVerifier = IRenVMSignatureVerifier(nextSignatureVerifier);
         emit LogSignatureVerifierUpdated(nextSignatureVerifier);
     }
 

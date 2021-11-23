@@ -16,10 +16,14 @@ if (process.env.HARDHAT_FORK) {
     process.env["HARDHAT_DEPLOY_FORK"] = process.env.HARDHAT_FORK;
 }
 
-const MNEMONIC_TESTNET = process.env.MNEMONIC;
-const MNEMONIC_MAINNET = process.env.MNEMONIC_MAINNET;
-const MNEMONIC_DEVNET = process.env.MNEMONIC_DEVNET;
+const MNEMONIC_DEVNET = process.env.MNEMONIC_DEVNET || process.env.MNEMONIC;
+const MNEMONIC_TESTNET = process.env.MNEMONIC_TESTNET || process.env.MNEMONIC;
+const MNEMONIC_MAINNET = process.env.MNEMONIC_MAINNET || process.env.MNEMONIC;
 const INFURA_KEY = process.env.INFURA_KEY || "";
+
+if (!MNEMONIC_DEVNET || !MNEMONIC_TESTNET || !MNEMONIC_MAINNET) {
+    throw new Error(`Must set MNEMONIC environment variable.`);
+}
 
 const config: HardhatUserConfig = {
     solidity: {

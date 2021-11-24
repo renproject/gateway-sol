@@ -40,7 +40,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         require(AddressUpgradeable.isContract(nextTokenOwner), "MintGateway: next token owner must be a contract");
         require(nextTokenOwner != address(0x0), "MintGateway: invalid next token owner");
 
-        address token_ = token();
+        address token_ = getToken();
         RenAssetV2(token_).transferOwnership(address(nextTokenOwner));
 
         emit TokenOwnershipTransferred(token_, nextTokenOwner);
@@ -135,7 +135,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
     ) internal returns (uint256) {
         // Calculate the hash signed by RenVM. This binds the payload hash,
         // amount, recipient and nonce hash to the signature.
-        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, selectorHash(), recipient, nHash);
+        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, getSelectorHash(), recipient, nHash);
 
         // Check that the signature hasn't been redeemed.
         require(!status(sigHash), "MintGateway: signature already spent");
@@ -143,7 +143,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         // If the signature fails verification, throw an error.
         // `isValidSignature` must return an exact bytes4 value, to avoid
         // a contract mistakingly returning a truthy value without intending to.
-        if (signatureVerifier().isValidSignature(sigHash, sig) != CORRECT_SIGNATURE_RETURN_VALUE_) {
+        if (getSignatureVerifier().isValidSignature(sigHash, sig) != CORRECT_SIGNATURE_RETURN_VALUE_) {
             revert(
                 string(
                     abi.encodePacked(
@@ -152,7 +152,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
                         ", amount: ",
                         StringsUpgradeable.toString(amount),
                         ", shash",
-                        StringsUpgradeable.toHexString(uint256(selectorHash()), 32),
+                        StringsUpgradeable.toHexString(uint256(getSelectorHash()), 32),
                         ", msg.sender: ",
                         StringsUpgradeable.toHexString(uint160(recipient), 20),
                         ", nhash: ",
@@ -166,7 +166,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         _status[sigHash] = true;
 
         // Mint the amount to the recipient.
-        RenAssetV2(token()).mint(recipient, amount);
+        RenAssetV2(getToken()).mint(recipient, amount);
 
         // Emit mint log. For backwards compatiblity reasons, the sigHash is
         // cast to a uint256.
@@ -201,9 +201,9 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
 
         // Burn the tokens. If the user doesn't have enough tokens, this will
         // throw.
-        RenAssetV2(token()).burn(caller, amount);
+        RenAssetV2(getToken()).burn(caller, amount);
 
-        uint256 burnNonce = eventNonce();
+        uint256 burnNonce = getEventNonce();
 
         // If a paylaod of recipient chain has been included, emit more detailed
         // event.

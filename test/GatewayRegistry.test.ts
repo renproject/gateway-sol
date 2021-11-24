@@ -79,7 +79,7 @@ describe("GatewayRegistry", function () {
         expect(renBTCGateway_1).to.equal(renBTCGateway_2);
         expect(renBTCGateway_1).to.equal(renBTCGateway_3);
         const renBTCGateway = await ethers.getContractAt<MintGatewayV3>("MintGatewayV3", renBTCGateway_1);
-        expect(await renBTCGateway.asset()).to.equal("BTC");
+        expect(await renBTCGateway.getAsset()).to.equal("BTC");
 
         // Lock
 
@@ -95,7 +95,7 @@ describe("GatewayRegistry", function () {
         expect(renDAIGateway_1).to.not.equal(Ox0);
         expect(renDAIGateway_1).to.equal(renDAIGateway_2);
         const renDAIGateway = await ethers.getContractAt<LockGatewayV3>("LockGatewayV3", renDAIGateway_1);
-        expect(await renDAIGateway.asset()).to.equal("DAI");
+        expect(await renDAIGateway.getAsset()).to.equal("DAI");
     });
 
     describe("gateway adder and updater", () => {
@@ -134,7 +134,7 @@ describe("GatewayRegistry", function () {
             const test2LockGateway = await create2<LockGatewayV3__factory>("LockGatewayV3", [], undefined, "TEST2");
             await test2LockGateway.__LockGateway_init(
                 "TEST2",
-                await gatewayRegistryV2.signatureVerifier(),
+                await gatewayRegistryV2.getSignatureVerifier(),
                 test2.address
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway.address);
@@ -145,7 +145,7 @@ describe("GatewayRegistry", function () {
             const test2MintGateway = await create2<MintGatewayV3__factory>("MintGatewayV3", [], undefined, "TEST2");
             await test2MintGateway.__MintGateway_init(
                 "TEST2",
-                await gatewayRegistryV2.signatureVerifier(),
+                await gatewayRegistryV2.getSignatureVerifier(),
                 renTEST2.address
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway.address);
@@ -220,10 +220,10 @@ describe("GatewayRegistry", function () {
                 undefined,
                 "uninitializedGateway"
             );
-            await expect(uninitializedGateway.signatureVerifier()).to.be.rejectedWith(
+            await expect(uninitializedGateway.getSignatureVerifier()).to.be.rejectedWith(
                 /GatewayRegistry: not initialized/
             );
-            await expect(uninitializedGateway.transferContract()).to.be.rejectedWith(
+            await expect(uninitializedGateway.getTransferContract()).to.be.rejectedWith(
                 /GatewayRegistry: not initialized/
             );
         });
@@ -272,7 +272,7 @@ describe("GatewayRegistry", function () {
             const test2LockGateway_1 = await create2<LockGatewayV3__factory>("LockGatewayV3", [], undefined, "TEST2_1");
             await test2LockGateway_1.__LockGateway_init(
                 "TEST2",
-                await gatewayRegistryV2.signatureVerifier(),
+                await gatewayRegistryV2.getSignatureVerifier(),
                 test2.address
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway_1.address);
@@ -280,7 +280,7 @@ describe("GatewayRegistry", function () {
             const test2LockGateway_2 = await create2<LockGatewayV3__factory>("LockGatewayV3", [], undefined, "TEST2_2");
             await test2LockGateway_2.__LockGateway_init(
                 "TEST2",
-                await gatewayRegistryV2.signatureVerifier(),
+                await gatewayRegistryV2.getSignatureVerifier(),
                 test2.address
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway_2.address);
@@ -291,7 +291,7 @@ describe("GatewayRegistry", function () {
             const test2MintGateway_1 = await create2<MintGatewayV3__factory>("MintGatewayV3", [], undefined, "TEST2_1");
             await test2MintGateway_1.__MintGateway_init(
                 "TEST2",
-                await gatewayRegistryV2.signatureVerifier(),
+                await gatewayRegistryV2.getSignatureVerifier(),
                 renTEST2.address
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway_1.address);
@@ -299,7 +299,7 @@ describe("GatewayRegistry", function () {
             const test2MintGateway_2 = await create2<MintGatewayV3__factory>("MintGatewayV3", [], undefined, "TEST2_2");
             await test2MintGateway_2.__MintGateway_init(
                 "TEST2",
-                await gatewayRegistryV2.signatureVerifier(),
+                await gatewayRegistryV2.getSignatureVerifier(),
                 renTEST2.address
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway_2.address);
@@ -345,12 +345,12 @@ describe("GatewayRegistry", function () {
                 /GatewayRegistry: invalid signature verifier/
             );
 
-            const signatureVerifier = await gatewayRegistryV2.signatureVerifier();
+            const signatureVerifier = await gatewayRegistryV2.getSignatureVerifier();
             const newSignatureVerifier = randomAddress();
             await gatewayRegistryV2.updateSignatureVerifier(newSignatureVerifier);
-            expect(await gatewayRegistryV2.signatureVerifier()).to.equal(newSignatureVerifier);
+            expect(await gatewayRegistryV2.getSignatureVerifier()).to.equal(newSignatureVerifier);
             await gatewayRegistryV2.updateSignatureVerifier(signatureVerifier);
-            expect(await gatewayRegistryV2.signatureVerifier()).to.equal(signatureVerifier);
+            expect(await gatewayRegistryV2.getSignatureVerifier()).to.equal(signatureVerifier);
         });
 
         it("updater can update TransferWithLog", async () => {
@@ -361,12 +361,12 @@ describe("GatewayRegistry", function () {
                 /GatewayRegistry: invalid transfer with log/
             );
 
-            const transferWithLog = await gatewayRegistryV2.transferContract();
+            const transferWithLog = await gatewayRegistryV2.getTransferContract();
             const newTransferWithLog = randomAddress();
             await gatewayRegistryV2.updateTransferContract(newTransferWithLog);
-            expect(await gatewayRegistryV2.transferContract()).to.equal(newTransferWithLog);
+            expect(await gatewayRegistryV2.getTransferContract()).to.equal(newTransferWithLog);
             await gatewayRegistryV2.updateTransferContract(transferWithLog);
-            expect(await gatewayRegistryV2.transferContract()).to.equal(transferWithLog);
+            expect(await gatewayRegistryV2.getTransferContract()).to.equal(transferWithLog);
         });
     });
 });

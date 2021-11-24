@@ -6,15 +6,15 @@ import {
     BasicBridge__factory,
     GatewayRegistryV2,
     GatewayRegistryV2__factory,
-    LockGatewayProxyBeaconV1,
-    LockGatewayProxyBeaconV1__factory,
-    MintGatewayProxyBeaconV1,
-    MintGatewayProxyBeaconV1__factory,
-    RenAssetProxyBeaconV1,
-    RenAssetProxyBeaconV1__factory,
+    LockGatewayProxyBeacon,
+    LockGatewayProxyBeacon__factory,
+    MintGatewayProxyBeacon,
+    MintGatewayProxyBeacon__factory,
+    RenAssetProxyBeacon,
+    RenAssetProxyBeacon__factory,
     RenAssetV2__factory,
-    RenProxyAdmin,
     RenProxyAdmin__factory,
+    RenTimelock__factory,
     RenVMSignatureVerifierV1,
     RenVMSignatureVerifierV1__factory,
     TestToken__factory,
@@ -46,7 +46,7 @@ export const deployGatewaySol = async function (
         throw new Error(`No network configuration found for ${network.name}!`);
     }
 
-    const { mintAuthority, chainName, create2SaltOverride, overrides } = config;
+    const { mintAuthority, chainName, create2SaltOverride } = config;
     const chainId: number = (await ethers.provider.getNetwork()).chainId;
     const { deployer } = await getNamedAccounts();
 
@@ -54,9 +54,20 @@ export const deployGatewaySol = async function (
     const getExistingDeployment = setupGetExistingDeployment(hre);
     const waitForTx = setupWaitForTx(logger);
 
+    // Deploy RenTimelock ////////////////////////////////////////////////
+    logger.log(chalk.yellow("RenTimelock"));
+    const renTimelock = await create2<RenTimelock__factory>("RenTimelock", [0, [deployer], [deployer]]);
+
+    let governanceAddress: string;
+    if (network.name === "hardhat") {
+        governanceAddress = deployer;
+    } else {
+        governanceAddress = renTimelock.address;
+    }
+
     // Deploy RenProxyAdmin ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenProxyAdmin"));
-    const renProxyAdmin: RenProxyAdmin = await create2<RenProxyAdmin__factory>("RenProxyAdmin", [deployer]);
+    const renProxyAdmin = await create2<RenProxyAdmin__factory>("RenProxyAdmin", [governanceAddress]);
     const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, logger);
 
     // This should only be false on hardhat.
@@ -65,10 +76,10 @@ export const deployGatewaySol = async function (
     // Deploy RenAssetProxyBeacon ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenAsset beacon"));
     const renAssetImplementation = await create2<RenAssetV2__factory>("RenAssetV2", []);
-    const existingRenAssetProxyBeacon = await getExistingDeployment<RenAssetProxyBeaconV1>("RenAssetProxyBeaconV1");
+    const existingRenAssetProxyBeacon = await getExistingDeployment<RenAssetProxyBeacon>("RenAssetProxyBeacon");
     const renAssetProxyBeacon =
         existingRenAssetProxyBeacon ||
-        (await create2<RenAssetProxyBeaconV1__factory>("RenAssetProxyBeaconV1", [
+        (await create2<RenAssetProxyBeacon__factory>("RenAssetProxyBeacon", [
             // Temporary value, gets overwritten in the next step. This is to
             // ensure that the address doesn't change between networks even when
             // the implementation changes.
@@ -83,12 +94,12 @@ export const deployGatewaySol = async function (
     // Deploy MintGatewayProxyBeacon /////////////////////////////////////////////
     logger.log(chalk.yellow("MintGateway beacon"));
     const mintGatewayImplementation = await create2("MintGatewayV3", []);
-    const existingMintGatewayProxyBeacon = await getExistingDeployment<MintGatewayProxyBeaconV1>(
-        "MintGatewayProxyBeaconV1"
+    const existingMintGatewayProxyBeacon = await getExistingDeployment<MintGatewayProxyBeacon>(
+        "MintGatewayProxyBeacon"
     );
     const mintGatewayProxyBeacon =
         existingMintGatewayProxyBeacon ||
-        (await create2<MintGatewayProxyBeaconV1__factory>("MintGatewayProxyBeaconV1", [
+        (await create2<MintGatewayProxyBeacon__factory>("MintGatewayProxyBeacon", [
             // Temporary value, gets overwritten in the next step. This is to
             // ensure that the address doesn't change between networks even when
             // the implementation changes.
@@ -103,12 +114,12 @@ export const deployGatewaySol = async function (
     // Deploy LockGatewayProxyBeacon /////////////////////////////////////////////
     logger.log(chalk.yellow("LockGateway beacon"));
     const lockGatewayImplementation = await create2("LockGatewayV3", []);
-    const existingLockGatewayProxyBeacon = await getExistingDeployment<LockGatewayProxyBeaconV1>(
-        "LockGatewayProxyBeaconV1"
+    const existingLockGatewayProxyBeacon = await getExistingDeployment<LockGatewayProxyBeacon>(
+        "LockGatewayProxyBeacon"
     );
     const lockGatewayProxyBeacon =
         existingLockGatewayProxyBeacon ||
-        (await create2<LockGatewayProxyBeaconV1__factory>("LockGatewayProxyBeaconV1", [
+        (await create2<LockGatewayProxyBeacon__factory>("LockGatewayProxyBeacon", [
             // Temporary value, gets overwritten in the next step. This is to
             // ensure that the address doesn't change between networks even when
             // the implementation changes.
@@ -131,7 +142,7 @@ export const deployGatewaySol = async function (
             >,
         },
         async (signatureVerifier) => {
-            const currentMintAuthority = Ox(await signatureVerifier.mintAuthority());
+            const currentMintAuthority = Ox(await signatureVerifier.getMintAuthority());
             logger.log("currentMintAuthority", currentMintAuthority);
             logger.log("mintAuthority", Ox(mintAuthority));
             if (currentMintAuthority !== Ox(mintAuthority)) {
@@ -154,90 +165,79 @@ export const deployGatewaySol = async function (
             initializer: "__GatewayRegistry_init",
             constructorArgs: [
                 chainId,
-                deployer,
                 signatureVerifier.address,
                 transferWithLog.address,
                 renAssetProxyBeacon.address,
                 mintGatewayProxyBeacon.address,
                 lockGatewayProxyBeacon.address,
+                governanceAddress,
+                [deployer],
             ] as Parameters<GatewayRegistryV2["__GatewayRegistry_init"]>,
         },
         async (gatewayRegistry) => {
             try {
-                await gatewayRegistry.signatureVerifier();
+                await gatewayRegistry.getSignatureVerifier();
                 return true;
             } catch (error: any) {
                 return false;
             }
         }
     );
-    const existingSignatureVerifier = Ox(await gatewayRegistry.signatureVerifier());
+    const existingSignatureVerifier = Ox(await gatewayRegistry.getSignatureVerifier());
     if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
         logger.log(
             `Updating signature verifier in gateway registry. Was ${existingSignatureVerifier}, updating to ${Ox(
                 signatureVerifier.address
             )}.`
         );
-        await waitForTx(
-            gatewayRegistry.updateSignatureVerifier(signatureVerifier.address, {
-                ...overrides,
-            })
-        );
+        await waitForTx(gatewayRegistry.updateSignatureVerifier(signatureVerifier.address));
     }
 
-    const existingTransferWithLog = Ox(await gatewayRegistry.transferContract());
+    const existingTransferWithLog = Ox(await gatewayRegistry.getTransferContract());
     if (existingTransferWithLog !== Ox(transferWithLog.address)) {
         logger.log(
             `Updating TransferWithLog in gateway registry. Was ${existingTransferWithLog}, updating to ${Ox(
                 transferWithLog.address
             )}.`
         );
-        await waitForTx(
-            gatewayRegistry.updateTransferContract(transferWithLog.address, {
-                ...overrides,
-            })
-        );
+        await waitForTx(gatewayRegistry.updateTransferContract(transferWithLog.address));
     }
 
-    if (Ox(await gatewayRegistry.renAssetProxyBeacon()) !== Ox(renAssetProxyBeacon.address)) {
+    if (Ox(await gatewayRegistry.getRenAssetProxyBeacon()) !== Ox(renAssetProxyBeacon.address)) {
         throw new Error(`GatewayRegistry's renAssetProxyBeacon address is not correct.`);
     }
-    if (Ox(await gatewayRegistry.mintGatewayProxyBeacon()) !== Ox(mintGatewayProxyBeacon.address)) {
+    if (Ox(await gatewayRegistry.getMintGatewayProxyBeacon()) !== Ox(mintGatewayProxyBeacon.address)) {
         throw new Error(`GatewayRegistry's mintGatewayProxyBeacon address is not correct.`);
     }
-    if (Ox(await gatewayRegistry.lockGatewayProxyBeacon()) !== Ox(lockGatewayProxyBeacon.address)) {
+    if (Ox(await gatewayRegistry.getLockGatewayProxyBeacon()) !== Ox(lockGatewayProxyBeacon.address)) {
         throw new Error(`GatewayRegistry's lockGatewayProxyBeacon address is not correct.`);
     }
 
-    if (!(await renAssetProxyBeacon.hasRole(await renAssetProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address))) {
-        logger.log(`Granting deployer role to gateway registry in renAssetProxyBeacon`);
-        await waitForTx(
-            renAssetProxyBeacon.grantRole(await renAssetProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address, {
-                ...overrides,
-            })
-        );
+    if (Ox(await renAssetProxyBeacon.getProxyDeployer()) !== Ox(gatewayRegistry.address)) {
+        logger.log(`Granting deployer role to gateway registry in renAssetProxyBeacon.`);
+        await waitForTx(renAssetProxyBeacon.updateProxyDeployer(gatewayRegistry.address));
+    }
+    if ((await renAssetProxyBeacon.owner()) !== governanceAddress) {
+        logger.log(`Transferring renAssetProxyBeacon ownership to timelock.`);
+        await waitForTx(renAssetProxyBeacon.transferOwnership(governanceAddress));
     }
 
-    if (
-        !(await mintGatewayProxyBeacon.hasRole(await mintGatewayProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address))
-    ) {
-        logger.log(`Granting deployer role to gateway registry in mintGatewayProxyBeacon`);
-        await waitForTx(
-            mintGatewayProxyBeacon.grantRole(await mintGatewayProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address, {
-                ...overrides,
-            })
-        );
+    if (Ox(await mintGatewayProxyBeacon.getProxyDeployer()) !== Ox(gatewayRegistry.address)) {
+        logger.log(`Granting deployer role to gateway registry in mintGatewayProxyBeacon.`);
+        await waitForTx(mintGatewayProxyBeacon.updateProxyDeployer(gatewayRegistry.address));
+    }
+    if ((await mintGatewayProxyBeacon.owner()) !== governanceAddress) {
+        logger.log(`Transferring mintGatewayProxyBeacon ownership to timelock.`);
+        await waitForTx(mintGatewayProxyBeacon.transferOwnership(governanceAddress));
     }
 
-    if (
-        !(await lockGatewayProxyBeacon.hasRole(await lockGatewayProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address))
-    ) {
-        logger.log(`Granting deployer role to gateway registry in lockGatewayProxyBeacon`);
-        await waitForTx(
-            lockGatewayProxyBeacon.grantRole(await lockGatewayProxyBeacon.PROXY_DEPLOYER(), gatewayRegistry.address, {
-                ...overrides,
-            })
-        );
+    if (Ox(await lockGatewayProxyBeacon.getProxyDeployer()) !== Ox(gatewayRegistry.address)) {
+        logger.log(`Granting deployer role to gateway registry in lockGatewayProxyBeacon.`);
+        await waitForTx(lockGatewayProxyBeacon.updateProxyDeployer(gatewayRegistry.address));
+    }
+    if ((await lockGatewayProxyBeacon.owner()) !== governanceAddress) {
+        logger.log(`Transferring lockGatewayProxyBeacon ownership to timelock.`);
+        await waitForTx(lockGatewayProxyBeacon.transferOwnership(governanceAddress));
     }
 
     logger.log(`Handling ${(config.mintGateways || []).length} mint assets.`);
@@ -253,31 +253,14 @@ export const deployGatewaySol = async function (
                     `Calling deployMintGatewayAndRenAsset(${symbol}, ${prefixedSymbol}, ${prefixedSymbol}, ${decimals}, '1')`
                 );
                 await waitForTx(
-                    gatewayRegistry.deployMintGatewayAndRenAsset(
-                        symbol,
-                        prefixedSymbol,
-                        prefixedSymbol,
-                        decimals,
-                        "1",
-                        {
-                            ...overrides,
-                        }
-                    )
+                    gatewayRegistry.deployMintGatewayAndRenAsset(symbol, prefixedSymbol, prefixedSymbol, decimals, "1")
                 );
             } else if (!gateway) {
                 logger.log(`Calling deployMintGateway(${symbol}, ${token}, '1')`);
-                await waitForTx(
-                    gatewayRegistry.deployMintGateway(symbol, token, "1", {
-                        ...overrides,
-                    })
-                );
+                await waitForTx(gatewayRegistry.deployMintGateway(symbol, token, "1"));
             } else {
                 logger.log(`Calling addMintGateway(${symbol}, ${token}, ${gateway})`);
-                await waitForTx(
-                    gatewayRegistry.addMintGateway(symbol, token, gateway, {
-                        ...overrides,
-                    })
-                );
+                await waitForTx(gatewayRegistry.addMintGateway(symbol, token, gateway));
             }
         } else {
             logger.log(`Skipping ${symbol} - ${existingGateway}, ${existingToken}!`);
@@ -311,18 +294,10 @@ export const deployGatewaySol = async function (
 
             if (!gateway) {
                 logger.log(`Calling deployLockGateway(${symbol}, ${deployedToken}, '1')`);
-                await waitForTx(
-                    gatewayRegistry.deployLockGateway(symbol, deployedToken, "1", {
-                        ...overrides,
-                    })
-                );
+                await waitForTx(gatewayRegistry.deployLockGateway(symbol, deployedToken, "1"));
             } else {
                 logger.log(`Calling addLockGateway(${symbol}, ${deployedToken}, ${gateway})`);
-                await waitForTx(
-                    gatewayRegistry.addLockGateway(symbol, deployedToken, gateway, {
-                        ...overrides,
-                    })
-                );
+                await waitForTx(gatewayRegistry.addLockGateway(symbol, deployedToken, gateway));
             }
         } else {
             logger.log(`Skipping ${symbol} - ${existingGateway}, ${existingToken}!`);

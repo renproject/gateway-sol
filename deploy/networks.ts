@@ -35,8 +35,6 @@ export interface NetworkConfig {
         gateway?: string;
         decimals: number;
     }>;
-
-    overrides?: CallOptions;
 }
 
 export const testnetTokens = [
@@ -1348,10 +1346,6 @@ export const networks: { [network: string]: NetworkConfig } = {
                     token: x.origin.token,
                 })),
         ],
-
-        overrides: {
-            gasPrice: "0x77359400",
-        },
     },
 };
 

@@ -10,13 +10,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IMintGateway} from "../Gateways/interfaces/IMintGateway.sol";
 import {ILockGateway} from "../Gateways/interfaces/ILockGateway.sol";
-import {RenAssetProxyBeaconV1, MintGatewayProxyBeaconV1, LockGatewayProxyBeaconV1} from "./ProxyBeacon.sol";
+import {RenAssetProxyBeacon, MintGatewayProxyBeacon, LockGatewayProxyBeacon} from "./ProxyBeacon.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract RenAssetFactoryState {
-    RenAssetProxyBeaconV1 internal _renAssetProxyBeacon;
-    MintGatewayProxyBeaconV1 internal _mintGatewayProxyBeacon;
-    LockGatewayProxyBeaconV1 internal _lockGatewayProxyBeacon;
+    RenAssetProxyBeacon internal _renAssetProxyBeacon;
+    MintGatewayProxyBeacon internal _mintGatewayProxyBeacon;
+    LockGatewayProxyBeacon internal _lockGatewayProxyBeacon;
 }
 
 abstract contract RenAssetFactory is Initializable, ContextUpgradeable, RenAssetFactoryState {
@@ -31,15 +31,15 @@ abstract contract RenAssetFactory is Initializable, ContextUpgradeable, RenAsset
     event MintGatewayProxyDeployed(string asset, address signatureVerifier, address token, string version);
     event LockGatewayProxyDeployed(string asset, address signatureVerifier, address token, string version);
 
-    function renAssetProxyBeacon() public view returns (RenAssetProxyBeaconV1) {
+    function getRenAssetProxyBeacon() public view returns (RenAssetProxyBeacon) {
         return _renAssetProxyBeacon;
     }
 
-    function mintGatewayProxyBeacon() public view returns (MintGatewayProxyBeaconV1) {
+    function getMintGatewayProxyBeacon() public view returns (MintGatewayProxyBeacon) {
         return _mintGatewayProxyBeacon;
     }
 
-    function lockGatewayProxyBeacon() public view returns (LockGatewayProxyBeaconV1) {
+    function getLockGatewayProxyBeacon() public view returns (LockGatewayProxyBeacon) {
         return _lockGatewayProxyBeacon;
     }
 
@@ -49,9 +49,9 @@ abstract contract RenAssetFactory is Initializable, ContextUpgradeable, RenAsset
         address lockGatewayProxyBeacon_
     ) public initializer {
         __Context_init();
-        _renAssetProxyBeacon = RenAssetProxyBeaconV1(renAssetProxyBeacon_);
-        _mintGatewayProxyBeacon = MintGatewayProxyBeaconV1(mintGatewayProxyBeacon_);
-        _lockGatewayProxyBeacon = LockGatewayProxyBeaconV1(lockGatewayProxyBeacon_);
+        _renAssetProxyBeacon = RenAssetProxyBeacon(renAssetProxyBeacon_);
+        _mintGatewayProxyBeacon = MintGatewayProxyBeacon(mintGatewayProxyBeacon_);
+        _lockGatewayProxyBeacon = LockGatewayProxyBeacon(lockGatewayProxyBeacon_);
     }
 
     function _deployRenAsset(
@@ -75,7 +75,7 @@ abstract contract RenAssetFactory is Initializable, ContextUpgradeable, RenAsset
 
         bytes32 create2Salt = keccak256(abi.encodePacked(asset, version));
 
-        address renAsset = renAssetProxyBeacon().deployProxy(create2Salt, encodedParameters);
+        address renAsset = getRenAssetProxyBeacon().deployProxy(create2Salt, encodedParameters);
 
         emit RenAssetProxyDeployed(chainId, asset, name, symbol, decimals, version);
 
@@ -97,7 +97,7 @@ abstract contract RenAssetFactory is Initializable, ContextUpgradeable, RenAsset
 
         bytes32 create2Salt = keccak256(abi.encodePacked(asset, version));
 
-        address mintGateway = mintGatewayProxyBeacon().deployProxy(create2Salt, encodedParameters);
+        address mintGateway = getMintGatewayProxyBeacon().deployProxy(create2Salt, encodedParameters);
 
         emit MintGatewayProxyDeployed(asset, signatureVerifier, token, version);
 
@@ -119,7 +119,7 @@ abstract contract RenAssetFactory is Initializable, ContextUpgradeable, RenAsset
 
         bytes32 create2Salt = keccak256(abi.encodePacked(asset, version));
 
-        address lockGateway = lockGatewayProxyBeacon().deployProxy(create2Salt, encodedParameters);
+        address lockGateway = getLockGatewayProxyBeacon().deployProxy(create2Salt, encodedParameters);
 
         emit LockGatewayProxyDeployed(asset, signatureVerifier, token, version);
 

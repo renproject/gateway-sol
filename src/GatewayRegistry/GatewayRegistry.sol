@@ -47,16 +47,16 @@ contract GatewayRegistryStateV2 {
 contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
     using StringSet for StringSet.Set;
 
-    function chainId() public view returns (uint256) {
+    function getChainId() public view returns (uint256) {
         return _chainId;
     }
 
-    function signatureVerifier() public view returns (address) {
+    function getSignatureVerifier() public view returns (address) {
         require(_signatureVerifier != address(0x0), "GatewayRegistry: not initialized");
         return _signatureVerifier;
     }
 
-    function transferContract() external view returns (address) {
+    function getTransferContract() external view returns (address) {
         require(_transferContract != address(0x0), "GatewayRegistry: not initialized");
         return _transferContract;
     }
@@ -160,12 +160,13 @@ contract GatewayRegistryV2 is
 
     function __GatewayRegistry_init(
         uint256 chainId_,
-        address adminAddress,
         address signatureVerifier_,
         address transferContract,
         address renAssetProxyBeacon_,
         address mintGatewayProxyBeacon_,
-        address lockGatewayProxyBeacon_
+        address lockGatewayProxyBeacon_,
+        address adminAddress,
+        address[] calldata gatewayDeployers
     ) external initializer {
         __AccessControlEnumerable_init();
         __RenAssetFactory_init(renAssetProxyBeacon_, mintGatewayProxyBeacon_, lockGatewayProxyBeacon_);
@@ -176,37 +177,40 @@ contract GatewayRegistryV2 is
         AccessControlEnumerableUpgradeable._setupRole(AccessControlUpgradeable.DEFAULT_ADMIN_ROLE, adminAddress);
         AccessControlEnumerableUpgradeable._setupRole(CAN_UPDATE_GATEWAYS, adminAddress);
         AccessControlEnumerableUpgradeable._setupRole(CAN_ADD_GATEWAYS, adminAddress);
+        for (uint256 i = 0; i < gatewayDeployers.length; ++i) {
+            _setupRole(CAN_ADD_GATEWAYS, gatewayDeployers[i]);
+        }
     }
 
     /// @dev The symbol is included twice because strings have to be hashed
     /// first in order to be used as a log index/topic.
-    event LogMintGatewayUpdated(
+    event LogMintGatewayAdded(
         string symbol,
         address indexed token,
         address indexed gatewayContract,
         // Indexed versions of previous parameters.
         string indexed indexedSymbol
     );
-    event LogMintGatewayDeleted(
+    event LogMintGatewayRemoved(
         string symbol,
         // Indexed versions of previous parameters.
         string indexed indexedSymbol
     );
-    event LogLockGatewayUpdated(
+    event LogLockGatewayAdded(
         string symbol,
         address indexed token,
         address indexed gatewayContract,
         // Indexed versions of previous parameters.
         string indexed indexedSymbol
     );
-    event LogLockGatewayDeleted(
+    event LogLockGatewayRemoved(
         string symbol,
         // Indexed versions of previous parameters.
         string indexed indexedSymbol
     );
 
-    event LogSignatureVerifierUpdated(address indexed newSignatureVerifier);
-    event LogTransferContractUpdated(address indexed newTransferContract);
+    event LogSignatureVerifierUpdated(address indexed oldSignatureVerifier, address indexed newSignatureVerifier);
+    event LogTransferContractUpdated(address indexed oldTransferContract, address indexed newTransferContract);
 
     // MODIFIERS ///////////////////////////////////////////////////////////////
 
@@ -243,26 +247,28 @@ contract GatewayRegistryV2 is
 
     /// @notice Allow the owner to update the signature verifier contract.
     ///
-    /// @param nextSignatureVerifier The new verifier contract address.
-    function updateSignatureVerifier(address nextSignatureVerifier)
+    /// @param newSignatureVerifier The new verifier contract address.
+    function updateSignatureVerifier(address newSignatureVerifier)
         external
         onlyRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS")
     {
-        require(nextSignatureVerifier != address(0x0), "GatewayRegistry: invalid signature verifier");
-        _signatureVerifier = nextSignatureVerifier;
-        emit LogSignatureVerifierUpdated(_signatureVerifier);
+        require(newSignatureVerifier != address(0x0), "GatewayRegistry: invalid signature verifier");
+        address oldSignatureVerifier = _signatureVerifier;
+        _signatureVerifier = newSignatureVerifier;
+        emit LogSignatureVerifierUpdated(oldSignatureVerifier, newSignatureVerifier);
     }
 
     /// @notice Allow the owner to update the TransferContract contract.
     ///
-    /// @param nextTransferContract The new TransferContract contract address.
-    function updateTransferContract(address nextTransferContract)
+    /// @param newTransferContract The new TransferContract contract address.
+    function updateTransferContract(address newTransferContract)
         external
         onlyRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS")
     {
-        require(nextTransferContract != address(0x0), "GatewayRegistry: invalid transfer with log");
-        _transferContract = nextTransferContract;
-        emit LogTransferContractUpdated(_transferContract);
+        require(newTransferContract != address(0x0), "GatewayRegistry: invalid transfer with log");
+        address oldTransferContract = _transferContract;
+        _transferContract = newTransferContract;
+        emit LogTransferContractUpdated(oldTransferContract, newTransferContract);
     }
 
     // MINT GATEWAYS ///////////////////////////////////////////////////////////
@@ -304,7 +310,7 @@ contract GatewayRegistryV2 is
         mintGatewayDetailsBySymbol[symbol] = GatewayDetails({token: renAsset, gateway: mintGateway});
         mintSymbolByToken[renAsset] = symbol;
 
-        emit LogMintGatewayUpdated(symbol, renAsset, mintGateway, symbol);
+        emit LogMintGatewayAdded(symbol, renAsset, mintGateway, symbol);
     }
 
     function deployMintGateway(
@@ -317,7 +323,7 @@ contract GatewayRegistryV2 is
             checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
         }
 
-        address mintGateway = address(_deployMintGateway(symbol, signatureVerifier(), renAsset, version));
+        address mintGateway = address(_deployMintGateway(symbol, getSignatureVerifier(), renAsset, version));
         addMintGateway(symbol, renAsset, mintGateway);
     }
 
@@ -333,8 +339,10 @@ contract GatewayRegistryV2 is
             checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
         }
 
-        address renAsset = address(_deployRenAsset(chainId(), symbol, erc20Name, erc20Symbol, erc20Decimals, version));
-        address mintGateway = address(_deployMintGateway(symbol, signatureVerifier(), renAsset, version));
+        address renAsset = address(
+            _deployRenAsset(getChainId(), symbol, erc20Name, erc20Symbol, erc20Decimals, version)
+        );
+        address mintGateway = address(_deployMintGateway(symbol, getSignatureVerifier(), renAsset, version));
         OwnableUpgradeable(renAsset).transferOwnership(mintGateway);
         addMintGateway(symbol, renAsset, mintGateway);
     }
@@ -355,7 +363,7 @@ contract GatewayRegistryV2 is
         delete mintGatewayDetailsBySymbol[symbol];
         mintGatewaySymbols.remove(symbol);
 
-        emit LogMintGatewayDeleted(symbol, symbol);
+        emit LogMintGatewayRemoved(symbol, symbol);
     }
 
     // LOCK GATEWAYS ///////////////////////////////////////////////////////////
@@ -397,7 +405,7 @@ contract GatewayRegistryV2 is
         lockGatewayDetailsBySymbol[symbol] = GatewayDetails({token: lockAsset, gateway: lockGateway});
         lockSymbolByToken[lockAsset] = symbol;
 
-        emit LogLockGatewayUpdated(symbol, lockAsset, lockGateway, symbol);
+        emit LogLockGatewayAdded(symbol, lockAsset, lockGateway, symbol);
     }
 
     function deployLockGateway(
@@ -410,7 +418,7 @@ contract GatewayRegistryV2 is
             checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
         }
 
-        address lockGateway = address(_deployLockGateway(symbol, signatureVerifier(), lockToken, version));
+        address lockGateway = address(_deployLockGateway(symbol, getSignatureVerifier(), lockToken, version));
         addLockGateway(symbol, lockToken, lockGateway);
     }
 
@@ -431,7 +439,7 @@ contract GatewayRegistryV2 is
         delete lockGatewayDetailsBySymbol[symbol];
         lockGatewaySymbols.remove(symbol);
 
-        emit LogLockGatewayDeleted(symbol, symbol);
+        emit LogLockGatewayRemoved(symbol, symbol);
     }
 }
 

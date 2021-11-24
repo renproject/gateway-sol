@@ -64,26 +64,26 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         // Lock the tokens. If the user doesn't have enough tokens, this will
         // throw. Note that some assets may transfer less than the provided
         // `amount`, due to transfer fees.
-        uint256 transferredAmount = IERC20Upgradeable(token()).safeTransferFromWithFees(
+        uint256 transferredAmount = IERC20Upgradeable(getToken()).safeTransferFromWithFees(
             _msgSender(),
             address(this),
             amount
         );
 
         // Get the latest nonce (also known as lock reference).
-        uint256 nonce_ = eventNonce();
+        uint256 lockNonce = getEventNonce();
 
         emit LogLockToChain(
             recipientAddress,
             recipientChain,
             recipientPayload,
             transferredAmount,
-            nonce_,
+            lockNonce,
             recipientAddress,
             recipientChain
         );
 
-        _eventNonce = nonce_ + 1;
+        _eventNonce = lockNonce + 1;
 
         return transferredAmount;
     }
@@ -109,7 +109,7 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
 
         // Calculate the hash signed by RenVM. This binds the payload hash,
         // amount, recipient and nonce hash to the signature.
-        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, selectorHash(), recipient, nHash);
+        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, getSelectorHash(), recipient, nHash);
 
         // Check that the signature hasn't been redeemed.
         require(!status(sigHash), "LockGateway: signature already spent");
@@ -117,9 +117,7 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         // If the signature fails verification, throw an error.
         // `isValidSignature` must return an exact bytes4 value, to avoid
         // a contract mistakingly returning a truthy value without intending to.
-        if (
-            GatewayStateManagerV3.signatureVerifier().isValidSignature(sigHash, sig) != CORRECT_SIGNATURE_RETURN_VALUE_
-        ) {
+        if (getSignatureVerifier().isValidSignature(sigHash, sig) != CORRECT_SIGNATURE_RETURN_VALUE_) {
             revert(
                 string(
                     abi.encodePacked(
@@ -128,7 +126,7 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
                         ", amount: ",
                         StringsUpgradeable.toString(amount),
                         ", shash",
-                        StringsUpgradeable.toHexString(uint256(selectorHash()), 32),
+                        StringsUpgradeable.toHexString(uint256(getSelectorHash()), 32),
                         ", msg.sender: ",
                         StringsUpgradeable.toHexString(uint160(recipient), 20),
                         ", nhash: ",
@@ -142,7 +140,7 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         _status[sigHash] = true;
 
         // Release the amount to the recipient.
-        IERC20Upgradeable(token()).safeTransfer(recipient, amount);
+        IERC20Upgradeable(getToken()).safeTransfer(recipient, amount);
 
         // Emit a log with a unique identifier 'n'.
         emit LogRelease(recipient, amount, sigHash, nHash);

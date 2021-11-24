@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {IRenVMSignatureVerifier} from "../RenVMSignatureVerifier.sol";
 import {String} from "../../libraries/String.sol";
@@ -33,10 +34,10 @@ abstract contract GatewayStateV3 {
 }
 
 abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, GatewayStateV3 {
-    event LogAssetUpdated(string _asset, bytes32 indexed _selectorHash);
-    event LogSignatureVerifierUpdated(address indexed _newSignatureVerifier);
-    event LogTokenUpdated(address indexed _newToken);
-    event LogPreviousGatewayUpdated(address indexed _newPreviousGateway);
+    event LogAssetUpdated(string asset, bytes32 indexed selectorHash);
+    event LogTokenUpdated(address indexed token);
+    event LogSignatureVerifierUpdated(address indexed oldSignatureVerifier, address indexed newSignatureVerifier);
+    event LogPreviousGatewayUpdated(address indexed oldPreviousGateway, address indexed newPreviousGateway);
 
     function __GatewayStateManager_init(
         string calldata asset_,
@@ -44,37 +45,41 @@ abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, Ga
         address token_
     ) public initializer {
         __Context_init();
-        _asset = asset_;
-        _signatureVerifier = IRenVMSignatureVerifier(signatureVerifier_);
-        _selectorHash = RenVMHashes.calculateSelectorHash(asset_, signatureVerifier().chain());
-        _token = token_;
+        _updateSignatureVerifier(signatureVerifier_);
+        _updateAsset(asset_);
+        _updateToken(token_);
     }
 
     // GETTERS /////////////////////////////////////////////////////////////////
 
-    function asset() public view returns (string memory) {
+    function getAsset() public view returns (string memory) {
         return _asset;
     }
 
-    function selectorHash() public view returns (bytes32) {
+    function getSelectorHash() public view returns (bytes32) {
         require(_selectorHash != bytes32(0x0), "Gateway: not initialized");
         return _selectorHash;
     }
 
-    function token() public view returns (address) {
+    function getToken() public view returns (address) {
         return _token;
     }
 
-    function signatureVerifier() public view returns (IRenVMSignatureVerifier) {
+    function getSignatureVerifier() public view returns (IRenVMSignatureVerifier) {
         return _signatureVerifier;
     }
 
-    function previousGateway() public view returns (address) {
+    function getPreviousGateway() public view returns (address) {
         return _previousGateway;
     }
 
-    function eventNonce() public view returns (uint256) {
+    function getEventNonce() public view returns (uint256) {
         return _eventNonce;
+    }
+
+    // Backwards compatibility.
+    function token() public view returns (address) {
+        return getToken();
     }
 
     // GOVERNANCE //////////////////////////////////////////////////////////////
@@ -83,7 +88,7 @@ abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, Ga
     /// This allows for the owner of every Gateway to be updated with a single
     /// update to the SignatureVerifier contract.
     function owner() public view returns (address) {
-        return signatureVerifier().owner();
+        return OwnableUpgradeable(address(getSignatureVerifier())).owner();
     }
 
     modifier onlySignatureVerifierOwner() {
@@ -95,47 +100,38 @@ abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, Ga
     ///
     /// @param nextAsset The new asset.
     function updateAsset(string calldata nextAsset) public onlySignatureVerifierOwner {
-        require(String.isValidString(nextAsset), "Gateway: invalid asset");
-
-        _asset = nextAsset;
-
-        bytes32 newSelectorHash = RenVMHashes.calculateSelectorHash(nextAsset, signatureVerifier().chain());
-        _selectorHash = newSelectorHash;
-        emit LogAssetUpdated(nextAsset, newSelectorHash);
+        _updateAsset(nextAsset);
     }
 
     /// @notice Allow the owner to update the signature verifier contract.
     ///
-    /// @param nextSignatureVerifier The new verifier contract address.
-    function updateSignatureVerifier(address nextSignatureVerifier) public onlySignatureVerifierOwner {
-        require(address(nextSignatureVerifier) != address(0x0), "Gateway: invalid signature verifier");
-        _signatureVerifier = IRenVMSignatureVerifier(nextSignatureVerifier);
-        emit LogSignatureVerifierUpdated(nextSignatureVerifier);
+    /// @param newSignatureVerifier The new verifier contract address.
+    function updateSignatureVerifier(address newSignatureVerifier) public onlySignatureVerifierOwner {
+        _updateSignatureVerifier(newSignatureVerifier);
     }
 
     /// @notice Allow the owner to update the ERC20 token contract.
     ///
-    /// @param nextToken The new ERC20 token contract's address.
-    function updateToken(address nextToken) public onlySignatureVerifierOwner {
-        require(address(nextToken) != address(0x0), "Gateway: invalid token");
-        _token = nextToken;
-        emit LogTokenUpdated(nextToken);
+    /// @param newToken The new ERC20 token contract's address.
+    function updateToken(address newToken) public onlySignatureVerifierOwner {
+        _updateToken(newToken);
     }
 
     /// @notice Allow the owner to update the previous gateway used for
     /// backwards compatibility.
     ///
-    /// @param nextPreviousGateway The new gateway contract's address.
-    function updatePreviousGateway(address nextPreviousGateway) external onlySignatureVerifierOwner {
-        require(address(nextPreviousGateway) != address(0x0), "Gateway: invalid address");
-        _previousGateway = nextPreviousGateway;
-        emit LogPreviousGatewayUpdated(nextPreviousGateway);
+    /// @param newPreviousGateway The new gateway contract's address.
+    function updatePreviousGateway(address newPreviousGateway) external onlySignatureVerifierOwner {
+        require(address(newPreviousGateway) != address(0x0), "Gateway: invalid address");
+        address oldPreviousGateway = _previousGateway;
+        _previousGateway = newPreviousGateway;
+        emit LogPreviousGatewayUpdated(oldPreviousGateway, newPreviousGateway);
     }
 
     // PREVIOUS GATEWAY ////////////////////////////////////////////////////////
 
     modifier onlyPreviousGateway() {
-        address previousGateway_ = previousGateway();
+        address previousGateway_ = getPreviousGateway();
 
         // If there's no previous gateway, the second require should also fail,
         // but this require will provide a more informative reason.
@@ -150,11 +146,45 @@ abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, Ga
             return true;
         }
 
-        address previousGateway_ = previousGateway();
+        address previousGateway_ = getPreviousGateway();
         if (previousGateway_ != address(0x0)) {
             return GatewayStateManagerV3(previousGateway_).status(hash);
         }
 
         return false;
+    }
+
+    // INTERNAL ////////////////////////////////////////////////////////////////
+
+    /// @notice Allow the owner to update the asset.
+    ///
+    /// @param nextAsset The new asset.
+    function _updateAsset(string calldata nextAsset) internal {
+        require(String.isValidString(nextAsset), "Gateway: invalid asset");
+
+        _asset = nextAsset;
+
+        bytes32 newSelectorHash = RenVMHashes.calculateSelectorHash(nextAsset, getSignatureVerifier().getChain());
+        _selectorHash = newSelectorHash;
+        emit LogAssetUpdated(nextAsset, newSelectorHash);
+    }
+
+    /// @notice Allow the owner to update the signature verifier contract.
+    ///
+    /// @param newSignatureVerifier The new verifier contract address.
+    function _updateSignatureVerifier(address newSignatureVerifier) internal {
+        require(address(newSignatureVerifier) != address(0x0), "Gateway: invalid signature verifier");
+        address oldSignatureVerifier = address(_signatureVerifier);
+        _signatureVerifier = IRenVMSignatureVerifier(newSignatureVerifier);
+        emit LogSignatureVerifierUpdated(oldSignatureVerifier, newSignatureVerifier);
+    }
+
+    /// @notice Allow the owner to update the ERC20 token contract.
+    ///
+    /// @param newToken The new ERC20 token contract's address.
+    function _updateToken(address newToken) internal {
+        require(address(newToken) != address(0x0), "Gateway: invalid token");
+        _token = newToken;
+        emit LogTokenUpdated(newToken);
     }
 }

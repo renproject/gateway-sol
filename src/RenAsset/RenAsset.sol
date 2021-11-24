@@ -56,14 +56,14 @@ contract RenAssetV2 is Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC2
 
     /// @notice mint can only be called by the tokens' associated Gateway
     /// contract. See Gateway's mint function instead.
-    function mint(address _to, uint256 _amount) external onlyOwner {
-        _mint(_to, _amount);
+    function mint(address to, uint256 amount) external onlyOwner {
+        _mint(to, amount);
     }
 
     /// @notice burn can only be called by the tokens' associated Gateway
     /// contract. See Gateway's burn functions instead.
-    function burn(address _from, uint256 _amount) external onlyOwner {
-        _burn(_from, _amount);
+    function burn(address from, uint256 amount) external onlyOwner {
+        _burn(from, amount);
     }
 
     function transfer(address recipient, uint256 amount) public override returns (bool) {

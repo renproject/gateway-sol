@@ -56,34 +56,6 @@ const config: HardhatUserConfig = {
                 : undefined,
             // allowUnlimitedContractSize: true,
         },
-        // localhost: {
-        //   url: node_url('localhost'),
-        //   accounts: accounts(),
-        // },
-        // staging: {
-        //   url: node_url('rinkeby'),
-        //   accounts: accounts('rinkeby'),
-        // },
-        // production: {
-        //   url: node_url('mainnet'),
-        //   accounts: accounts('mainnet'),
-        // },
-        // mainnet: {
-        //   url: node_url('mainnet'),
-        //   accounts: accounts('mainnet'),
-        // },
-        // rinkeby: {
-        //   url: node_url('rinkeby'),
-        //   accounts: accounts('rinkeby'),
-        // },
-        // kovan: {
-        //   url: node_url('kovan'),
-        //   accounts: accounts('kovan'),
-        // },
-        // goerli: {
-        //   url: node_url('goerli'),
-        //   accounts: accounts('goerli'),
-        // },
 
         ethereumMainnet: {
             url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
@@ -181,7 +153,7 @@ const config: HardhatUserConfig = {
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },
-            gasPrice: 1000000000,
+            gasPrice: 2000000000,
         },
     },
     deterministicDeployment: (network: string) => {

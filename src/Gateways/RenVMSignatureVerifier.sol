@@ -13,15 +13,13 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 interface IRenVMSignatureVerifier is IERC1271 {
     // See IERC1271
 
-    function owner() external view returns (address);
+    function getChain() external view returns (string memory);
 
-    function chain() external view returns (string memory);
-
-    function mintAuthority() external view returns (address);
+    function getMintAuthority() external view returns (address);
 }
 
 contract RenVMSignatureVerifierStateV1 {
-    string _chain;
+    string internal _chain;
     address internal _mintAuthority;
 
     // Leave a gap so that storage values added in future upgrages don't corrupt
@@ -45,7 +43,7 @@ contract RenVMSignatureVerifierV1 is
 {
     string public constant NAME = "RenVMSignatureVerifier";
 
-    event LogMintAuthorityUpdated(address indexed _newMintAuthority);
+    event LogMintAuthorityUpdated(address indexed mintAuthority);
 
     // bytes4(keccak256("isValidSignature(bytes32,bytes)")
     bytes4 public constant CORRECT_SIGNATURE_RETURN_VALUE = 0x1626ba7e; // CORRECT_SIGNATURE_RETURN_VALUE_
@@ -66,22 +64,18 @@ contract RenVMSignatureVerifierV1 is
         }
     }
 
-    function owner() public view override(IRenVMSignatureVerifier, OwnableUpgradeable) returns (address) {
-        return super.owner();
-    }
-
-    function chain() public view override returns (string memory) {
+    function getChain() public view override returns (string memory) {
         return _chain;
     }
 
-    function mintAuthority() public view override returns (address) {
+    function getMintAuthority() public view override returns (address) {
         return _mintAuthority;
     }
 
     // GOVERNANCE //////////////////////////////////////////////////////////////
 
     modifier onlyOwnerOrMintAuthority() {
-        require(_msgSender() == owner() || _msgSender() == mintAuthority(), "SignatureVerifier: not authorized");
+        require(_msgSender() == owner() || _msgSender() == getMintAuthority(), "SignatureVerifier: not authorized");
         _;
     }
 
@@ -99,7 +93,7 @@ contract RenVMSignatureVerifierV1 is
     /// @notice verifySignature checks the the provided signature matches the
     /// provided parameters. Returns a 4-byte value as defined by ERC1271.
     function isValidSignature(bytes32 sigHash, bytes calldata signature) external view override returns (bytes4) {
-        address mintAuthority_ = mintAuthority();
+        address mintAuthority_ = getMintAuthority();
         require(mintAuthority_ != address(0x0), "SignatureVerifier: mintAuthority not initialized");
         if (mintAuthority_ == ECDSA.recover(sigHash, signature)) {
             return CORRECT_SIGNATURE_RETURN_VALUE;

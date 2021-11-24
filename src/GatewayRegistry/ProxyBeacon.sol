@@ -11,31 +11,67 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-contract ProxyBeaconV1 is Context, AccessControl, UpgradeableBeacon {
-    bytes32 public constant PROXY_DEPLOYER = keccak256("PROXY_DEPLOYER");
+contract ProxyBeacon is Context, UpgradeableBeacon {
+    event LogProxyDeployerUpdated(address indexed oldProxyDeployer, address indexed newProxyDeployer);
 
-    constructor(address implementation_, address adminAddress_) UpgradeableBeacon(implementation_) {
-        AccessControl._setupRole(AccessControl.DEFAULT_ADMIN_ROLE, adminAddress_);
-        transferOwnership(adminAddress_);
+    // Only allow one address to call `deployProxy`.
+    address private _proxyDeployer;
+
+    modifier onlyProxyDeployer() {
+        address proxyDeployer_ = getProxyDeployer();
+        require(
+            proxyDeployer_ != address(0x0) && _msgSender() == proxyDeployer_,
+            "ProxyBeacon: caller is not the proxy deployer"
+        );
+        _;
     }
 
+    constructor(address implementation_, address contractOwner) UpgradeableBeacon(implementation_) {
+        transferOwnership(contractOwner);
+    }
+
+    // GETTERS /////////////////////////////////////////////////////////////////
+
+    function getProxyDeployer() public view returns (address) {
+        return _proxyDeployer;
+    }
+
+    // GOVERNANCE //////////////////////////////////////////////////////////////
+
+    function updateProxyDeployer(address newProxyDeployer) public onlyOwner {
+        require(newProxyDeployer != address(0x0), "ProxyBeacon: invalid proxy deployer");
+        address oldProxyDeployer = _proxyDeployer;
+        _proxyDeployer = newProxyDeployer;
+        emit LogProxyDeployerUpdated(oldProxyDeployer, newProxyDeployer);
+    }
+
+    // RESTRICTED //////////////////////////////////////////////////////////////
+
+    /// @notice Deploy a proxy that fetches its implementation from this
+    /// ProxyBeacon.
     function deployProxy(bytes32 create2Salt, bytes calldata encodedParameters)
         external
-        onlyRole(PROXY_DEPLOYER)
+        onlyProxyDeployer
         returns (address)
     {
         return address(new BeaconProxy{salt: create2Salt}(address(this), encodedParameters));
     }
 }
 
-contract RenAssetProxyBeaconV1 is ProxyBeaconV1 {
-    constructor(address implementation, address adminAddress) ProxyBeaconV1(implementation, adminAddress) {}
+contract RenAssetProxyBeacon is ProxyBeacon {
+    string public constant NAME = "RenAssetProxyBeacon";
+
+    constructor(address implementation, address adminAddress) ProxyBeacon(implementation, adminAddress) {}
 }
 
-contract MintGatewayProxyBeaconV1 is ProxyBeaconV1 {
-    constructor(address implementation, address adminAddress) ProxyBeaconV1(implementation, adminAddress) {}
+contract MintGatewayProxyBeacon is ProxyBeacon {
+    string public constant NAME = "MintGatewayProxyBeacon";
+
+    constructor(address implementation, address adminAddress) ProxyBeacon(implementation, adminAddress) {}
 }
 
-contract LockGatewayProxyBeaconV1 is ProxyBeaconV1 {
-    constructor(address implementation, address adminAddress) ProxyBeaconV1(implementation, adminAddress) {}
+contract LockGatewayProxyBeacon is ProxyBeacon {
+    string public constant NAME = "LockGatewayProxyBeacon";
+
+    constructor(address implementation, address adminAddress) ProxyBeacon(implementation, adminAddress) {}
 }

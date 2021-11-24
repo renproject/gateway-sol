@@ -39,7 +39,7 @@ describe("Gateway Migration", () => {
                 await ethGatewayRegistry.getMintGatewayBySymbol("BTC")
             )
         ).connect(await ethers.getSigner(deployer));
-        const signatureVerifier = await ethGatewayRegistry.signatureVerifier();
+        const signatureVerifier = await ethGatewayRegistry.getSignatureVerifier();
         const gateway_1 = await deployProxy<MintGatewayV3__factory>(
             "MintGatewayV3",
             "TransparentUpgradeableProxy",
@@ -51,7 +51,7 @@ describe("Gateway Migration", () => {
             },
             async (gateway) => {
                 try {
-                    await gateway.selectorHash();
+                    await gateway.getSelectorHash();
                     return true;
                 } catch (error) {
                     return false;
@@ -102,7 +102,7 @@ describe("Gateway Migration", () => {
             },
             async (gateway) => {
                 try {
-                    await gateway.selectorHash();
+                    await gateway.getSelectorHash();
                     return true;
                 } catch (error) {
                     return false;

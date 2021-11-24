@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.7;
+// solhint-disable-next-line
+pragma solidity ^0.8.0;
 
 abstract contract ILockGateway {
     event LogRelease(address indexed recipient, uint256 amount, bytes32 indexed sigHash, bytes32 indexed nHash);

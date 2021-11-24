@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.7;
+// solhint-disable-next-line
+pragma solidity ^0.8.0;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -27,20 +28,8 @@ abstract contract RenAssetFactory is Initializable, ContextUpgradeable, RenAsset
         uint8 decimals,
         string version
     );
-    event MintGatewayProxyDeployed(
-        string chainName,
-        string asset,
-        address signatureVerifier,
-        address token,
-        string version
-    );
-    event LockGatewayProxyDeployed(
-        string chainName,
-        string asset,
-        address signatureVerifier,
-        address token,
-        string version
-    );
+    event MintGatewayProxyDeployed(string asset, address signatureVerifier, address token, string version);
+    event LockGatewayProxyDeployed(string asset, address signatureVerifier, address token, string version);
 
     function renAssetProxyBeacon() public view returns (RenAssetProxyBeaconV1) {
         return _renAssetProxyBeacon;
@@ -80,6 +69,7 @@ abstract contract RenAssetFactory is Initializable, ContextUpgradeable, RenAsset
             name,
             symbol,
             decimals,
+            // Owner will be transferred to gateway
             address(this)
         );
 
@@ -93,51 +83,45 @@ abstract contract RenAssetFactory is Initializable, ContextUpgradeable, RenAsset
     }
 
     function _deployMintGateway(
-        string memory chainName,
         string calldata asset,
         address signatureVerifier,
         address token,
         string calldata version
     ) internal returns (IMintGateway) {
         bytes memory encodedParameters = abi.encodeWithSignature(
-            "__MintGateway_init(string,string,address,address,address)",
-            chainName,
+            "__MintGateway_init(string,address,address)",
             asset,
             signatureVerifier,
-            token,
-            _msgSender()
+            token
         );
 
         bytes32 create2Salt = keccak256(abi.encodePacked(asset, version));
 
         address mintGateway = mintGatewayProxyBeacon().deployProxy(create2Salt, encodedParameters);
 
-        emit MintGatewayProxyDeployed(chainName, asset, signatureVerifier, token, version);
+        emit MintGatewayProxyDeployed(asset, signatureVerifier, token, version);
 
         return IMintGateway(mintGateway);
     }
 
     function _deployLockGateway(
-        string memory chainName,
         string calldata asset,
         address signatureVerifier,
         address token,
         string calldata version
     ) internal returns (ILockGateway) {
         bytes memory encodedParameters = abi.encodeWithSignature(
-            "__LockGateway_init(string,string,address,address,address)",
-            chainName,
+            "__LockGateway_init(string,address,address)",
             asset,
             signatureVerifier,
-            token,
-            _msgSender()
+            token
         );
 
         bytes32 create2Salt = keccak256(abi.encodePacked(asset, version));
 
         address lockGateway = lockGatewayProxyBeacon().deployProxy(create2Salt, encodedParameters);
 
-        emit LockGatewayProxyDeployed(chainName, asset, signatureVerifier, token, version);
+        emit LockGatewayProxyDeployed(asset, signatureVerifier, token, version);
 
         return ILockGateway(lockGateway);
     }

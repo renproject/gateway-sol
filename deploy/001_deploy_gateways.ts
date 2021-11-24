@@ -50,21 +50,6 @@ export const deployGatewaySol = async function (
     const chainId: number = (await ethers.provider.getNetwork()).chainId;
     const { deployer } = await getNamedAccounts();
 
-    console.log("deployer", deployer);
-
-    // BEFORE: 497.725533816077748462
-
-    // console.log("ledger", ledger);
-    // const signer = await ethers.provider.getSigner(ledger);
-    // await signer.sendTransaction({
-    //     from: ledger,
-    //     to: ledger,
-    //     value: 0,
-    // });
-    // if (true as any) {
-    //     throw new Error(`Done.`);
-    // }
-
     const create2 = setupCreate2(hre, create2SaltOverride, logger);
     const getExistingDeployment = setupGetExistingDeployment(hre);
     const waitForTx = setupWaitForTx(logger);
@@ -141,7 +126,7 @@ export const deployGatewaySol = async function (
         "RenVMSignatureVerifierProxy",
         {
             initializer: "__RenVMSignatureVerifier_init",
-            constructorArgs: [mintAuthority, deployer] as Parameters<
+            constructorArgs: [chainName, mintAuthority, deployer] as Parameters<
                 RenVMSignatureVerifierV1["__RenVMSignatureVerifier_init"]
             >,
         },
@@ -168,7 +153,6 @@ export const deployGatewaySol = async function (
         {
             initializer: "__GatewayRegistry_init",
             constructorArgs: [
-                chainName,
                 chainId,
                 deployer,
                 signatureVerifier.address,
@@ -180,14 +164,14 @@ export const deployGatewaySol = async function (
         },
         async (gatewayRegistry) => {
             try {
-                await gatewayRegistry.chainName();
+                await gatewayRegistry.signatureVerifier();
                 return true;
             } catch (error: any) {
                 return false;
             }
         }
     );
-    const existingSignatureVerifier = Ox(await gatewayRegistry.getSignatureVerifier());
+    const existingSignatureVerifier = Ox(await gatewayRegistry.signatureVerifier());
     if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
         logger.log(
             `Updating signature verifier in gateway registry. Was ${existingSignatureVerifier}, updating to ${Ox(
@@ -201,7 +185,7 @@ export const deployGatewaySol = async function (
         );
     }
 
-    const existingTransferWithLog = Ox(await gatewayRegistry.getTransferWithLog());
+    const existingTransferWithLog = Ox(await gatewayRegistry.transferContract());
     if (existingTransferWithLog !== Ox(transferWithLog.address)) {
         logger.log(
             `Updating TransferWithLog in gateway registry. Was ${existingTransferWithLog}, updating to ${Ox(
@@ -209,7 +193,7 @@ export const deployGatewaySol = async function (
             )}.`
         );
         await waitForTx(
-            gatewayRegistry.updateTransferWithLog(transferWithLog.address, {
+            gatewayRegistry.updateTransferContract(transferWithLog.address, {
                 ...overrides,
             })
         );

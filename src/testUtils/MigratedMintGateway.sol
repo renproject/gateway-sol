@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.7;
+// solhint-disable-next-line
+pragma solidity ^0.8.0;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import {RenAssetV2} from "../RenAsset/RenAsset.sol";
@@ -13,10 +13,10 @@ import {MintGatewayV3} from "../Gateways/MintGateway.sol";
 import {CORRECT_SIGNATURE_RETURN_VALUE_} from "../Gateways/RenVMSignatureVerifier.sol";
 
 // TESTING CONTRACT
-contract MigratedMintGateway is Initializable, OwnableUpgradeable, GatewayStateV3, GatewayStateManagerV3, IMintGateway {
+contract MigratedMintGateway is Initializable, GatewayStateV3, GatewayStateManagerV3, IMintGateway {
     MintGatewayV3 public nextGateway;
 
-    function setNextGateway(address nextGateway_) public onlyOwner {
+    function setNextGateway(address nextGateway_) public onlySignatureVerifierOwner {
         nextGateway = MintGatewayV3(nextGateway_);
     }
 

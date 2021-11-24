@@ -28,10 +28,16 @@ if (!MNEMONIC_DEVNET || !MNEMONIC_TESTNET || !MNEMONIC_MAINNET) {
 const config: HardhatUserConfig = {
     solidity: {
         version: "0.8.7",
+        settings: {
+            optimizer: {
+                enabled: true,
+                runs: 200,
+            },
+        },
     },
     namedAccounts: {
         deployer: 0,
-        simpleERC20Beneficiary: 1,
+        governance: "0x0000000000000000000000000000000000000001",
     },
     networks: {
         hardhat: {

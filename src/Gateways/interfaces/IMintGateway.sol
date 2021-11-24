@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.7;
+// solhint-disable-next-line
+pragma solidity ^0.8.0;
 
 abstract contract IMintGateway {
     /// @dev For backwards compatiblity reasons, the sigHash is cast to a

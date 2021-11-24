@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.7;
+// solhint-disable-next-line
+pragma solidity ^0.8.0;
 
 library RenVMHashes {
     /// @notice calculateSelectorHash calculates and hashes the selector hash,

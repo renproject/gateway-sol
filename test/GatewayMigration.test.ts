@@ -39,13 +39,13 @@ describe("Gateway Migration", () => {
                 await ethGatewayRegistry.getMintGatewayBySymbol("BTC")
             )
         ).connect(await ethers.getSigner(deployer));
-        const signatureVerifier = await ethGatewayRegistry.getSignatureVerifier();
+        const signatureVerifier = await ethGatewayRegistry.signatureVerifier();
         const gateway_1 = await deployProxy<MintGatewayV3__factory>(
             "MintGatewayV3",
             "TransparentUpgradeableProxy",
             {
                 initializer: "__MintGateway_init",
-                constructorArgs: ["Ethereum", "BTC", signatureVerifier, renBTC.address, deployer] as Parameters<
+                constructorArgs: ["BTC", signatureVerifier, renBTC.address] as Parameters<
                     MintGatewayV3["__MintGateway_init"]
                 >,
             },
@@ -96,7 +96,7 @@ describe("Gateway Migration", () => {
             "TransparentUpgradeableProxy",
             {
                 initializer: "__MintGateway_init",
-                constructorArgs: ["Ethereum", "BTC", signatureVerifier, renBTC.address, deployer] as Parameters<
+                constructorArgs: ["BTC", signatureVerifier, renBTC.address] as Parameters<
                     MintGatewayV3["__MintGateway_init"]
                 >,
             },

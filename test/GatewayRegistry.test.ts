@@ -133,11 +133,9 @@ describe("GatewayRegistry", function () {
             const test2 = await deployToken(hre, "TEST2");
             const test2LockGateway = await create2<LockGatewayV3__factory>("LockGatewayV3", [], undefined, "TEST2");
             await test2LockGateway.__LockGateway_init(
-                "Hardhat",
                 "TEST2",
-                await gatewayRegistryV2.getSignatureVerifier(),
-                test2.address,
-                deployer
+                await gatewayRegistryV2.signatureVerifier(),
+                test2.address
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway.address);
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
@@ -146,11 +144,9 @@ describe("GatewayRegistry", function () {
             const renTEST2 = await create2<RenAssetV2__factory>("RenAssetV2", [], undefined, "TEST2");
             const test2MintGateway = await create2<MintGatewayV3__factory>("MintGatewayV3", [], undefined, "TEST2");
             await test2MintGateway.__MintGateway_init(
-                "Hardhat",
                 "TEST2",
-                await gatewayRegistryV2.getSignatureVerifier(),
-                renTEST2.address,
-                deployer
+                await gatewayRegistryV2.signatureVerifier(),
+                renTEST2.address
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway.address);
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
@@ -190,7 +186,7 @@ describe("GatewayRegistry", function () {
                 /GatewayRegistry: account 0x[a-fA-F0-9]{40} is missing role CAN_UPDATE_GATEWAYS/
             );
 
-            await expect(gatewayRegistryV2.updateTransferWithLog(Ox0)).to.be.rejectedWith(
+            await expect(gatewayRegistryV2.updateTransferContract(Ox0)).to.be.rejectedWith(
                 /GatewayRegistry: account 0x[a-fA-F0-9]{40} is missing role CAN_UPDATE_GATEWAYS/
             );
 
@@ -224,10 +220,10 @@ describe("GatewayRegistry", function () {
                 undefined,
                 "uninitializedGateway"
             );
-            await expect(uninitializedGateway.getSignatureVerifier()).to.be.rejectedWith(
+            await expect(uninitializedGateway.signatureVerifier()).to.be.rejectedWith(
                 /GatewayRegistry: not initialized/
             );
-            await expect(uninitializedGateway.getTransferWithLog()).to.be.rejectedWith(
+            await expect(uninitializedGateway.transferContract()).to.be.rejectedWith(
                 /GatewayRegistry: not initialized/
             );
         });
@@ -275,21 +271,17 @@ describe("GatewayRegistry", function () {
             const test2 = await deployToken(hre, "TEST2");
             const test2LockGateway_1 = await create2<LockGatewayV3__factory>("LockGatewayV3", [], undefined, "TEST2_1");
             await test2LockGateway_1.__LockGateway_init(
-                "Hardhat",
                 "TEST2",
-                await gatewayRegistryV2.getSignatureVerifier(),
-                test2.address,
-                deployer
+                await gatewayRegistryV2.signatureVerifier(),
+                test2.address
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway_1.address);
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
             const test2LockGateway_2 = await create2<LockGatewayV3__factory>("LockGatewayV3", [], undefined, "TEST2_2");
             await test2LockGateway_2.__LockGateway_init(
-                "Hardhat",
                 "TEST2",
-                await gatewayRegistryV2.getSignatureVerifier(),
-                test2.address,
-                deployer
+                await gatewayRegistryV2.signatureVerifier(),
+                test2.address
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway_2.address);
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
@@ -298,21 +290,17 @@ describe("GatewayRegistry", function () {
             const renTEST2 = await create2<RenAssetV2__factory>("RenAssetV2", [], undefined, "TEST2");
             const test2MintGateway_1 = await create2<MintGatewayV3__factory>("MintGatewayV3", [], undefined, "TEST2_1");
             await test2MintGateway_1.__MintGateway_init(
-                "Hardhat",
                 "TEST2",
-                await gatewayRegistryV2.getSignatureVerifier(),
-                renTEST2.address,
-                deployer
+                await gatewayRegistryV2.signatureVerifier(),
+                renTEST2.address
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway_1.address);
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
             const test2MintGateway_2 = await create2<MintGatewayV3__factory>("MintGatewayV3", [], undefined, "TEST2_2");
             await test2MintGateway_2.__MintGateway_init(
-                "Hardhat",
                 "TEST2",
-                await gatewayRegistryV2.getSignatureVerifier(),
-                renTEST2.address,
-                deployer
+                await gatewayRegistryV2.signatureVerifier(),
+                renTEST2.address
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway_2.address);
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
@@ -357,28 +345,28 @@ describe("GatewayRegistry", function () {
                 /GatewayRegistry: invalid signature verifier/
             );
 
-            const signatureVerifier = await gatewayRegistryV2.getSignatureVerifier();
+            const signatureVerifier = await gatewayRegistryV2.signatureVerifier();
             const newSignatureVerifier = randomAddress();
             await gatewayRegistryV2.updateSignatureVerifier(newSignatureVerifier);
-            expect(await gatewayRegistryV2.getSignatureVerifier()).to.equal(newSignatureVerifier);
+            expect(await gatewayRegistryV2.signatureVerifier()).to.equal(newSignatureVerifier);
             await gatewayRegistryV2.updateSignatureVerifier(signatureVerifier);
-            expect(await gatewayRegistryV2.getSignatureVerifier()).to.equal(signatureVerifier);
+            expect(await gatewayRegistryV2.signatureVerifier()).to.equal(signatureVerifier);
         });
 
         it("updater can update TransferWithLog", async () => {
             let { gatewayRegistryV2 } = await setup();
             // Updating signature verifier
 
-            await expect(gatewayRegistryV2.updateTransferWithLog(Ox0)).to.be.rejectedWith(
+            await expect(gatewayRegistryV2.updateTransferContract(Ox0)).to.be.rejectedWith(
                 /GatewayRegistry: invalid transfer with log/
             );
 
-            const transferWithLog = await gatewayRegistryV2.getTransferWithLog();
+            const transferWithLog = await gatewayRegistryV2.transferContract();
             const newTransferWithLog = randomAddress();
-            await gatewayRegistryV2.updateTransferWithLog(newTransferWithLog);
-            expect(await gatewayRegistryV2.getTransferWithLog()).to.equal(newTransferWithLog);
-            await gatewayRegistryV2.updateTransferWithLog(transferWithLog);
-            expect(await gatewayRegistryV2.getTransferWithLog()).to.equal(transferWithLog);
+            await gatewayRegistryV2.updateTransferContract(newTransferWithLog);
+            expect(await gatewayRegistryV2.transferContract()).to.equal(newTransferWithLog);
+            await gatewayRegistryV2.updateTransferContract(transferWithLog);
+            expect(await gatewayRegistryV2.transferContract()).to.equal(transferWithLog);
         });
     });
 });

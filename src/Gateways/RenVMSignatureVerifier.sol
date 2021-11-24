@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.7;
+// solhint-disable-next-line
+pragma solidity ^0.8.0;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -11,14 +12,21 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 interface IRenVMSignatureVerifier is IERC1271 {
     // See IERC1271
+
+    function owner() external view returns (address);
+
+    function chain() external view returns (string memory);
+
+    function mintAuthority() external view returns (address);
 }
 
 contract RenVMSignatureVerifierStateV1 {
+    string _chain;
     address internal _mintAuthority;
 
     // Leave a gap so that storage values added in future upgrages don't corrupt
     // the storage of contracts that inherit from this contract.
-    uint256[49] private __gap;
+    uint256[48] private __gap;
 }
 
 // ERC-1271 uses 4-byte value instead of a boolean so that if a bug causes
@@ -43,9 +51,14 @@ contract RenVMSignatureVerifierV1 is
     bytes4 public constant CORRECT_SIGNATURE_RETURN_VALUE = 0x1626ba7e; // CORRECT_SIGNATURE_RETURN_VALUE_
     bytes4 public constant INCORRECT_SIGNATURE_RETURN_VALUE = 0x000000;
 
-    function __RenVMSignatureVerifier_init(address mintAuthority_, address contractOwner) external initializer {
+    function __RenVMSignatureVerifier_init(
+        string calldata chain_,
+        address mintAuthority_,
+        address contractOwner
+    ) external initializer {
         __Context_init();
         __Ownable_init();
+        _chain = chain_;
         updateMintAuthority(mintAuthority_);
 
         if (owner() != contractOwner) {
@@ -53,7 +66,15 @@ contract RenVMSignatureVerifierV1 is
         }
     }
 
-    function mintAuthority() public view returns (address) {
+    function owner() public view override(IRenVMSignatureVerifier, OwnableUpgradeable) returns (address) {
+        return super.owner();
+    }
+
+    function chain() public view override returns (string memory) {
+        return _chain;
+    }
+
+    function mintAuthority() public view override returns (address) {
         return _mintAuthority;
     }
 

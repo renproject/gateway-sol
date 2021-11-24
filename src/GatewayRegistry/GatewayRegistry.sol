@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.7;
+// solhint-disable-next-line
+pragma solidity ^0.8.0;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
@@ -34,14 +35,13 @@ contract GatewayRegistryStateV2 {
     address internal _signatureVerifier;
 
     uint256 internal _chainId;
-    string internal _chainName;
 
-    address internal _transferWithLog;
+    address internal _transferContract;
 
     // Leave a gap so that storage values added in future upgrages don't corrupt
     // the storage of contracts that inherit from this contract.
     // Note that StringSet.Set occupies two slots.
-    uint256[38] private __gap;
+    uint256[39] private __gap;
 }
 
 contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
@@ -51,19 +51,14 @@ contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
         return _chainId;
     }
 
-    function chainName() public view returns (string memory) {
-        require(String.isNotEmpty(_chainName), "GatewayRegistry: not initialized");
-        return _chainName;
-    }
-
-    function getSignatureVerifier() public view returns (address) {
+    function signatureVerifier() public view returns (address) {
         require(_signatureVerifier != address(0x0), "GatewayRegistry: not initialized");
         return _signatureVerifier;
     }
 
-    function getTransferWithLog() external view returns (address) {
-        require(_transferWithLog != address(0x0), "GatewayRegistry: not initialized");
-        return _transferWithLog;
+    function transferContract() external view returns (address) {
+        require(_transferContract != address(0x0), "GatewayRegistry: not initialized");
+        return _transferContract;
     }
 
     /// @dev To get all the registered Gateway contracts set count to `0`.
@@ -164,21 +159,19 @@ contract GatewayRegistryV2 is
     bytes32 public constant CAN_ADD_GATEWAYS = keccak256("CAN_ADD_GATEWAYS");
 
     function __GatewayRegistry_init(
-        string calldata chainName_,
         uint256 chainId_,
         address adminAddress,
         address signatureVerifier_,
-        address transferWithLog,
+        address transferContract,
         address renAssetProxyBeacon_,
         address mintGatewayProxyBeacon_,
         address lockGatewayProxyBeacon_
-    ) external initializer onlyValidString(chainName_) {
+    ) external initializer {
         __AccessControlEnumerable_init();
         __RenAssetFactory_init(renAssetProxyBeacon_, mintGatewayProxyBeacon_, lockGatewayProxyBeacon_);
-        _chainName = chainName_;
         _chainId = chainId_;
         _signatureVerifier = signatureVerifier_;
-        _transferWithLog = transferWithLog;
+        _transferContract = transferContract;
 
         AccessControlEnumerableUpgradeable._setupRole(AccessControlUpgradeable.DEFAULT_ADMIN_ROLE, adminAddress);
         AccessControlEnumerableUpgradeable._setupRole(CAN_UPDATE_GATEWAYS, adminAddress);
@@ -213,7 +206,7 @@ contract GatewayRegistryV2 is
     );
 
     event LogSignatureVerifierUpdated(address indexed newSignatureVerifier);
-    event LogTransferWithLogUpdated(address indexed newTransferWithLog);
+    event LogTransferContractUpdated(address indexed newTransferContract);
 
     // MODIFIERS ///////////////////////////////////////////////////////////////
 
@@ -260,16 +253,16 @@ contract GatewayRegistryV2 is
         emit LogSignatureVerifierUpdated(_signatureVerifier);
     }
 
-    /// @notice Allow the owner to update the TransferWithLog contract.
+    /// @notice Allow the owner to update the TransferContract contract.
     ///
-    /// @param nextTransferWithLog The new TransferWithLog contract address.
-    function updateTransferWithLog(address nextTransferWithLog)
+    /// @param nextTransferContract The new TransferContract contract address.
+    function updateTransferContract(address nextTransferContract)
         external
         onlyRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS")
     {
-        require(nextTransferWithLog != address(0x0), "GatewayRegistry: invalid transfer with log");
-        _transferWithLog = nextTransferWithLog;
-        emit LogTransferWithLogUpdated(_transferWithLog);
+        require(nextTransferContract != address(0x0), "GatewayRegistry: invalid transfer with log");
+        _transferContract = nextTransferContract;
+        emit LogTransferContractUpdated(_transferContract);
     }
 
     // MINT GATEWAYS ///////////////////////////////////////////////////////////
@@ -319,15 +312,12 @@ contract GatewayRegistryV2 is
         address renAsset,
         string calldata version
     ) external onlyRoleVerbose(CAN_ADD_GATEWAYS, "CAN_ADD_GATEWAYS") {
-        string memory chainName_ = chainName();
         if (mintGatewaySymbols.contains(symbol)) {
             // Check role before expensive contract deployment.
             checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
         }
 
-        address mintGateway = address(
-            _deployMintGateway(chainName_, symbol, getSignatureVerifier(), renAsset, version)
-        );
+        address mintGateway = address(_deployMintGateway(symbol, signatureVerifier(), renAsset, version));
         addMintGateway(symbol, renAsset, mintGateway);
     }
 
@@ -344,9 +334,7 @@ contract GatewayRegistryV2 is
         }
 
         address renAsset = address(_deployRenAsset(chainId(), symbol, erc20Name, erc20Symbol, erc20Decimals, version));
-        address mintGateway = address(
-            _deployMintGateway(chainName(), symbol, getSignatureVerifier(), renAsset, version)
-        );
+        address mintGateway = address(_deployMintGateway(symbol, signatureVerifier(), renAsset, version));
         OwnableUpgradeable(renAsset).transferOwnership(mintGateway);
         addMintGateway(symbol, renAsset, mintGateway);
     }
@@ -422,9 +410,7 @@ contract GatewayRegistryV2 is
             checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
         }
 
-        address lockGateway = address(
-            _deployLockGateway(chainName(), symbol, getSignatureVerifier(), lockToken, version)
-        );
+        address lockGateway = address(_deployLockGateway(symbol, signatureVerifier(), lockToken, version));
         addLockGateway(symbol, lockToken, lockGateway);
     }
 

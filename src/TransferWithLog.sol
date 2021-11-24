@@ -2,7 +2,8 @@
 
 import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 
-pragma solidity ^0.8.7;
+// solhint-disable-next-line
+pragma solidity ^0.8.0;
 
 /// TransferWithLog is a replacement for a standard ETH transfer, with an added
 /// log to make it easily searchable.

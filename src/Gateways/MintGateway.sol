@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.7;
+// solhint-disable-next-line
+pragma solidity ^0.8.0;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {AddressUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
@@ -18,39 +18,25 @@ import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./RenVMSignatureVerifier.sol";
 /// MintGateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
-contract MintGatewayV3 is
-    Initializable,
-    ContextUpgradeable,
-    OwnableUpgradeable,
-    GatewayStateV3,
-    GatewayStateManagerV3,
-    IMintGateway
-{
+contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, GatewayStateManagerV3, IMintGateway {
     string public constant NAME = "MintGateway";
 
     event TokenOwnershipTransferred(address indexed tokenAddress, address indexed nextTokenOwner);
 
     // If these parameters are changed, RenAssetFactory must be updated as well.
     function __MintGateway_init(
-        string calldata chain_,
         string calldata asset_,
         address signatureVerifier_,
-        address token_,
-        address contractOwner
+        address token_
     ) external initializer {
         __Context_init();
-        __Ownable_init();
-        __GatewayStateManager_init(chain_, asset_, signatureVerifier_, token_);
-
-        if (owner() != contractOwner) {
-            transferOwnership(contractOwner);
-        }
+        __GatewayStateManager_init(asset_, signatureVerifier_, token_);
     }
 
     // Governance functions ////////////////////////////////////////////////////
 
     /// @notice Allow the owner to update the owner of the RenERC20 token.
-    function transferTokenOwnership(address nextTokenOwner) external onlyOwner {
+    function transferTokenOwnership(address nextTokenOwner) external onlySignatureVerifierOwner {
         require(AddressUpgradeable.isContract(nextTokenOwner), "MintGateway: next token owner must be a contract");
         require(nextTokenOwner != address(0x0), "MintGateway: invalid next token owner");
 

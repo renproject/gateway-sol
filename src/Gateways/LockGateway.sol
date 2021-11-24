@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.7;
+// solhint-disable-next-line
+pragma solidity ^0.8.0;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -21,14 +21,7 @@ import {String} from "../libraries/String.sol";
 /// approves assets being released by providing a digital signature.
 /// The balance of assets is assumed not to change without a transfer, so
 /// rebasing assets and assets with a demurrage fee are not supported.
-contract LockGatewayV3 is
-    Initializable,
-    ContextUpgradeable,
-    OwnableUpgradeable,
-    GatewayStateV3,
-    GatewayStateManagerV3,
-    ILockGateway
-{
+contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, GatewayStateManagerV3, ILockGateway {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeTransferWithFeesUpgradeable for IERC20Upgradeable;
 
@@ -36,19 +29,12 @@ contract LockGatewayV3 is
 
     // If these parameters are changed, RenAssetFactory must be updated as well.
     function __LockGateway_init(
-        string calldata chain_,
         string calldata asset_,
         address signatureVerifier_,
-        address token_,
-        address contractOwner
+        address token_
     ) external initializer {
         __Context_init();
-        __Ownable_init();
-        __GatewayStateManager_init(chain_, asset_, signatureVerifier_, token_);
-
-        if (owner() != contractOwner) {
-            transferOwnership(contractOwner);
-        }
+        __GatewayStateManager_init(asset_, signatureVerifier_, token_);
     }
 
     // Public functions ////////////////////////////////////////////////////////

@@ -137,7 +137,7 @@ export const deployGatewaySol = async function (
         "RenVMSignatureVerifierProxy",
         {
             initializer: "__RenVMSignatureVerifier_init",
-            constructorArgs: [chainName, mintAuthority, deployer] as Parameters<
+            constructorArgs: [chainName, mintAuthority, governanceAddress] as Parameters<
                 RenVMSignatureVerifierV1["__RenVMSignatureVerifier_init"]
             >,
         },
@@ -152,6 +152,10 @@ export const deployGatewaySol = async function (
             }
         }
     );
+    if (Ox(await signatureVerifier.owner()) !== Ox(governanceAddress)) {
+        console.log(`Transferring RenVMSignatureVerifier ownership to governance address.`);
+        await waitForTx(signatureVerifier.transferOwnership(governanceAddress));
+    }
 
     logger.log(chalk.yellow("TransferWithLog"));
     const transferWithLog = await create2("TransferWithLog", []);

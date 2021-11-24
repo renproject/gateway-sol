@@ -37,7 +37,6 @@ const config: HardhatUserConfig = {
     },
     namedAccounts: {
         deployer: 0,
-        governance: "0x0000000000000000000000000000000000000001",
     },
     networks: {
         hardhat: {
@@ -74,7 +73,7 @@ const config: HardhatUserConfig = {
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },
-            gasPrice: 150 * 1e9,
+            gasPrice: 2.5 * 1e9,
         },
         ethereumDevnet: {
             url: `https://kovan.infura.io/v3/${INFURA_KEY}`,

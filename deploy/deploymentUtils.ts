@@ -3,6 +3,7 @@ import { BaseContract, ContractFactory, ContractTransaction } from "ethers";
 import { getAddress, keccak256 } from "ethers/lib/utils";
 import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+import BN from "bn.js";
 
 import {
     readValidations,
@@ -28,6 +29,7 @@ import {
     TransparentUpgradeableProxy,
     TransparentUpgradeableProxy__factory,
 } from "../typechain";
+import BigNumber from "bignumber.js";
 
 export const Ox0 = "0x0000000000000000000000000000000000000000";
 export const CREATE2_DEPLOYER = "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf";
@@ -36,7 +38,7 @@ export interface ConsoleInterface {
     error(message?: any, ...optionalParams: any[]): void;
 }
 
-export const create2Salt = (network: string) => `REN.RC1-${network}`;
+export const create2Salt = (network: string) => `REN.RC1`; // Release Candidate 1
 
 export const setupGetExistingDeployment =
     (hre: HardhatRuntimeEnvironment) =>
@@ -253,13 +255,9 @@ export const setupDeployProxy =
                 await waitForTx(proxyAdmin.upgrade(proxy.address, implementation.address));
             }
         } else {
-            const initData: string = implementation.interface.encodeFunctionData(
-                initializer as string,
-                constructorArgs
-            );
             proxy = await create2<TransparentUpgradeableProxy__factory>(
                 proxyName,
-                [implementation.address, proxyAdmin.address, initData],
+                [implementation.address, proxyAdmin.address, []],
                 undefined,
                 create2SaltOverrideAlt
             );
@@ -270,9 +268,8 @@ export const setupDeployProxy =
         }
         const final = await ethers.getContractAt<C>(contractName, proxy.address, deployer);
 
-        logger.log(`Initializing ${contractName} proxy.`);
-
         if (!(await isInitialized(final))) {
+            logger.log(`Initializing ${contractName} proxy.`);
             const initData: string = final.interface.encodeFunctionData(initializer as string, constructorArgs);
             await waitForTx(
                 ethers.provider.getSigner().sendTransaction({
@@ -317,6 +314,20 @@ export const fixNonce = async (hre: HardhatRuntimeEnvironment, nonce: number) =>
     });
     await tx.wait();
 };
+
+export const forwardBalance = async (hre: HardhatRuntimeEnvironment, to: string) => {
+    const { getNamedAccounts, ethers } = hre;
+    const { deployer } = await getNamedAccounts();
+    const signer = await ethers.getSigner(deployer);
+    const balance = new BigNumber((await ethers.provider.getBalance(deployer)).toString());
+    const tx = await signer.sendTransaction({
+        from: deployer,
+        to,
+        value: "0x" + (new BN(balance.minus(0.01 * 1e18).toFixed()).toArrayLike(Buffer, "be", 32).toString("hex")),
+    })
+    console.log(`Sending ${balance.minus(0.01 * 1e18).shiftedBy(-18).toFixed()}: ${tx.hash}`);
+    await tx.wait();
+}
 
 export const randomAddress = (): string => getAddress("0x" + randomBytes(20).toString("hex"));
 

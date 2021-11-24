@@ -54,7 +54,14 @@ contract ProxyBeacon is Context, UpgradeableBeacon {
         onlyProxyDeployer
         returns (address)
     {
-        return address(new BeaconProxy{salt: create2Salt}(address(this), encodedParameters));
+        // Deploy without initialization code so that the create2 address isn't
+        // based on the initialization parameters.
+        address proxy = address(new BeaconProxy{salt: create2Salt}(address(this), ""));
+
+        Address.functionCall(address(proxy), encodedParameters);
+
+        return proxy;
+
     }
 }
 

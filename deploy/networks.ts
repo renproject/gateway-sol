@@ -1,5 +1,4 @@
-import { randomBytes } from "crypto";
-import { CallOptions, DeployFunction } from "hardhat-deploy/types";
+import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { randomAddress } from "./deploymentUtils";
@@ -20,6 +19,7 @@ export interface NetworkConfig {
     tokenPrefix: "dev" | "test" | "ren";
     chainName: Chain | string;
     mintAuthority: string;
+    darknodeRegistry: string;
     governanceAddress?: string;
     create2SaltOverride?: string;
     mintGateways: Array<{
@@ -275,16 +275,19 @@ export const testnetTokens = [
 // > utils.toChecksumAddress(utils.pubToAddress("... public key ...", true).toString("hex"))
 
 const renvmMainnetConfig = {
+    darknodeRegistry: "0x2D7b6C95aFeFFa50C068D50f89C5C0014e054f0A",
     mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7",
     tokenPrefix: "ren" as const,
 };
 
 const renvmTestnetConfig = {
+    darknodeRegistry: "0x9954C9F839b31E82bc9CA98F234313112D269712",
     mintAuthority: "0x44Bb4eF43408072bC888Afd1a5986ba0Ce35Cb54",
     tokenPrefix: "test" as const,
 };
 
 const renvmDevnetConfig = {
+    darknodeRegistry: "",
     mintAuthority: "0x1A5650DAd360803ea7912b7a0a747446b554a5BE",
     tokenPrefix: "dev" as const,
 };
@@ -292,6 +295,7 @@ const renvmDevnetConfig = {
 export const networks: { [network: string]: NetworkConfig } = {
     hardhat: {
         mintAuthority: randomAddress(),
+        darknodeRegistry: randomAddress(),
         tokenPrefix: "dev",
         chainName: Chain.Hardhat,
 

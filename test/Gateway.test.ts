@@ -13,7 +13,7 @@ const setup = hre.deployments.createFixture(async () => {
     return await setupNetworks(hre);
 });
 
-describe("RenJS", () => {
+describe("Gateway", () => {
     it("mint and burn", async function () {
         this.timeout(1000 * 1000);
 
@@ -78,7 +78,7 @@ describe("RenJS", () => {
         await completeGateway(ethBurn);
     });
 
-    it("mint and burn", async function () {
+    it("invalid signature", async function () {
         this.timeout(1000 * 1000);
 
         const { bitcoin, renJS, ethereum, bsc, mockRenVMProvider } = await setup();

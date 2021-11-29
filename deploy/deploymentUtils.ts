@@ -1,11 +1,15 @@
+import BigNumber from "bignumber.js";
+import BN from "bn.js";
 import { randomBytes } from "crypto";
 import { BaseContract, ContractFactory, ContractTransaction } from "ethers";
 import { getAddress, keccak256 } from "ethers/lib/utils";
 import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import BN from "bn.js";
 
-import { readValidations, withDefaults } from "@openzeppelin/hardhat-upgrades/dist/utils";
+import {
+    readValidations,
+    withDefaults,
+} from "@openzeppelin/hardhat-upgrades/dist/utils";
 import {
     assertStorageUpgradeSafe,
     assertUpgradeSafe,
@@ -26,7 +30,6 @@ import {
     TransparentUpgradeableProxy,
     TransparentUpgradeableProxy__factory,
 } from "../typechain";
-import BigNumber from "bignumber.js";
 
 export const Ox0 = "0x0000000000000000000000000000000000000000";
 export const CREATE2_DEPLOYER = "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf";
@@ -283,6 +286,10 @@ export const setupDeployProxy =
                     data: initData,
                 })
             );
+        }
+
+        if (!(await isInitialized(final))) {
+            throw new Error(`Invalid 'isInitialized' method.`);
         }
 
         return final;

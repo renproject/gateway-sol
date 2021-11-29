@@ -53,7 +53,7 @@ export const LocalEthereumNetwork = (
     },
 });
 
-export const completeGateway = async (gateway: Gateway, amount?: BigNumber) => {
+export const completeGateway = async (gateway: Gateway<any, any>, amount?: BigNumber) => {
     for (const setupKey of Object.keys(gateway.setup)) {
         const setup = gateway.setup[setupKey];
         if (setup.submit) {
@@ -118,6 +118,7 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
         hre,
         {
             mintAuthority,
+            darknodeRegistry: Ox(Buffer.from(new Array(20))),
             tokenPrefix: "dev",
             chainName: "Ethereum",
             mintGateways: [],
@@ -129,6 +130,7 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
         hre,
         {
             mintAuthority,
+            darknodeRegistry: Ox(Buffer.from(new Array(20))),
             tokenPrefix: "dev",
             chainName: "BinanceSmartChain",
             mintGateways: [],

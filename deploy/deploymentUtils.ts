@@ -5,10 +5,7 @@ import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import BN from "bn.js";
 
-import {
-    readValidations,
-    withDefaults,
-} from "@openzeppelin/hardhat-upgrades/dist/utils";
+import { readValidations, withDefaults } from "@openzeppelin/hardhat-upgrades/dist/utils";
 import {
     assertStorageUpgradeSafe,
     assertUpgradeSafe,
@@ -39,6 +36,14 @@ export interface ConsoleInterface {
 }
 
 export const create2Salt = (network: string) => `REN.RC1`; // Release Candidate 1
+
+export const getContractAt =
+    (hre: HardhatRuntimeEnvironment) =>
+    async <T extends BaseContract>(name: string, address: string) => {
+        const { getNamedAccounts, ethers } = hre;
+        const { deployer } = await getNamedAccounts();
+        await ethers.getContractAt<T>(name, address, deployer);
+    };
 
 export const setupGetExistingDeployment =
     (hre: HardhatRuntimeEnvironment) =>
@@ -323,11 +328,16 @@ export const forwardBalance = async (hre: HardhatRuntimeEnvironment, to: string)
     const tx = await signer.sendTransaction({
         from: deployer,
         to,
-        value: "0x" + (new BN(balance.minus(0.01 * 1e18).toFixed()).toArrayLike(Buffer, "be", 32).toString("hex")),
-    })
-    console.log(`Sending ${balance.minus(0.01 * 1e18).shiftedBy(-18).toFixed()}: ${tx.hash}`);
+        value: "0x" + new BN(balance.minus(0.01 * 1e18).toFixed()).toArrayLike(Buffer, "be", 32).toString("hex"),
+    });
+    console.log(
+        `Sending ${balance
+            .minus(0.01 * 1e18)
+            .shiftedBy(-18)
+            .toFixed()}: ${tx.hash}`
+    );
     await tx.wait();
-}
+};
 
 export const randomAddress = (): string => getAddress("0x" + randomBytes(20).toString("hex"));
 

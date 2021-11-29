@@ -62,12 +62,6 @@ const config: HardhatUserConfig = {
                 mnemonic: MNEMONIC_MAINNET,
             },
         },
-        ethereumMainnetVDot3: {
-            url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
-            accounts: {
-                mnemonic: MNEMONIC_MAINNET,
-            },
-        },
         ethereumTestnet: {
             url: `https://kovan.infura.io/v3/${INFURA_KEY}`,
             accounts: {
@@ -92,6 +86,7 @@ const config: HardhatUserConfig = {
             accounts: {
                 mnemonic: MNEMONIC_MAINNET,
             },
+            // gasPrice: 10 * 1e9,
         },
         polygonTestnet: {
             url: `https://rpc-mumbai.maticvigil.com/`,
@@ -112,7 +107,7 @@ const config: HardhatUserConfig = {
             },
         },
         fantomMainnet: {
-            url: `https://rpcapi.fantom.network`,
+            url: "https://rpc.ftm.tools",
             accounts: {
                 mnemonic: MNEMONIC_MAINNET,
             },
@@ -163,8 +158,9 @@ const config: HardhatUserConfig = {
         return {
             factory: "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf",
             deployer: "0x90899d3cc800c0a9196aec83da43e46582cb7435",
-            // Must be deployed manually.
-            funding: "0",
+            // Must be deployed manually. Required funding may be more on
+            // certain chains (e.g. Ethereum mainnet).
+            funding: "10000000000000000",
             signedTx: "0x00",
         };
     },

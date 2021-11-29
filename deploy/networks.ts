@@ -37,6 +37,114 @@ export interface NetworkConfig {
     }>;
 }
 
+export const mainnetTokens = [
+    {
+        symbol: "REN",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0x408e41876cccdc0f92210600ef50372656052a38" },
+    },
+    {
+        symbol: "DAI",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0x6b175474e89094c44da98b954eedeac495271d0f" },
+    },
+    {
+        symbol: "USDC",
+        decimals: 6,
+        origin: { chain: Chain.Ethereum, token: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+    },
+    {
+        symbol: "USDT",
+        decimals: 6,
+        origin: { chain: Chain.Ethereum, token: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
+    },
+    {
+        symbol: "EURT",
+        decimals: 6,
+        origin: { chain: Chain.Ethereum, token: "0xc581b735a1688071a1746c968e0798d642ede491" },
+    },
+    {
+        symbol: "BUSD",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0x4Fabb145d64652a948d72533023f6E7A623C7C53" },
+    },
+    {
+        symbol: "MIM",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3" },
+    },
+    {
+        symbol: "CRV",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0xd533a949740bb3306d119cc777fa900ba034cd52" },
+    },
+    {
+        symbol: "LINK",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0x514910771af9ca656af840dff83e8264ecf986ca" },
+    },
+    {
+        symbol: "UNI",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984" },
+    },
+    {
+        symbol: "SUSHI",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2" },
+    },
+    {
+        symbol: "FTT",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0x50d1c9771902476076ecfc8b2a83ad6b9355a4c9" },
+    },
+    {
+        symbol: "ROOK",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0xfa5047c9c78b8877af97bdcb85db743fd7313d4a" },
+    },
+    {
+        symbol: "BADGER",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0x3472a5a71965499acd81997a54bba8d852c6e53d" },
+    },
+    {
+        symbol: "KNC",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202" },
+    },
+    {
+        symbol: "ETH",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum },
+    },
+    {
+        symbol: "BNB",
+        decimals: 18,
+        origin: { chain: Chain.BinanceSmartChain },
+    },
+    {
+        symbol: "FTM",
+        decimals: 18,
+        origin: { chain: Chain.Fantom },
+    },
+    {
+        symbol: "MATIC",
+        decimals: 18,
+        origin: { chain: Chain.Polygon },
+    },
+    {
+        symbol: "ArbETH",
+        decimals: 18,
+        origin: { chain: Chain.Arbitrum },
+    },
+    {
+        symbol: "AVAX",
+        decimals: 18,
+        origin: { chain: Chain.Avalanche },
+    },
+];
+
 export const testnetTokens = [
     {
         symbol: "REN",
@@ -126,7 +234,26 @@ export const testnetTokens = [
         decimals: 18,
         origin: { chain: Chain.Ethereum, token: "0x54c864EBD4b84c1ce3F415f1E7c074572d863652" },
     },
-
+    {
+        symbol: "ETH",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum },
+    },
+    {
+        symbol: "BNB",
+        decimals: 18,
+        origin: { chain: Chain.BinanceSmartChain },
+    },
+    {
+        symbol: "FTM",
+        decimals: 18,
+        origin: { chain: Chain.Fantom },
+    },
+    {
+        symbol: "MATIC",
+        decimals: 18,
+        origin: { chain: Chain.Polygon },
+    },
     {
         symbol: "ArbETH",
         decimals: 18,
@@ -138,29 +265,9 @@ export const testnetTokens = [
         origin: { chain: Chain.Avalanche },
     },
     {
-        symbol: "BNB",
-        decimals: 18,
-        origin: { chain: Chain.BinanceSmartChain },
-    },
-    {
-        symbol: "ETH",
-        decimals: 18,
-        origin: { chain: Chain.Ethereum },
-    },
-    {
-        symbol: "FTM",
-        decimals: 18,
-        origin: { chain: Chain.Fantom },
-    },
-    {
         symbol: "gETH",
         decimals: 18,
         origin: { chain: Chain.Goerli },
-    },
-    {
-        symbol: "MATIC",
-        decimals: 18,
-        origin: { chain: Chain.Polygon },
     },
 ];
 
@@ -251,32 +358,45 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0x459086F2376525BdCebA5bDDA135e4E9d3FeF5bf",
                 gateway: "0xCc4FF5b8A4A7adb35F00ff0CBf53784e07c3C52F",
             },
+            {
+                // renFIL
+                symbol: "FIL",
+                decimals: 18,
+                token: "0xD5147bc8e386d91Cc5DBE72099DAC6C9b99276F5",
+                gateway: "0xED7D080AA1d2A4D468C615a5d481125Bb56BF1bf",
+            },
+            {
+                // renDGB
+                symbol: "DGB",
+                decimals: 8,
+                token: "0xe3Cb486f3f5C639e98cCBaF57d95369375687F80",
+                gateway: "0x05387a10Bb3EF789b6C2a9CE2d6C21D5a8c6B1aA",
+            },
+            {
+                // testDOGE
+                symbol: "DOGE",
+                decimals: 8,
+                token: "0x3832d2F059E55934220881F831bE501D180671A7",
+                gateway: "0x2362843745615368F4ef0A43D7502353649C0783",
+            },
+            {
+                // renLUNA
+                symbol: "LUNA",
+                decimals: 6,
+                token: "0x52d87F22192131636F93c5AB18d0127Ea52CB641",
+                gateway: "0xD7D7Deab930B6d3f98b35A26a4c431630d5AB874",
+            },
+            ...mainnetTokens.filter((x) => x.origin.chain !== Chain.Ethereum),
         ],
 
         lockGateways: [
-            // {
-            //     symbol: "REN",
-            //     token: "0x408e41876cccdc0f92210600ef50372656052a38",
-            //     gateway: "",
-            // },
-            // {
-            //     symbol: "DAI",
-            //     token: "0x6b175474e89094c44da98b954eedeac495271d0f",
-            //     gateway: "",
-            // },
-            // { symbol: "USDC", token: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", gateway: "" }, // Circle USD, 6 decimals
-            // { symbol: "USDT", token: "0xdac17f958d2ee523a2206206994597c13d831ec7", gateway: "" }, // Tether, 6 decimals
-            // { symbol: "EURT", token: "0xc581b735a1688071a1746c968e0798d642ede491", gateway: "" }, // Euro Tether, 6 decimals
-            // { symbol: "BUSD", token: "0x4Fabb145d64652a948d72533023f6E7A623C7C53", gateway: "" }, // Binance USD, 18 decimals
-            // { symbol: "MIM", token: "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3", gateway: "" }, // Magic Internet Money, 18 decimals
-            // { symbol: "CRV", token: "0xd533a949740bb3306d119cc777fa900ba034cd52", gateway: "" }, // Curve, 18 decimals
-            // { symbol: "LINK", token: "0x514910771af9ca656af840dff83e8264ecf986ca", gateway: "" }, // Chainlink, 18 decimals
-            // { symbol: "UNI", token: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984", gateway: "" }, // Uniswap, 18 decimals
-            // { symbol: "SUSHI", token: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2", gateway: "" }, // Sushiswap, 18 decimals
-            // { symbol: "FTT", token: "0x50d1c9771902476076ecfc8b2a83ad6b9355a4c9", gateway: "" }, // FTX, 18 decimals
-            // { symbol: "ROOK", token: "0xfa5047c9c78b8877af97bdcb85db743fd7313d4a", gateway: "" }, // KeeperDAO, 18 decimals
-            // { symbol: "BADGER", token: "0x3472a5a71965499acd81997a54bba8d852c6e53d", gateway: "" }, // Badger DAO, 18 decimals
-            // { symbol: "KNC", token: "0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202", gateway: "" }, // Kyber Network, 18 decimals
+            ...mainnetTokens
+                .filter((x) => x.origin.chain === Chain.Ethereum && x.origin.token)
+                .map((x) => ({
+                    symbol: x.symbol,
+                    decimals: x.decimals,
+                    token: x.origin.token,
+                })),
         ],
     },
 
@@ -405,43 +525,6 @@ export const networks: { [network: string]: NetworkConfig } = {
         ],
     },
 
-    ethereumMainnetVDot3: {
-        chainName: Chain.Ethereum,
-        ...renvmMainnetConfig,
-        // governanceAddress: '0x33024cfb7af11a7cb12ab0dedefc5dd5f430381f', // defaults to deployer
-
-        mintGateways: [
-            {
-                // renFIL
-                symbol: "FIL",
-                decimals: 18,
-                token: "0xD5147bc8e386d91Cc5DBE72099DAC6C9b99276F5",
-                gateway: "0xED7D080AA1d2A4D468C615a5d481125Bb56BF1bf",
-            },
-            {
-                // renDGB
-                symbol: "DGB",
-                decimals: 8,
-                token: "0xe3Cb486f3f5C639e98cCBaF57d95369375687F80",
-                gateway: "0x05387a10Bb3EF789b6C2a9CE2d6C21D5a8c6B1aA",
-            },
-            {
-                // testDOGE
-                symbol: "DOGE",
-                decimals: 8,
-                token: "0x3832d2F059E55934220881F831bE501D180671A7",
-                gateway: "0x2362843745615368F4ef0A43D7502353649C0783",
-            },
-            {
-                // renLUNA
-                symbol: "LUNA",
-                decimals: 6,
-                token: "0x52d87F22192131636F93c5AB18d0127Ea52CB641",
-                gateway: "0xD7D7Deab930B6d3f98b35A26a4c431630d5AB874",
-            },
-        ],
-    },
-
     bscMainnet: {
         chainName: Chain.BinanceSmartChain,
         ...renvmMainnetConfig,
@@ -496,6 +579,17 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0xc4Ace9278e7E01755B670C0838c3106367639962",
                 gateway: "0x4d59f628CB8e4670b779eAE22aF0c46DebC06695",
             },
+            ...mainnetTokens.filter((x) => x.origin.chain !== Chain.BinanceSmartChain),
+        ],
+
+        lockGateways: [
+            ...mainnetTokens
+                .filter((x) => x.origin.chain === Chain.BinanceSmartChain && x.origin.token)
+                .map((x) => ({
+                    symbol: x.symbol,
+                    decimals: x.decimals,
+                    token: x.origin.token,
+                })),
         ],
     },
 
@@ -612,21 +706,6 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0x2c82a39549858A0fF1a369D84695D983791d0786",
                 gateway: "0x26f4F36A070190Ee4379241DD1463A420768EB4B",
             },
-            {
-                // testETH
-                symbol: "ETH",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-            {
-                // testDAI
-                symbol: "DAI",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-
             ...testnetTokens.filter((x) => x.origin.chain !== Chain.BinanceSmartChain),
         ],
 
@@ -752,21 +831,6 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0x671c7f6319d04999dE58aF32075C50061383240F",
                 gateway: "0x075046dE7D7e708da1593bB7476dE0547a3A057a",
             },
-            {
-                // testETH
-                symbol: "ETH",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-            {
-                // testDAI
-                symbol: "DAI",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-
             ...testnetTokens.filter((x) => x.origin.chain !== Chain.Fantom),
         ],
 
@@ -836,6 +900,17 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0x7c7DAAF2dB46fEFd067f002a69FD0BE14AeB159f",
                 gateway: "0x731Ea4Ba77fF184d89dBeB160A0078274Acbe9D2",
             },
+            ...mainnetTokens.filter((x) => x.origin.chain !== Chain.Fantom),
+        ],
+
+        lockGateways: [
+            ...mainnetTokens
+                .filter((x) => x.origin.chain === Chain.Fantom && x.origin.token)
+                .map((x) => ({
+                    symbol: x.symbol,
+                    decimals: x.decimals,
+                    token: x.origin.token,
+                })),
         ],
     },
 
@@ -893,21 +968,6 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0xF5DC123b4622b17511cCf3251Dc00d8adC620A6D",
                 gateway: "0xb98E6dA48F27e86D32dc9ab8721ce19c95E206b8",
             },
-            {
-                // testETH
-                symbol: "ETH",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-            {
-                // testDAI
-                symbol: "DAI",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-
             ...testnetTokens.filter((x) => x.origin.chain !== Chain.Polygon),
         ],
 
@@ -976,6 +1036,17 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0x7c7DAAF2dB46fEFd067f002a69FD0BE14AeB159f",
                 gateway: "0x731Ea4Ba77fF184d89dBeB160A0078274Acbe9D2",
             },
+            ...mainnetTokens.filter((x) => x.origin.chain !== Chain.Polygon),
+        ],
+
+        lockGateways: [
+            ...mainnetTokens
+                .filter((x) => x.origin.chain === Chain.Polygon && x.origin.token)
+                .map((x) => ({
+                    symbol: x.symbol,
+                    decimals: x.decimals,
+                    token: x.origin.token,
+                })),
         ],
     },
 
@@ -1033,21 +1104,6 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0x59fE85a45D2ecBDB1499dab315A109De8E4e2DAd",
                 gateway: "0xA0b04e9D8B883626769Ac23aF4fb019e34B944C4",
             },
-            {
-                // testETH
-                symbol: "ETH",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-            {
-                // testDAI
-                symbol: "DAI",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-
             ...testnetTokens.filter((x) => x.origin.chain !== Chain.Avalanche),
         ],
 
@@ -1116,6 +1172,17 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0x7c7DAAF2dB46fEFd067f002a69FD0BE14AeB159f",
                 gateway: "0x731Ea4Ba77fF184d89dBeB160A0078274Acbe9D2",
             },
+            ...mainnetTokens.filter((x) => x.origin.chain !== Chain.Avalanche),
+        ],
+
+        lockGateways: [
+            ...mainnetTokens
+                .filter((x) => x.origin.chain === Chain.Avalanche && x.origin.token)
+                .map((x) => ({
+                    symbol: x.symbol,
+                    decimals: x.decimals,
+                    token: x.origin.token,
+                })),
         ],
     },
 
@@ -1173,21 +1240,6 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0xCa920A213f8f20406612eB02AA00EDDdAf5005EF",
                 gateway: "0xa6e39c23fe29D15b0302E8ca234b365328fD49B5",
             },
-            {
-                // testETH
-                symbol: "ETH",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-            {
-                // testDAI
-                symbol: "DAI",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-
             ...testnetTokens.filter((x) => x.origin.chain !== Chain.Arbitrum),
         ],
 
@@ -1262,6 +1314,17 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0x7c7DAAF2dB46fEFd067f002a69FD0BE14AeB159f",
                 gateway: "0x731Ea4Ba77fF184d89dBeB160A0078274Acbe9D2",
             },
+            ...mainnetTokens.filter((x) => x.origin.chain !== Chain.Arbitrum),
+        ],
+
+        lockGateways: [
+            ...mainnetTokens
+                .filter((x) => x.origin.chain === Chain.Arbitrum && x.origin.token)
+                .map((x) => ({
+                    symbol: x.symbol,
+                    decimals: x.decimals,
+                    token: x.origin.token,
+                })),
         ],
     },
 
@@ -1319,21 +1382,6 @@ export const networks: { [network: string]: NetworkConfig } = {
                 token: "0xA0b04e9D8B883626769Ac23aF4fb019e34B944C4",
                 gateway: "0x75A33b43Af9d532da65750c01F5fAB3c3FC0b8F9",
             },
-            {
-                // testETH
-                symbol: "ETH",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-            {
-                // testDAI
-                symbol: "DAI",
-                decimals: 18,
-                token: "",
-                gateway: "",
-            },
-
             ...testnetTokens.filter((x) => x.origin.chain !== Chain.Goerli),
         ],
 

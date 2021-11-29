@@ -4,6 +4,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
     BasicBridge__factory,
+    ERC20,
     GatewayRegistryV2,
     GatewayRegistryV2__factory,
     LockGatewayProxyBeacon,
@@ -153,7 +154,7 @@ export const deployGatewaySol = async function (
         }
     );
     if (Ox(await signatureVerifier.owner()) !== Ox(governanceAddress)) {
-        console.log(`Transferring RenVMSignatureVerifier ownership to governance address.`);
+        logger.log(`Transferring RenVMSignatureVerifier ownership to governance address.`);
         await waitForTx(signatureVerifier.transferOwnership(governanceAddress));
     }
 
@@ -281,6 +282,21 @@ export const deployGatewaySol = async function (
         const totalSupply = typeof token === "object" ? token.totalSupply : undefined;
         let deployedToken = typeof token === "string" ? token : "";
         if (existingGateway === Ox0) {
+            // Check token symbol and decimals
+            if (token && typeof token === "string") {
+                const erc20 = await ethers.getContractAt<ERC20>("ERC20", token);
+                const erc20Symbol = await erc20.symbol();
+                if (erc20Symbol !== symbol && symbol !== "FTT") {
+                    console.error(`Expected ${token.slice(0, 10)}...'s symbol to be ${symbol}, got ${erc20Symbol}`);
+                }
+                const erc20Decimals = await erc20.decimals();
+                if (erc20Decimals !== decimals) {
+                    console.error(
+                        `Expected ${token.slice(0, 10)}...'s decimals to be ${decimals}, got ${erc20Decimals}`
+                    );
+                }
+            }
+
             if (typeof token !== "string") {
                 logger.log(`Deploying TestToken(${symbol}, ${decimals}, ${totalSupply})`);
                 const supply = new BigNumber(

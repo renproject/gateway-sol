@@ -56,7 +56,7 @@ contract BasicBridge is Context {
         }
 
         renAsset.safeTransferFrom(_msgSender(), address(this), amount);
-        registry.getMintGatewayBySymbol(symbol).burn(recipient, amount);
+        mintGateway.burn(recipient, amount);
     }
 
     function lock(

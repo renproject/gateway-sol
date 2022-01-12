@@ -1,5 +1,6 @@
 import BigNumber from "bignumber.js";
 import BN from "bn.js";
+import chalk from "chalk";
 import { randomBytes } from "crypto";
 import { BaseContract, ContractFactory, ContractTransaction } from "ethers";
 import { getAddress, keccak256 } from "ethers/lib/utils";
@@ -25,11 +26,13 @@ import { SyncOrPromise } from "@renproject/utils";
 
 import {
     AccessControlEnumerableUpgradeable,
+    ERC20,
     Ownable,
     RenProxyAdmin,
     TransparentUpgradeableProxy,
     TransparentUpgradeableProxy__factory,
 } from "../typechain";
+import { NetworkConfig, networks } from "./networks";
 
 export const Ox0 = "0x0000000000000000000000000000000000000000";
 export const CREATE2_DEPLOYER = "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf";
@@ -45,7 +48,7 @@ export const getContractAt =
     async <T extends BaseContract>(name: string, address: string) => {
         const { getNamedAccounts, ethers } = hre;
         const { deployer } = await getNamedAccounts();
-        await ethers.getContractAt<T>(name, address, deployer);
+        return await ethers.getContractAt<T>(name, address, deployer);
     };
 
 export const setupGetExistingDeployment =
@@ -246,15 +249,19 @@ export const setupDeployProxy =
         ////////////////////////////////////////////////////////////////////////
 
         if (!(await isInitialized(implementation))) {
+            logger.log(`Initializing ${contractName} instance (optional).`);
             await waitForTx(implementation[initializer](...constructorArgs));
         }
-        logger.log(`Initializing ${contractName} instance (optional).`);
 
         if (existingProxyDeployment) {
             logger.log(`Reusing ${proxyName} at ${existingProxyDeployment.address}`);
 
             proxy = existingProxyDeployment;
+            console.log("Calling proxyAdmin.getProxyImplementation");
+            console.log("proxyAdmin.address", proxyAdmin.address);
+            console.log("proxy.address", proxy.address);
             const currentImplementation = await proxyAdmin.getProxyImplementation(proxy.address);
+            console.log("currentImplementation", currentImplementation);
             logger.log(proxyName, "points to", currentImplementation);
             if (currentImplementation.toLowerCase() !== implementation.address.toLowerCase()) {
                 logger.log(
@@ -347,6 +354,51 @@ export const forwardBalance = async (hre: HardhatRuntimeEnvironment, to: string)
 };
 
 export const randomAddress = (): string => getAddress("0x" + randomBytes(20).toString("hex"));
+
+export const forwardTokens =
+    (hre: HardhatRuntimeEnvironment, config?: NetworkConfig, logger: ConsoleInterface = console) =>
+    async (to: string) => {
+        const { getNamedAccounts, ethers, network } = hre;
+
+        logger.log(`Deploying to ${network.name}...`);
+
+        const Ox = ethers.utils.getAddress;
+
+        config = config || networks[network.name as "hardhat"];
+        if (!config) {
+            throw new Error(`No network configuration found for ${network.name}!`);
+        }
+
+        const chainId: number = (await ethers.provider.getNetwork()).chainId;
+        const { deployer } = await getNamedAccounts();
+
+        const waitForTx = setupWaitForTx(logger);
+
+        // Test Tokens are deployed when a particular lock-asset doesn't exist on a
+        // testnet.
+        console.log(`Handling ${(config.lockGateways || []).length} lock assets.`);
+        for (const { symbol, gateway, token, decimals } of config.lockGateways || []) {
+            console.log(chalk.yellow(`Lock asset: ${symbol}`));
+            // Check token symbol and decimals
+            if (token && typeof token === "string") {
+                const erc20 = await ethers.getContractAt<ERC20>("ERC20", token);
+                const recipient = "0xFB87bCF203b78d9B67719b7EEa3b6B65A208961B";
+                const deployerBalance = new BigNumber((await erc20.balanceOf(deployer)).toString());
+                const recipientBalance = new BigNumber((await erc20.balanceOf(recipient)).toString());
+                const decimals = await erc20.decimals();
+                const amount = BigNumber.min(
+                    deployerBalance.dividedBy(10),
+                    new BigNumber(10000).shiftedBy(decimals)
+                ).minus(recipientBalance);
+                if (amount.isGreaterThan(0)) {
+                    console.log(`Transferring ${amount.shiftedBy(-decimals).toFixed()} ${symbol}`);
+                    await waitForTx(erc20.transfer(recipient, amount.toFixed()));
+                } else {
+                    console.log(`Skipping ${symbol}`);
+                }
+            }
+        }
+    };
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {};
 func.tags = [];

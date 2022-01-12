@@ -17,7 +17,7 @@ import {
 } from "./deploymentUtils";
 import { NetworkConfig, networks } from "./networks";
 
-export const deployGatewaySol = async function (
+export const deployProtocol = async function (
     hre: HardhatRuntimeEnvironment,
     config?: NetworkConfig,
     logger: ConsoleInterface = console
@@ -89,7 +89,7 @@ export const deployGatewaySol = async function (
 };
 
 export default async function func(env: HardhatRuntimeEnvironment): Promise<void | boolean> {
-    await deployGatewaySol(env);
+    await deployProtocol(env);
 }
 
 func.tags = ["Protocol", "GetOperatorDarknodes", "ClaimRewards"];

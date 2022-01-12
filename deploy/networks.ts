@@ -1,7 +1,7 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { randomAddress } from "./deploymentUtils";
+import { Ox } from "@renproject/utils";
 
 export enum Chain {
     Hardhat = "Hardhat",
@@ -294,8 +294,8 @@ const renvmDevnetConfig = {
 
 export const networks: { [network: string]: NetworkConfig } = {
     hardhat: {
-        mintAuthority: randomAddress(),
-        darknodeRegistry: randomAddress(),
+        mintAuthority: Ox(Buffer.from(new Array(20))),
+        darknodeRegistry: Ox(Buffer.from(new Array(20))),
         tokenPrefix: "dev",
         chainName: Chain.Hardhat,
 

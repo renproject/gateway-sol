@@ -1,6 +1,6 @@
 {
     "name": "@renproject/gateway-sol",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "repository": "https://github.io/renproject/gateway-sol",
     "public": true,
     "author": "renproject",
@@ -77,6 +77,6 @@
         "fork:node": "node ./config/_scripts.js fork:node",
         "fork:test": "node ./config/_scripts.js fork:test",
         "bindings:go": "solc-0.8.7 --optimize darknode-sol=`pwd`/node_modules/darknode-sol @openzeppelin/upgrades=`pwd`/node_modules/@openzeppelin/upgrades @openzeppelin/contracts=`pwd`/node_modules/@openzeppelin/contracts --combined-json bin,abi,userdoc,devdoc,metadata $(find src -type f -name '*.sol') > go-abi.json && abigen --alias status=status2 -pkg bindings --out bindings.go --combined-json go-abi.json; rm go-abi.json",
-	"prepare-release": "npmignore"
+        "prepare-release": "npmignore"
     }
 }

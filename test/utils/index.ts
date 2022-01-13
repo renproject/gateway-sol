@@ -11,7 +11,7 @@ import {
 import { MockChain, MockProvider } from "@renproject/mock-provider";
 import { RenVMProvider } from "@renproject/provider";
 import RenJS, { Gateway, GatewayTransaction } from "@renproject/ren";
-import { Ox } from "@renproject/utils";
+import { utils } from "@renproject/utils";
 
 import { deployGatewaySol } from "../../deploy/001_deploy_gateways";
 import {
@@ -36,11 +36,16 @@ export const LocalEthereumNetwork = (
     basicBridge: string
 ): EvmNetworkConfig => ({
     selector: selector,
-    asset: symbol,
+    nativeAsset: {
+        name: symbol,
+        symbol,
+        decimals: 18,
+    },
+    averageConfirmationTime: 1,
     isTestnet: true,
 
     network: {
-        chainId: Ox(networkID),
+        chainId: utils.Ox(networkID),
         chainName: "Hardhat",
         nativeCurrency: { name: "Hardhat Ether", symbol: symbol, decimals: 18 },
         rpcUrls: [""],
@@ -54,8 +59,8 @@ export const LocalEthereumNetwork = (
 });
 
 export const completeGateway = async (gateway: Gateway<any, any>, amount?: BigNumber) => {
-    for (const setupKey of Object.keys(gateway.setup)) {
-        const setup = gateway.setup[setupKey];
+    for (const setupKey of Object.keys(gateway.inSetup)) {
+        const setup = gateway.inSetup[setupKey];
         if (setup.submit) {
             await setup.submit();
         }
@@ -118,7 +123,7 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
         hre,
         {
             mintAuthority,
-            darknodeRegistry: Ox(Buffer.from(new Array(20))),
+            darknodeRegistry: utils.Ox(Buffer.from(new Array(20))),
             tokenPrefix: "dev",
             chainName: "Ethereum",
             mintGateways: [],
@@ -130,7 +135,7 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
         hre,
         {
             mintAuthority,
-            darknodeRegistry: Ox(Buffer.from(new Array(20))),
+            darknodeRegistry: utils.Ox(Buffer.from(new Array(20))),
             tokenPrefix: "dev",
             chainName: "BinanceSmartChain",
             mintGateways: [],
@@ -158,7 +163,10 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
     await bscGatewayRegistry.deployMintGatewayAndRenAsset("USDC", "renUSDC", "renUSDC", usdcDecimals, "1");
 
     // Set up mock Bitcoin chain.
-    const bitcoin = new MockChain("Bitcoin", "BTC");
+    const bitcoin = new MockChain({
+        chain: "Bitcoin",
+        asset: "BTC",
+    });
     mockRenVMProvider.registerChain(bitcoin);
 
     // Set up Ethereum network config.
@@ -174,7 +182,8 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
         ethGatewayRegistry.address,
         ethBasicBridge.address
     );
-    const ethereum = new Ethereum(ethereumNetwork, {
+    const ethereum = new Ethereum({
+        network: ethereumNetwork,
         provider: signer.provider as any,
         signer: (await ethers.getSigner(user)) as any,
     });
@@ -187,7 +196,8 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
         bscGatewayRegistry.address,
         bscBasicBridge.address
     );
-    const bsc = new BinanceSmartChain(bscNetwork, {
+    const bsc = new BinanceSmartChain({
+        network: bscNetwork,
         provider: signer.provider as any,
         signer: (await ethers.getSigner(user)) as any,
     });

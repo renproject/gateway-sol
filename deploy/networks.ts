@@ -1,7 +1,7 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { Ox } from "@renproject/utils";
+import { utils } from "@renproject/utils";
 
 export enum Chain {
     Hardhat = "Hardhat",
@@ -294,8 +294,8 @@ const renvmDevnetConfig = {
 
 export const networks: { [network: string]: NetworkConfig } = {
     hardhat: {
-        mintAuthority: Ox(Buffer.from(new Array(20))),
-        darknodeRegistry: Ox(Buffer.from(new Array(20))),
+        mintAuthority: "0x0000000000000000000000000000000000000001",
+        darknodeRegistry: "0x0000000000000000000000000000000000000002",
         tokenPrefix: "dev",
         chainName: Chain.Hardhat,
 

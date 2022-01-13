@@ -77,8 +77,11 @@ export const deployProtocol = async function (
 
     logger.log(chalk.yellow("Protocol"));
     const protocol = await create2<Protocol__factory>("Protocol", [renTimelock.address, [deployer]]);
+    logger.log(`Adding DarknodeRegistry to Protocol contract.`);
     await protocol.addContract("DarknodeRegistry", darknodeRegistry);
+    logger.log(`Adding ClaimRewards to Protocol contract.`);
     await protocol.addContract("ClaimRewards", claimRewards.address);
+    logger.log(`Adding GetOperatorDarknodes to Protocol contract.`);
     await protocol.addContract("GetOperatorDarknodes", getOperatorDarknodes.address);
 
     return {

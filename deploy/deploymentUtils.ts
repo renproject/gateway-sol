@@ -257,11 +257,7 @@ export const setupDeployProxy =
             logger.log(`Reusing ${proxyName} at ${existingProxyDeployment.address}`);
 
             proxy = existingProxyDeployment;
-            console.log("Calling proxyAdmin.getProxyImplementation");
-            console.log("proxyAdmin.address", proxyAdmin.address);
-            console.log("proxy.address", proxy.address);
             const currentImplementation = await proxyAdmin.getProxyImplementation(proxy.address);
-            console.log("currentImplementation", currentImplementation);
             logger.log(proxyName, "points to", currentImplementation);
             if (currentImplementation.toLowerCase() !== implementation.address.toLowerCase()) {
                 logger.log(

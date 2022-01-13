@@ -31,7 +31,7 @@ describe("Gateway Migration", () => {
         ethGatewayRegistry = ethGatewayRegistry.connect(await ethers.getSigner(deployer));
 
         const renBTC = (
-            await ethers.getContractAt<RenAssetV2>("RenAssetV2", await ethereum.getRenAsset("BTC"))
+            await ethers.getContractAt<RenAssetV2>("RenAssetV2", await ethereum.getMintAsset("BTC"))
         ).connect(await ethers.getSigner(deployer));
         const existingGateway = (
             await ethers.getContractAt<MintGatewayV3>(

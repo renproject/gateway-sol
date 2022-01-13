@@ -58,6 +58,10 @@ export const deployGatewaySol = async function (
     const chainId: number = (await ethers.provider.getNetwork()).chainId;
     const { deployer } = await getNamedAccounts();
 
+    if (Ox(mintAuthority) === Ox0) {
+        throw new Error(`Invalid empty mintAuthority.`);
+    }
+
     const create2 = setupCreate2(hre, create2SaltOverride, logger);
     const getExistingDeployment = setupGetExistingDeployment(hre);
     const waitForTx = setupWaitForTx(logger);
@@ -152,21 +156,16 @@ export const deployGatewaySol = async function (
                 RenVMSignatureVerifierV1["__RenVMSignatureVerifier_init"]
             >,
         },
-        async (signatureVerifier) => {
-            const currentMintAuthority = Ox(await signatureVerifier.getMintAuthority());
-            logger.log("currentMintAuthority", currentMintAuthority);
-            logger.log("mintAuthority", Ox(mintAuthority));
-            if (currentMintAuthority !== Ox(mintAuthority)) {
-                console.log("Returning false");
-                return false;
-            } else {
-                console.log("Returning true");
-                return true;
-            }
-        }
+        // isInitialized:
+        async (signatureVerifier) => Ox(await signatureVerifier.getMintAuthority()) === Ox(mintAuthority)
     );
-    if (Ox(await signatureVerifier.owner()) !== Ox(governanceAddress)) {
-        logger.log(`Transferring RenVMSignatureVerifier ownership to governance address.`);
+    const signatureVerifierOwner = Ox(await signatureVerifier.owner());
+    if (signatureVerifierOwner !== Ox(governanceAddress)) {
+        logger.log(
+            `Transferring RenVMSignatureVerifier ownership to governance address. (Was ${signatureVerifierOwner}, changing to ${Ox(
+                governanceAddress
+            )}) Deployer: ${deployer}.`
+        );
         await waitForTx(signatureVerifier.transferOwnership(governanceAddress));
     }
 

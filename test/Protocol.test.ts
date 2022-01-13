@@ -6,7 +6,7 @@ import { Protocol } from "../typechain";
 
 const setup = hre.deployments.createFixture(async () => {
     const { deployments, ethers } = hre;
-    await deployments.fixture("Protocol");
+    await deployments.fixture(["Protocol", "GetOperatorDarknodes"]);
 
     const protocol = await ethers.getContract<Protocol>("Protocol");
 

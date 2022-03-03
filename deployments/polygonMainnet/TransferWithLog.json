@@ -1,0 +1,108 @@
+{
+  "address": "0x41493d32036f5bf0eFfE94f259B2B0dC1B086A6e",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "LogTransferred",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "NAME",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address payable",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "transferWithLog",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x5eaf358b90c5072da20e42160617ac3ee2198e038088353bd975693fdc169316",
+  "receipt": {
+    "to": "0x2222229fb3318A6375FA78fd299A9a42aC6A8fbF",
+    "from": "0x000091178c828a9788f83Ab733Ff48fC1DA5Ba15",
+    "contractAddress": null,
+    "transactionIndex": 66,
+    "gasUsed": "199981",
+    "logsBloom": "0x00000000000000000000000000000008000000000000000000000000000002000000000000000000000000000000000000008000000020000000000000000000000000000000000000000000000000800000000000000000000100000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000001000000000000000000000004000000000000000000003000000000000000000001000000000100000000000000000000000000000000000000000000000000000000000000000000000100000",
+    "blockHash": "0x159ea5af718e1dbb171e6aaa29e68eb3934181207126f647fd3604abb31e4ab5",
+    "transactionHash": "0x5eaf358b90c5072da20e42160617ac3ee2198e038088353bd975693fdc169316",
+    "logs": [
+      {
+        "transactionIndex": 66,
+        "blockNumber": 21808926,
+        "transactionHash": "0x5eaf358b90c5072da20e42160617ac3ee2198e038088353bd975693fdc169316",
+        "address": "0x0000000000000000000000000000000000001010",
+        "topics": [
+          "0x4dfe1bbbcf077ddc3e01291eea2d5c70c2b422b415d95645b9adcfd678cb1d63",
+          "0x0000000000000000000000000000000000000000000000000000000000001010",
+          "0x000000000000000000000000000091178c828a9788f83ab733ff48fc1da5ba15",
+          "0x00000000000000000000000072f93a2740e00112d5f2cef404c0aa16fae21fa4"
+        ],
+        "data": "0x0000000000000000000000000000000000000000000000000015507326013c0000000000000000000000000000000000000000000000000074cf2e591fada1b400000000000000000000000000000000000000000000002e727bddd15419383b00000000000000000000000000000000000000000000000074b9dde5f9ac65b400000000000000000000000000000000000000000000002e72912e447a1a743b",
+        "logIndex": 622,
+        "blockHash": "0x159ea5af718e1dbb171e6aaa29e68eb3934181207126f647fd3604abb31e4ab5"
+      }
+    ],
+    "blockNumber": 21808926,
+    "cumulativeGasUsed": "19743839",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "solcInputHash": "5b6b2689ed9e6b3172aee736600c5c8e",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.7+commit.e28d00a7\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LogTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"NAME\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address payable\",\"name\":\"to\",\"type\":\"address\"}],\"name\":\"transferWithLog\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"TransferWithLog is a replacement for a standard ETH transfer, with an added log to make it easily searchable.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/TransferWithLog.sol\":\"TransferWithLog\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/utils/Context.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Provides information about the current execution context, including the\\n * sender of the transaction and its data. While these are generally available\\n * via msg.sender and msg.data, they should not be accessed in such a direct\\n * manner, since when dealing with meta-transactions the account sending and\\n * paying for execution may not be the actual sender (as far as an application\\n * is concerned).\\n *\\n * This contract is only required for intermediate, library-like contracts.\\n */\\nabstract contract Context {\\n    function _msgSender() internal view virtual returns (address) {\\n        return msg.sender;\\n    }\\n\\n    function _msgData() internal view virtual returns (bytes calldata) {\\n        return msg.data;\\n    }\\n}\\n\",\"keccak256\":\"0x90565a39ae45c80f0468dc96c7b20d0afc3055f344c8203a0c9258239f350b9f\",\"license\":\"MIT\"},\"src/TransferWithLog.sol\":{\"content\":\"// SPDX-License-Identifier: GPL-3.0\\n\\nimport {Context} from \\\"@openzeppelin/contracts/utils/Context.sol\\\";\\n\\n// solhint-disable-next-line\\npragma solidity ^0.8.0;\\n\\n/// TransferWithLog is a replacement for a standard ETH transfer, with an added\\n/// log to make it easily searchable.\\ncontract TransferWithLog is Context {\\n    string public constant NAME = \\\"TransferWithLog\\\";\\n\\n    event LogTransferred(address indexed from, address indexed to, uint256 amount);\\n\\n    function transferWithLog(address payable to) external payable {\\n        require(to != address(0x0), \\\"TransferWithLog: invalid empty recipient\\\");\\n        uint256 amount = msg.value;\\n        // `call` is used instead of `transfer` or `send` to avoid a hard-coded\\n        // gas limit.\\n        // See https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now/\\n        (bool sent, ) = to.call{value: amount}(\\\"\\\");\\n        require(sent, \\\"TransferWithLog: transfer failed\\\");\\n        emit LogTransferred(_msgSender(), to, amount);\\n    }\\n}\\n\",\"keccak256\":\"0xfd5b7b6f94c893f450cb37be4fcf2a4a05d9bf8a5096074d0dde21542658767c\",\"license\":\"GPL-3.0\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b506102a3806100206000396000f3fe6080604052600436106100295760003560e01c8063a3f4df7e1461002e578063f36594921461007f575b600080fd5b34801561003a57600080fd5b506100696040518060400160405280600f81526020016e5472616e73666572576974684c6f6760881b81525081565b6040516100769190610218565b60405180910390f35b61009261008d3660046101e8565b610094565b005b6001600160a01b0381166101005760405162461bcd60e51b815260206004820152602860248201527f5472616e73666572576974684c6f673a20696e76616c696420656d70747920726044820152671958da5c1a595b9d60c21b60648201526084015b60405180910390fd5b60405134906000906001600160a01b0384169083908381818185875af1925050503d806000811461014d576040519150601f19603f3d011682016040523d82523d6000602084013e610152565b606091505b50509050806101a35760405162461bcd60e51b815260206004820181905260248201527f5472616e73666572576974684c6f673a207472616e73666572206661696c656460448201526064016100f7565b6040518281526001600160a01b0384169033907f488b94843be4f0df500bd7d8c10ae80f778d8f4943c7a72df6a74b5b142a2ed99060200160405180910390a3505050565b6000602082840312156101fa57600080fd5b81356001600160a01b038116811461021157600080fd5b9392505050565b600060208083528351808285015260005b8181101561024557858101830151858201604001528201610229565b81811115610257576000604083870101525b50601f01601f191692909201604001939250505056fea26469706673582212201d683c5f406cbeba2b5c6500be9ecebcf3cefb4a65c19df64b683cf8a8a8fcd164736f6c63430008070033",
+  "deployedBytecode": "0x6080604052600436106100295760003560e01c8063a3f4df7e1461002e578063f36594921461007f575b600080fd5b34801561003a57600080fd5b506100696040518060400160405280600f81526020016e5472616e73666572576974684c6f6760881b81525081565b6040516100769190610218565b60405180910390f35b61009261008d3660046101e8565b610094565b005b6001600160a01b0381166101005760405162461bcd60e51b815260206004820152602860248201527f5472616e73666572576974684c6f673a20696e76616c696420656d70747920726044820152671958da5c1a595b9d60c21b60648201526084015b60405180910390fd5b60405134906000906001600160a01b0384169083908381818185875af1925050503d806000811461014d576040519150601f19603f3d011682016040523d82523d6000602084013e610152565b606091505b50509050806101a35760405162461bcd60e51b815260206004820181905260248201527f5472616e73666572576974684c6f673a207472616e73666572206661696c656460448201526064016100f7565b6040518281526001600160a01b0384169033907f488b94843be4f0df500bd7d8c10ae80f778d8f4943c7a72df6a74b5b142a2ed99060200160405180910390a3505050565b6000602082840312156101fa57600080fd5b81356001600160a01b038116811461021157600080fd5b9392505050565b600060208083528351808285015260005b8181101561024557858101830151858201604001528201610229565b81811115610257576000604083870101525b50601f01601f191692909201604001939250505056fea26469706673582212201d683c5f406cbeba2b5c6500be9ecebcf3cefb4a65c19df64b683cf8a8a8fcd164736f6c63430008070033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "notice": "TransferWithLog is a replacement for a standard ETH transfer, with an added log to make it easily searchable.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}

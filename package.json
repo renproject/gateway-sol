@@ -6,8 +6,8 @@
     "author": "renproject",
     "license": "GPL-3.0",
     "dependencies": {
-        "@openzeppelin/contracts": "^4.3.3",
-        "@openzeppelin/contracts-upgradeable": "^4.3.3"
+        "@openzeppelin/contracts": "4.3.3",
+        "@openzeppelin/contracts-upgradeable": "4.3.3"
     },
     "devDependencies": {
         "@ethersproject/hardware-wallets": "^5.5.0",

@@ -14,6 +14,7 @@ export enum Chain {
     Avalanche = "Avalanche",
     Arbitrum = "Arbitrum",
     Moonbeam = "Moonbeam",
+    Kava = "Kava",
 }
 
 export interface NetworkConfig {
@@ -279,6 +280,11 @@ export const testnetTokens = [
         symbol: "GLMR",
         decimals: 18,
         origin: { chain: Chain.Moonbeam },
+    },
+    {
+        symbol: "KAVA",
+        decimals: 6,
+        origin: { chain: Chain.Kava },
     },
 ];
 
@@ -1517,6 +1523,60 @@ export const networks: { [network: string]: NetworkConfig } = {
         lockGateways: [
             ...mainnetTokens
                 .filter((x) => x.origin.chain === Chain.Moonbeam && x.origin.token)
+                .map((x) => ({
+                    symbol: x.symbol,
+                    decimals: x.decimals,
+                    token: x.origin.token,
+                })),
+        ],
+    },
+
+    kavaTestnet: {
+        ...renvmTestnetConfig,
+        chainName: Chain.Kava,
+
+        mintGateways: [
+            {
+                // testBTC
+                symbol: "BTC",
+                decimals: 8,
+            },
+            {
+                // testZEC
+                symbol: "ZEC",
+                decimals: 8,
+            },
+            {
+                // testBCH
+                symbol: "BCH",
+                decimals: 8,
+            },
+            {
+                // testDGB
+                symbol: "DGB",
+                decimals: 8,
+            },
+            {
+                // testDOGE
+                symbol: "DOGE",
+                decimals: 8,
+            },
+            {
+                // testFIL
+                symbol: "FIL",
+                decimals: 18,
+            },
+            {
+                // testLUNA
+                symbol: "LUNA",
+                decimals: 6,
+            },
+            ...testnetTokens.filter((x) => x.origin.chain !== Chain.Kava),
+        ],
+
+        lockGateways: [
+            ...testnetTokens
+                .filter((x) => x.origin.chain === Chain.Kava && x.origin.token)
                 .map((x) => ({
                     symbol: x.symbol,
                     decimals: x.decimals,

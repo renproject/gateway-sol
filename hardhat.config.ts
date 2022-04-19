@@ -149,6 +149,26 @@ const config: HardhatUserConfig = {
             },
             gasPrice: 2000000000,
         },
+        
+        moonbeamTestnet: {
+            url: `https://rpc.testnet.moonbeam.network`,
+            accounts: {
+                mnemonic: MNEMONIC_TESTNET,
+            },
+        },
+        moonbeamMainnet: {
+            url: `https://rpc.api.moonbeam.network`,
+            accounts: {
+                mnemonic: MNEMONIC_MAINNET,
+            },
+        },
+
+        kavaTestnet: {
+            url: `https://evm.evm-alpha.kava.io`,
+            accounts: {
+                mnemonic: MNEMONIC_TESTNET,
+            },
+        },
     },
     deterministicDeployment: (network: string) => {
         // Skip on hardhat's local network.

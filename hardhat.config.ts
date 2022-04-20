@@ -151,7 +151,7 @@ const config: HardhatUserConfig = {
         },
         
         moonbeamTestnet: {
-            url: `https://rpc.testnet.moonbeam.network`,
+            url: `https://rpc.api.moonbase.moonbeam.network`,
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },

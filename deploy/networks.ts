@@ -37,6 +37,7 @@ export interface NetworkConfig {
         token?: string | { totalSupply: string };
         gateway?: string;
         decimals: number;
+        version?: string;
     }>;
 }
 
@@ -284,8 +285,9 @@ export const testnetTokens = [
     },
     {
         symbol: "KAVA",
-        decimals: 6,
+        decimals: 18,
         origin: { chain: Chain.Kava },
+        version: "2",
     },
 ];
 

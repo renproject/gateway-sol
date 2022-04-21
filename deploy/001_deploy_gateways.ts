@@ -320,7 +320,7 @@ export const deployGatewaySol = async function (
     // Test Tokens are deployed when a particular lock-asset doesn't exist on a
     // testnet.
     logger.log(`Handling ${(config.lockGateways || []).length} lock assets.`);
-    for (const { symbol, gateway, token, decimals } of config.lockGateways || []) {
+    for (const { symbol, gateway, token, decimals, version } of config.lockGateways || []) {
         logger.log(chalk.yellow(`Lock asset: ${symbol}`));
         const existingGateway = Ox(await gatewayRegistry.getLockGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getLockAssetBySymbol(symbol));
@@ -358,8 +358,8 @@ export const deployGatewaySol = async function (
             }
 
             if (!gateway) {
-                logger.log(`Calling deployLockGateway(${symbol}, ${deployedToken}, '1')`);
-                await waitForTx(gatewayRegistry.deployLockGateway(symbol, deployedToken, "1"));
+                logger.log(`Calling deployLockGateway(${symbol}, ${deployedToken}, '${version || "1"}')`);
+                await waitForTx(gatewayRegistry.deployLockGateway(symbol, deployedToken, version || "1"));
             } else {
                 logger.log(`Calling addLockGateway(${symbol}, ${deployedToken}, ${gateway})`);
                 await waitForTx(gatewayRegistry.addLockGateway(symbol, deployedToken, gateway));

@@ -9,7 +9,7 @@ import "@openzeppelin/hardhat-upgrades";
 
 import { HardhatUserConfig } from "hardhat/types";
 
-import { accounts, node_url } from "./utils/network";
+import { accounts, node_url } from "./scripts/utils/network";
 
 // While waiting for hardhat PR: https://github.com/nomiclabs/hardhat/pull/1542
 if (process.env.HARDHAT_FORK) {

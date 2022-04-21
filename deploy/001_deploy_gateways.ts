@@ -267,7 +267,7 @@ export const deployGatewaySol = async function (
 
     logger.log(`Handling ${(config.mintGateways || []).length} mint assets.`);
     const prefix = config.tokenPrefix;
-    for (const { symbol, gateway, token, decimals } of config.mintGateways) {
+    for (const { symbol, gateway, token, decimals, version } of config.mintGateways) {
         logger.log(chalk.yellow(`Mint asset: ${symbol}`));
         const existingGateway = Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getRenAssetBySymbol(symbol));
@@ -278,7 +278,13 @@ export const deployGatewaySol = async function (
                     `Calling deployMintGatewayAndRenAsset(${symbol}, ${prefixedSymbol}, ${prefixedSymbol}, ${decimals}, '1')`
                 );
                 await waitForTx(
-                    gatewayRegistry.deployMintGatewayAndRenAsset(symbol, prefixedSymbol, prefixedSymbol, decimals, "1")
+                    gatewayRegistry.deployMintGatewayAndRenAsset(
+                        symbol,
+                        prefixedSymbol,
+                        prefixedSymbol,
+                        decimals,
+                        version || "1"
+                    )
                 );
             } else if (!gateway) {
                 logger.log(`Calling deployMintGateway(${symbol}, ${token}, '1')`);

@@ -34,11 +34,8 @@ contract BasicBridge is Context {
         IERC20 renAsset = registry.getRenAssetBySymbol(symbol);
         IMintGateway mintGateway = registry.getMintGatewayBySymbol(symbol);
 
-        if (address(renAsset) == address(0x0)) {
+        if (address(renAsset) == address(0x0) || address(mintGateway) == address(0x0)) {
             revert(string(abi.encodePacked("BasicBridge: unknown asset ", symbol)));
-        }
-        if (address(mintGateway) != address(0x0)) {
-            string(abi.encodePacked("BasicBridge: unknown asset ", symbol));
         }
 
         bytes32 payloadHash = keccak256(abi.encode(symbol, recipient));
@@ -54,15 +51,12 @@ contract BasicBridge is Context {
         IERC20 renAsset = registry.getRenAssetBySymbol(symbol);
         IMintGateway mintGateway = registry.getMintGatewayBySymbol(symbol);
 
-        if (address(renAsset) == address(0x0)) {
+        if (address(renAsset) == address(0x0) || address(mintGateway) == address(0x0)) {
             revert(string(abi.encodePacked("BasicBridge: unknown asset ", symbol)));
-        }
-        if (address(mintGateway) != address(0x0)) {
-            string(abi.encodePacked("BasicBridge: unknown asset ", symbol));
         }
 
         renAsset.safeTransferFrom(_msgSender(), address(this), amount);
-        registry.getMintGatewayBySymbol(symbol).burn(recipient, amount);
+        mintGateway.burn(recipient, amount);
     }
 
     function lock(
@@ -75,11 +69,8 @@ contract BasicBridge is Context {
         IERC20 lockAsset = registry.getLockAssetBySymbol(symbol);
         ILockGateway lockGateway = registry.getLockGatewayBySymbol(symbol);
 
-        if (address(lockAsset) == address(0x0)) {
+        if (address(lockAsset) == address(0x0) || address(lockGateway) == address(0x0)) {
             revert(string(abi.encodePacked("BasicBridge: unknown asset ", symbol)));
-        }
-        if (address(lockGateway) != address(0x0)) {
-            string(abi.encodePacked("BasicBridge: unknown asset ", symbol));
         }
 
         lockAsset.safeTransferFrom(_msgSender(), address(this), amount);
@@ -99,11 +90,8 @@ contract BasicBridge is Context {
         IERC20 lockAsset = registry.getLockAssetBySymbol(symbol);
         ILockGateway lockGateway = registry.getLockGatewayBySymbol(symbol);
 
-        if (address(lockAsset) == address(0x0)) {
+        if (address(lockAsset) == address(0x0) || address(lockGateway) == address(0x0)) {
             revert(string(abi.encodePacked("BasicBridge: unknown asset ", symbol)));
-        }
-        if (address(lockGateway) != address(0x0)) {
-            string(abi.encodePacked("BasicBridge: unknown asset ", symbol));
         }
 
         bytes32 payloadHash = keccak256(abi.encode(symbol, recipient));

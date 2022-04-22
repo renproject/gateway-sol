@@ -62,7 +62,7 @@ As a standard lifecycle npm script, it is executed automatically upon install. I
 
 `yarn lint`, `yarn lint:fix`, `yarn format` and `yarn format:fix`
 
-These will lint and format check your code. the `:fix` version will modifiy the files to match the requirement specified in `.eslintrc` and `.prettierrc.`
+These will lint and format check your code. the `:fix` version will modifiy the files to match the requirement specified in `.eslintrc` and and the prettier config in `package.json`
 <br/><br/>
 
 `yarn compile`

@@ -1,13 +1,13 @@
 {
     "name": "@renproject/gateway-sol",
-    "version": "2.0.1",
+    "version": "2.0.3",
     "repository": "https://github.io/renproject/gateway-sol",
     "public": true,
     "author": "renproject",
     "license": "GPL-3.0",
     "dependencies": {
-        "@openzeppelin/contracts": "^4.3.3",
-        "@openzeppelin/contracts-upgradeable": "^4.3.3"
+        "@openzeppelin/contracts": "4.3.3",
+        "@openzeppelin/contracts-upgradeable": "4.3.3"
     },
     "devDependencies": {
         "@ethersproject/hardware-wallets": "^5.5.0",
@@ -78,5 +78,22 @@
         "fork:test": "node ./config/_scripts.js fork:test",
         "bindings:go": "solc-0.8.7 --optimize darknode-sol=`pwd`/node_modules/darknode-sol @openzeppelin/upgrades=`pwd`/node_modules/@openzeppelin/upgrades @openzeppelin/contracts=`pwd`/node_modules/@openzeppelin/contracts --combined-json bin,abi,userdoc,devdoc,metadata $(find src -type f -name '*.sol') > go-abi.json && abigen --alias status=status2 -pkg bindings --out bindings.go --combined-json go-abi.json; rm go-abi.json",
         "prepare-release": "npmignore"
+    },
+    "prettier": {
+        "printWidth": 120,
+        "tabWidth": 4,
+        "singleQuote": false,
+        "explicitTypes": "always",
+        "overrides": [
+            {
+                "files": "*.sol",
+                "options": {
+                    "printWidth": 120,
+                    "tabWidth": 4,
+                    "singleQuote": false,
+                    "explicitTypes": "always"
+                }
+            }
+        ]
     }
 }

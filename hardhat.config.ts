@@ -9,21 +9,17 @@ import "@openzeppelin/hardhat-upgrades";
 
 import { HardhatUserConfig } from "hardhat/types";
 
-import { accounts, node_url } from "./utils/network";
+import { accounts, node_url } from "./scripts/utils/network";
 
 // While waiting for hardhat PR: https://github.com/nomiclabs/hardhat/pull/1542
 if (process.env.HARDHAT_FORK) {
     process.env["HARDHAT_DEPLOY_FORK"] = process.env.HARDHAT_FORK;
 }
 
-const MNEMONIC_DEVNET = process.env.MNEMONIC_DEVNET || process.env.MNEMONIC;
-const MNEMONIC_TESTNET = process.env.MNEMONIC_TESTNET || process.env.MNEMONIC;
-const MNEMONIC_MAINNET = process.env.MNEMONIC_MAINNET || process.env.MNEMONIC;
+const MNEMONIC_DEVNET = process.env.MNEMONIC_DEVNET || process.env.MNEMONIC || "";
+const MNEMONIC_TESTNET = process.env.MNEMONIC_TESTNET || process.env.MNEMONIC || "";
+const MNEMONIC_MAINNET = process.env.MNEMONIC_MAINNET || process.env.MNEMONIC || "";
 const INFURA_KEY = process.env.INFURA_KEY || "";
-
-if (!MNEMONIC_DEVNET || !MNEMONIC_TESTNET || !MNEMONIC_MAINNET) {
-    throw new Error(`Must set MNEMONIC environment variable.`);
-}
 
 const config: HardhatUserConfig = {
     solidity: {

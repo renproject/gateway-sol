@@ -27,6 +27,7 @@ export interface NetworkConfig {
         decimals: number;
         token?: string;
         gateway?: string;
+        version?: string;
     }>;
 
     lockGateways?: Array<{

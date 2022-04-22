@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
 import chalk from "chalk";
 import { Contract } from "ethers";
+import { keccak256 } from "ethers/lib/utils";
 import { deployments } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
@@ -12,8 +13,10 @@ import {
     GatewayRegistryV2__factory,
     LockGatewayProxyBeacon,
     LockGatewayProxyBeacon__factory,
+    LockGatewayV3,
     MintGatewayProxyBeacon,
     MintGatewayProxyBeacon__factory,
+    MintGatewayV3,
     RenAssetProxyBeacon,
     RenAssetProxyBeacon__factory,
     RenAssetV2,
@@ -267,7 +270,7 @@ export const deployGatewaySol = async function (
 
     logger.log(`Handling ${(config.mintGateways || []).length} mint assets.`);
     const prefix = config.tokenPrefix;
-    for (const { symbol, gateway, token, decimals } of config.mintGateways) {
+    for (const { symbol, gateway, token, decimals, version } of config.mintGateways) {
         logger.log(chalk.yellow(`Mint asset: ${symbol}`));
         const existingGateway = Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getRenAssetBySymbol(symbol));
@@ -278,7 +281,13 @@ export const deployGatewaySol = async function (
                     `Calling deployMintGatewayAndRenAsset(${symbol}, ${prefixedSymbol}, ${prefixedSymbol}, ${decimals}, '1')`
                 );
                 await waitForTx(
-                    gatewayRegistry.deployMintGatewayAndRenAsset(symbol, prefixedSymbol, prefixedSymbol, decimals, "1")
+                    gatewayRegistry.deployMintGatewayAndRenAsset(
+                        symbol,
+                        prefixedSymbol,
+                        prefixedSymbol,
+                        decimals,
+                        version || "1"
+                    )
                 );
             } else if (!gateway) {
                 logger.log(`Calling deployMintGateway(${symbol}, ${token}, '1')`);
@@ -307,6 +316,26 @@ export const deployGatewaySol = async function (
             address: updatedToken,
             metadata: beaconDeployment.metadata && beaconDeployment.metadata.replace("BeaconProxy", tokenLabel),
         });
+
+        // Update signature verifier.
+        const gatewayInstance = await getContractAt(hre)<MintGatewayV3>("MintGatewayV3", updatedGateway);
+        const existingSignatureVerifier = Ox(await gatewayInstance.getSignatureVerifier());
+        if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
+            logger.log(
+                `Updating signature verifier in the ${symbol} mint gateway. Was ${existingSignatureVerifier}, updating to ${Ox(
+                    signatureVerifier.address
+                )}.`
+            );
+            await waitForTx(gatewayInstance.updateSignatureVerifier(signatureVerifier.address));
+        }
+
+        // Update selector hash, by updating symbol.
+        const expectedSelectorHash = keccak256(
+            Buffer.concat([Buffer.from(symbol), Buffer.from("/to"), Buffer.from(chainName)])
+        );
+        if (expectedSelectorHash !== (await gatewayInstance.getSelectorHash())) {
+            await gatewayInstance.updateAsset(symbol);
+        }
     }
 
     // Test Tokens are deployed when a particular lock-asset doesn't exist on a
@@ -367,6 +396,26 @@ export const deployGatewaySol = async function (
             address: updatedGateway,
             metadata: beaconDeployment.metadata && beaconDeployment.metadata.replace("BeaconProxy", gatewayLabel),
         });
+
+        // Update signature verifier.
+        const gatewayInstance = await getContractAt(hre)<LockGatewayV3>("LockGatewayV3", updatedGateway);
+        const existingSignatureVerifier = Ox(await gatewayInstance.getSignatureVerifier());
+        if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
+            logger.log(
+                `Updating signature verifier in the ${symbol} lock gateway. Was ${existingSignatureVerifier}, updating to ${Ox(
+                    signatureVerifier.address
+                )}.`
+            );
+            await waitForTx(gatewayInstance.updateSignatureVerifier(signatureVerifier.address));
+        }
+
+        // Update selector hash, by updating symbol.
+        const expectedSelectorHash = keccak256(
+            Buffer.concat([Buffer.from(symbol), Buffer.from("/to"), Buffer.from(chainName)])
+        );
+        if (expectedSelectorHash !== (await gatewayInstance.getSelectorHash())) {
+            await gatewayInstance.updateAsset(symbol);
+        }
     }
 
     // await gatewayRegistry.deployMintGatewayAndRenAsset(

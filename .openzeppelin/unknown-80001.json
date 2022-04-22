@@ -147,31 +147,31 @@
           {
             "contract": "RenAssetFactoryState",
             "label": "_renAssetProxyBeacon",
-            "type": "t_contract(RenAssetProxyBeacon)9180",
+            "type": "t_contract(RenAssetProxyBeacon)9983",
             "src": "src/GatewayRegistry/RenAssetFactory.sol:17"
           },
           {
             "contract": "RenAssetFactoryState",
             "label": "_mintGatewayProxyBeacon",
-            "type": "t_contract(MintGatewayProxyBeacon)9198",
+            "type": "t_contract(MintGatewayProxyBeacon)10001",
             "src": "src/GatewayRegistry/RenAssetFactory.sol:18"
           },
           {
             "contract": "RenAssetFactoryState",
             "label": "_lockGatewayProxyBeacon",
-            "type": "t_contract(LockGatewayProxyBeacon)9216",
+            "type": "t_contract(LockGatewayProxyBeacon)10019",
             "src": "src/GatewayRegistry/RenAssetFactory.sol:19"
           },
           {
             "contract": "GatewayRegistryStateV2",
             "label": "mintGatewaySymbols",
-            "type": "t_struct(Set)11924_storage",
+            "type": "t_struct(Set)13090_storage",
             "src": "src/GatewayRegistry/GatewayRegistry.sol:26"
           },
           {
             "contract": "GatewayRegistryStateV2",
             "label": "lockGatewaySymbols",
-            "type": "t_struct(Set)11924_storage",
+            "type": "t_struct(Set)13090_storage",
             "src": "src/GatewayRegistry/GatewayRegistry.sol:27"
           },
           {
@@ -183,7 +183,7 @@
           {
             "contract": "GatewayRegistryStateV2",
             "label": "mintGatewayDetailsBySymbol",
-            "type": "t_mapping(t_string_memory_ptr,t_struct(GatewayDetails)7945_storage)",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(GatewayDetails)8748_storage)",
             "src": "src/GatewayRegistry/GatewayRegistry.sol:30"
           },
           {
@@ -195,7 +195,7 @@
           {
             "contract": "GatewayRegistryStateV2",
             "label": "lockGatewayDetailsBySymbol",
-            "type": "t_mapping(t_string_memory_ptr,t_struct(GatewayDetails)7945_storage)",
+            "type": "t_mapping(t_string_memory_ptr,t_struct(GatewayDetails)8748_storage)",
             "src": "src/GatewayRegistry/GatewayRegistry.sol:33"
           },
           {
@@ -224,7 +224,7 @@
           }
         ],
         "types": {
-          "t_struct(Set)11924_storage": {
+          "t_struct(Set)13090_storage": {
             "label": "struct StringSet.Set",
             "members": [
               {
@@ -255,10 +255,10 @@
           "t_address": {
             "label": "address"
           },
-          "t_mapping(t_string_memory_ptr,t_struct(GatewayDetails)7945_storage)": {
+          "t_mapping(t_string_memory_ptr,t_struct(GatewayDetails)8748_storage)": {
             "label": "mapping(string => struct GatewayRegistryStateV2.GatewayDetails)"
           },
-          "t_struct(GatewayDetails)7945_storage": {
+          "t_struct(GatewayDetails)8748_storage": {
             "label": "struct GatewayRegistryStateV2.GatewayDetails",
             "members": [
               {
@@ -274,13 +274,13 @@
           "t_array(t_uint256)39_storage": {
             "label": "uint256[39]"
           },
-          "t_contract(RenAssetProxyBeacon)9180": {
+          "t_contract(RenAssetProxyBeacon)9983": {
             "label": "contract RenAssetProxyBeacon"
           },
-          "t_contract(MintGatewayProxyBeacon)9198": {
+          "t_contract(MintGatewayProxyBeacon)10001": {
             "label": "contract MintGatewayProxyBeacon"
           },
-          "t_contract(LockGatewayProxyBeacon)9216": {
+          "t_contract(LockGatewayProxyBeacon)10019": {
             "label": "contract LockGatewayProxyBeacon"
           },
           "t_mapping(t_bytes32,t_struct(AddressSet)3125_storage)": {

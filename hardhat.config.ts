@@ -85,7 +85,7 @@ const config: HardhatUserConfig = {
             // gasPrice: 10 * 1e9,
         },
         polygonTestnet: {
-            url: `https://rpc-mumbai.maticvigil.com/`,
+            url: `https://matic-mumbai.chainstacklabs.com/`,
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },

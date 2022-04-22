@@ -287,7 +287,6 @@ export const testnetTokens = [
         symbol: "KAVA",
         decimals: 18,
         origin: { chain: Chain.Kava },
-        version: "2",
     },
 ];
 

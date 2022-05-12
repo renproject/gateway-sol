@@ -15,6 +15,7 @@ export enum Chain {
     Arbitrum = "Arbitrum",
     Moonbeam = "Moonbeam",
     Kava = "Kava",
+    Optimism = "Optimism",
 }
 
 export interface NetworkConfig {
@@ -287,6 +288,11 @@ export const testnetTokens = [
         symbol: "KAVA",
         decimals: 18,
         origin: { chain: Chain.Kava },
+    },
+    {
+        symbol: "oETH",
+        decimals: 18,
+        origin: { chain: Chain.Optimism },
     },
 ];
 
@@ -1579,6 +1585,120 @@ export const networks: { [network: string]: NetworkConfig } = {
         lockGateways: [
             ...testnetTokens
                 .filter((x) => x.origin.chain === Chain.Kava && x.origin.token)
+                .map((x) => ({
+                    symbol: x.symbol,
+                    decimals: x.decimals,
+                    token: x.origin.token,
+                })),
+        ],
+    },
+
+    optimismTestnet: {
+        ...renvmTestnetConfig,
+        chainName: Chain.Optimism,
+
+        mintGateways: [
+            {
+                // testBTC
+                symbol: "BTC",
+                decimals: 8,
+            },
+            {
+                // testZEC
+                symbol: "ZEC",
+                decimals: 8,
+            },
+            {
+                // testBCH
+                symbol: "BCH",
+                decimals: 8,
+            },
+            {
+                // testDGB
+                symbol: "DGB",
+                decimals: 8,
+            },
+            {
+                // testDOGE
+                symbol: "DOGE",
+                decimals: 8,
+            },
+            {
+                // testFIL
+                symbol: "FIL",
+                decimals: 18,
+            },
+            {
+                // testLUNA
+                symbol: "LUNA",
+                decimals: 6,
+            },
+            ...testnetTokens.filter((x) => x.origin.chain !== Chain.Optimism),
+        ],
+
+        lockGateways: [
+            ...testnetTokens
+                .filter((x) => x.origin.chain === Chain.Optimism && x.origin.token)
+                .map((x) => ({
+                    symbol: x.symbol,
+                    decimals: x.decimals,
+                    token: x.origin.token,
+                })),
+        ],
+    },
+
+    optimismMainnet: {
+        chainName: Chain.Optimism,
+        ...renvmMainnetConfig,
+
+        mintGateways: [
+            {
+                // renBTC
+                symbol: "BTC",
+                decimals: 8,
+            },
+
+            {
+                // renZEC
+                symbol: "ZEC",
+                decimals: 8,
+            },
+
+            {
+                // renBCH
+                symbol: "BCH",
+                decimals: 8,
+            },
+
+            {
+                // renFIL
+                symbol: "FIL",
+                decimals: 18,
+            },
+
+            {
+                // renDGB
+                symbol: "DGB",
+                decimals: 8,
+            },
+
+            {
+                // renDOGE
+                symbol: "DOGE",
+                decimals: 8,
+            },
+
+            {
+                // renLUNA
+                symbol: "LUNA",
+                decimals: 6,
+            },
+            ...mainnetTokens.filter((x) => x.origin.chain !== Chain.Optimism),
+        ],
+
+        lockGateways: [
+            ...mainnetTokens
+                .filter((x) => x.origin.chain === Chain.Optimism && x.origin.token)
                 .map((x) => ({
                     symbol: x.symbol,
                     decimals: x.decimals,

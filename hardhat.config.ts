@@ -165,6 +165,13 @@ const config: HardhatUserConfig = {
                 mnemonic: MNEMONIC_TESTNET,
             },
         },
+
+        optimismTestnet: {
+            url: `https://kovan.optimism.io`,
+            accounts: {
+                mnemonic: MNEMONIC_TESTNET,
+            },
+        },
     },
     deterministicDeployment: (network: string) => {
         // Skip on hardhat's local network.

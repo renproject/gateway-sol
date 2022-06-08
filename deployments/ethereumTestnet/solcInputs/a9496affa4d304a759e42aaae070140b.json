@@ -1,0 +1,35 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "src/Protocol/GetOperatorDarknodes.sol": {
+      "content": "// SPDX-License-Identifier: GPL-3.0\n\npragma solidity ^0.8.7;\n\ninterface IDarknodeRegistry {\n    function numDarknodes() external view returns (uint256);\n\n    function getDarknodes(address _start, uint256 _count) external view returns (address[] memory);\n\n    function getDarknodeOperator(address _darknodeID) external view returns (address payable);\n}\n\ncontract GetOperatorDarknodes {\n    IDarknodeRegistry public darknodeRegistry;\n\n    constructor(address darknodeRegistry_) {\n        darknodeRegistry = IDarknodeRegistry(darknodeRegistry_);\n    }\n\n    function getOperatorDarknodes(address _operator) public view returns (address[] memory) {\n        uint256 numDarknodes = darknodeRegistry.numDarknodes();\n        address[] memory nodesPadded = new address[](numDarknodes);\n\n        address[] memory allNodes = darknodeRegistry.getDarknodes(address(0), 0);\n\n        uint256 j = 0;\n        for (uint256 i = 0; i < allNodes.length; i++) {\n            if (darknodeRegistry.getDarknodeOperator(allNodes[i]) == _operator) {\n                nodesPadded[j] = (allNodes[i]);\n                j++;\n            }\n        }\n\n        address[] memory nodes = new address[](j);\n        for (uint256 i = 0; i < j; i++) {\n            nodes[i] = nodesPadded[i];\n        }\n\n        return nodes;\n    }\n}\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}

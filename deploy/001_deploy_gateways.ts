@@ -48,8 +48,6 @@ export const deployGatewaySol = async function (
 ) {
     const { getNamedAccounts, ethers, network } = hre;
 
-    logger.log(`Deploying to ${network.name}...`);
-
     const Ox = ethers.utils.getAddress;
 
     config = config || networks[network.name as "hardhat"];
@@ -60,6 +58,8 @@ export const deployGatewaySol = async function (
     const { mintAuthority, chainName, create2SaltOverride } = config;
     const chainId: number = (await ethers.provider.getNetwork()).chainId;
     const { deployer } = await getNamedAccounts();
+
+    logger.log(`Deploying to ${network.name} from ${deployer}...`);
 
     if (Ox(mintAuthority) === Ox0) {
         throw new Error(`Invalid empty mintAuthority.`);
@@ -309,14 +309,18 @@ export const deployGatewaySol = async function (
         await deployments.save(gatewayLabel, {
             ...beaconDeployment,
             address: updatedGateway,
-            metadata: beaconDeployment.metadata && beaconDeployment.metadata.replace("BeaconProxy", gatewayLabel),
+            metadata:
+                beaconDeployment.metadata &&
+                beaconDeployment.metadata.replace(/contract BeaconProxy is/g, `contract ${gatewayLabel} is`),
         });
 
         const tokenLabel = `ren${symbol}_Proxy`;
         await deployments.save(tokenLabel, {
             ...beaconDeployment,
             address: updatedToken,
-            metadata: beaconDeployment.metadata && beaconDeployment.metadata.replace("BeaconProxy", tokenLabel),
+            metadata:
+                beaconDeployment.metadata &&
+                beaconDeployment.metadata.replace(/contract BeaconProxy is/g, `contract ${tokenLabel} is`),
         });
 
         // Update signature verifier.

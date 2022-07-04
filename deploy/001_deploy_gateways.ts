@@ -1,6 +1,5 @@
 import BigNumber from "bignumber.js";
 import chalk from "chalk";
-import { Contract } from "ethers";
 import { keccak256 } from "ethers/lib/utils";
 import { deployments } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -27,7 +26,6 @@ import {
     RenVMSignatureVerifierV1,
     RenVMSignatureVerifierV1__factory,
     TestToken__factory,
-    TransparentUpgradeableProxy__factory,
 } from "../typechain";
 import {
     ConsoleInterface,
@@ -323,24 +321,28 @@ export const deployGatewaySol = async function (
                 beaconDeployment.metadata.replace(/contract BeaconProxy is/g, `contract ${tokenLabel} is`),
         });
 
-        // Update signature verifier.
-        const gatewayInstance = await getContractAt(hre)<MintGatewayV3>("MintGatewayV3", updatedGateway);
-        const existingSignatureVerifier = Ox(await gatewayInstance.getSignatureVerifier());
-        if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
-            logger.log(
-                `Updating signature verifier in the ${symbol} mint gateway. Was ${existingSignatureVerifier}, updating to ${Ox(
-                    signatureVerifier.address
-                )}.`
-            );
-            await waitForTx(gatewayInstance.updateSignatureVerifier(signatureVerifier.address));
-        }
+        try {
+            // Update signature verifier.
+            const gatewayInstance = await getContractAt(hre)<MintGatewayV3>("MintGatewayV3", updatedGateway);
+            const existingSignatureVerifier = Ox(await gatewayInstance.getSignatureVerifier());
+            if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
+                logger.log(
+                    `Updating signature verifier in the ${symbol} mint gateway. Was ${existingSignatureVerifier}, updating to ${Ox(
+                        signatureVerifier.address
+                    )}.`
+                );
+                await waitForTx(gatewayInstance.updateSignatureVerifier(signatureVerifier.address));
+            }
 
-        // Update selector hash, by updating symbol.
-        const expectedSelectorHash = keccak256(
-            Buffer.concat([Buffer.from(symbol), Buffer.from("/to"), Buffer.from(chainName)])
-        );
-        if (expectedSelectorHash !== (await gatewayInstance.getSelectorHash())) {
-            await gatewayInstance.updateAsset(symbol);
+            // Update selector hash, by updating symbol.
+            const expectedSelectorHash = keccak256(
+                Buffer.concat([Buffer.from(symbol), Buffer.from("/to"), Buffer.from(chainName)])
+            );
+            if (expectedSelectorHash !== (await gatewayInstance.getSelectorHash())) {
+                await gatewayInstance.updateAsset(symbol);
+            }
+        } catch (error) {
+            // Ignore
         }
     }
 

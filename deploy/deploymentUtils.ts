@@ -1,11 +1,4 @@
-import BigNumber from "bignumber.js";
-import BN from "bn.js";
-import chalk from "chalk";
 import { randomBytes } from "crypto";
-import { BaseContract, ContractFactory, ContractTransaction } from "ethers";
-import { getAddress, keccak256 } from "ethers/lib/utils";
-import { CallOptions, DeployFunction } from "hardhat-deploy/types";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
     readValidations,
@@ -23,6 +16,13 @@ import {
     setProxyKind,
 } from "@openzeppelin/upgrades-core";
 import { SyncOrPromise } from "@renproject/utils";
+import BigNumber from "bignumber.js";
+import BN from "bn.js";
+import chalk from "chalk";
+import { BaseContract, ContractFactory, ContractTransaction } from "ethers";
+import { getAddress, keccak256 } from "ethers/lib/utils";
+import { CallOptions, DeployFunction } from "hardhat-deploy/types";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
     AccessControlEnumerableUpgradeable,
@@ -236,7 +236,7 @@ export const setupDeployProxy =
 
         // openzeppelin-upgrades manifest //////////////////////////////////////
         await manifest.lockedRun(async () => {
-            let data = await manifest.read();
+            const data = await manifest.read();
             data.admin = {
                 address: proxyAdmin.address,
             };
@@ -319,7 +319,7 @@ export const fixNonce = async (hre: HardhatRuntimeEnvironment, nonce: number) =>
     const { getNamedAccounts, ethers } = hre;
     const { deployer } = await getNamedAccounts();
 
-    let tx = await ethers.provider.getSigner().sendTransaction({
+    const tx = await ethers.provider.getSigner().sendTransaction({
         from: deployer,
         to: deployer,
         nonce: nonce,
@@ -365,7 +365,6 @@ export const forwardTokens =
             throw new Error(`No network configuration found for ${network.name}!`);
         }
 
-        const chainId: number = (await ethers.provider.getNetwork()).chainId;
         const { deployer } = await getNamedAccounts();
 
         const waitForTx = setupWaitForTx(logger);
@@ -378,7 +377,7 @@ export const forwardTokens =
             // Check token symbol and decimals
             if (token && typeof token === "string") {
                 const erc20 = await ethers.getContractAt<ERC20>("ERC20", token);
-                const recipient = "0xFB87bCF203b78d9B67719b7EEa3b6B65A208961B";
+                const recipient = Ox(to);
                 const deployerBalance = new BigNumber((await erc20.balanceOf(deployer)).toString());
                 const recipientBalance = new BigNumber((await erc20.balanceOf(recipient)).toString());
                 const decimals = await erc20.decimals();

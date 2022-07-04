@@ -8,6 +8,7 @@ import {
     BasicBridge__factory,
     BeaconProxy__factory,
     ERC20,
+    ForceSend__factory,
     GatewayRegistryV2,
     GatewayRegistryV2__factory,
     LockGatewayProxyBeacon,
@@ -44,6 +45,9 @@ export const deployGatewaySol = async function (
     config?: NetworkConfig,
     logger: ConsoleInterface = console
 ) {
+    // if (true as boolean) {
+    //     return;
+    // }
     const { getNamedAccounts, ethers, network } = hre;
 
     const Ox = ethers.utils.getAddress;
@@ -66,6 +70,22 @@ export const deployGatewaySol = async function (
     const create2 = setupCreate2(hre, create2SaltOverride, logger);
     const getExistingDeployment = setupGetExistingDeployment(hre);
     const waitForTx = setupWaitForTx(logger);
+
+    // const provider = await ethers.getSigner(deployer);
+    // const gatewayRegistry2 = GatewayRegistryV2__factory.connect("0x5076a1F237531fa4dC8ad99bb68024aB6e1Ff701", provider);
+    // console.log("gatewayRegistry2", await gatewayRegistry2!.getMintGatewaySymbols(0, 100));
+    // const ibbtc = await gatewayRegistry2?.getMintGatewayBySymbol("ibBTC");
+    // console.log(ibbtc);
+    // // console.log("renLuna", renLuna);
+    // // const forceSend = await ForceSend__factory.connect(renLuna, provider);
+    // // console.log(
+    // //     await forceSend.send(deployer, {
+    // //         gasLimit: 1000000,
+    // //     })
+    // // );
+    // if (true as any) {
+    //     throw new Error("done");
+    // }
 
     // Deploy RenTimelock ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenTimelock"));
@@ -310,6 +330,7 @@ export const deployGatewaySol = async function (
             metadata:
                 beaconDeployment.metadata &&
                 beaconDeployment.metadata.replace(/contract BeaconProxy is/g, `contract ${gatewayLabel} is`),
+            args: [mintGatewayProxyBeacon.address, []],
         });
 
         const tokenLabel = `ren${symbol}_Proxy`;
@@ -342,7 +363,7 @@ export const deployGatewaySol = async function (
                 await gatewayInstance.updateAsset(symbol);
             }
         } catch (error) {
-            // Ignore
+            console.error(error);
         }
     }
 
@@ -403,26 +424,31 @@ export const deployGatewaySol = async function (
             ...beaconDeployment,
             address: updatedGateway,
             metadata: beaconDeployment.metadata && beaconDeployment.metadata.replace("BeaconProxy", gatewayLabel),
+            args: [lockGatewayProxyBeacon.address, []],
         });
 
-        // Update signature verifier.
-        const gatewayInstance = await getContractAt(hre)<LockGatewayV3>("LockGatewayV3", updatedGateway);
-        const existingSignatureVerifier = Ox(await gatewayInstance.getSignatureVerifier());
-        if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
-            logger.log(
-                `Updating signature verifier in the ${symbol} lock gateway. Was ${existingSignatureVerifier}, updating to ${Ox(
-                    signatureVerifier.address
-                )}.`
-            );
-            await waitForTx(gatewayInstance.updateSignatureVerifier(signatureVerifier.address));
-        }
+        try {
+            // Update signature verifier.
+            const gatewayInstance = await getContractAt(hre)<LockGatewayV3>("LockGatewayV3", updatedGateway);
+            const existingSignatureVerifier = Ox(await gatewayInstance.getSignatureVerifier());
+            if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
+                logger.log(
+                    `Updating signature verifier in the ${symbol} lock gateway. Was ${existingSignatureVerifier}, updating to ${Ox(
+                        signatureVerifier.address
+                    )}.`
+                );
+                await waitForTx(gatewayInstance.updateSignatureVerifier(signatureVerifier.address));
+            }
 
-        // Update selector hash, by updating symbol.
-        const expectedSelectorHash = keccak256(
-            Buffer.concat([Buffer.from(symbol), Buffer.from("/to"), Buffer.from(chainName)])
-        );
-        if (expectedSelectorHash !== (await gatewayInstance.getSelectorHash())) {
-            await gatewayInstance.updateAsset(symbol);
+            // Update selector hash, by updating symbol.
+            const expectedSelectorHash = keccak256(
+                Buffer.concat([Buffer.from(symbol), Buffer.from("/to"), Buffer.from(chainName)])
+            );
+            if (expectedSelectorHash !== (await gatewayInstance.getSelectorHash())) {
+                await gatewayInstance.updateAsset(symbol);
+            }
+        } catch (error) {
+            console.error(error);
         }
     }
 

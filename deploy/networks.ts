@@ -1,8 +1,6 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { utils } from "@renproject/utils";
-
 export enum Chain {
     Hardhat = "Hardhat",
 
@@ -43,6 +41,11 @@ export interface NetworkConfig {
 }
 
 export const mainnetTokens = [
+    {
+        symbol: "ibBTC",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0xc4E15973E6fF2A35cC804c2CF9D2a1b817a8b40F" },
+    },
     {
         symbol: "REN",
         decimals: 18,
@@ -153,9 +156,22 @@ export const mainnetTokens = [
         decimals: 18,
         origin: { chain: Chain.Moonbeam },
     },
+    {
+        symbol: "oETH",
+        decimals: 18,
+        origin: { chain: Chain.Optimism },
+    },
 ];
 
 export const testnetTokens = [
+    {
+        symbol: "ibBTC",
+        decimals: 18,
+        origin: {
+            chain: Chain.Ethereum,
+            token: "0xBB0286966De3B0B513CD596BF7DCdDb63b55b0A6" /* { totalSupply: "5,000" } */,
+        },
+    },
     {
         symbol: "REN",
         decimals: 18,

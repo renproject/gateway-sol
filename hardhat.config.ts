@@ -91,7 +91,7 @@ const config: HardhatUserConfig = {
             },
         },
         polygonMainnet: {
-            url: `https://rpc-mainnet.maticvigil.com`,
+            url: `https://polygon-rpc.com/`,
             accounts: {
                 mnemonic: MNEMONIC_MAINNET,
             },
@@ -170,6 +170,12 @@ const config: HardhatUserConfig = {
             url: `https://kovan.optimism.io`,
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
+            },
+        },
+        optimismMainnet: {
+            url: `https://mainnet.optimism.io`,
+            accounts: {
+                mnemonic: MNEMONIC_MAINNET,
             },
         },
     },

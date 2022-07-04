@@ -1,9 +1,6 @@
 import { randomBytes } from "crypto";
 
-import {
-    readValidations,
-    withDefaults,
-} from "@openzeppelin/hardhat-upgrades/dist/utils";
+import { readValidations, withDefaults } from "@openzeppelin/hardhat-upgrades/dist/utils";
 import {
     assertStorageUpgradeSafe,
     assertUpgradeSafe,

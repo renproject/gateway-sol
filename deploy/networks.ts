@@ -44,6 +44,11 @@ export interface NetworkConfig {
 
 export const mainnetTokens = [
     {
+        symbol: "ibBTC",
+        decimals: 18,
+        origin: { chain: Chain.Ethereum, token: "0xc4E15973E6fF2A35cC804c2CF9D2a1b817a8b40F" },
+    },
+    {
         symbol: "REN",
         decimals: 18,
         origin: { chain: Chain.Ethereum, token: "0x408e41876cccdc0f92210600ef50372656052a38" },
@@ -156,6 +161,14 @@ export const mainnetTokens = [
 ];
 
 export const testnetTokens = [
+    {
+        symbol: "ibBTC",
+        decimals: 18,
+        origin: {
+            chain: Chain.Ethereum,
+            token: "0xBB0286966De3B0B513CD596BF7DCdDb63b55b0A6" /* { totalSupply: "5,000" } */,
+        },
+    },
     {
         symbol: "REN",
         decimals: 18,

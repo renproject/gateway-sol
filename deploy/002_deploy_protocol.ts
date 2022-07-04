@@ -10,11 +10,7 @@ import {
     RenProxyAdmin__factory,
     RenTimelock__factory,
 } from "../typechain";
-import {
-    ConsoleInterface,
-    setupCreate2,
-    setupDeployProxy,
-} from "./deploymentUtils";
+import { ConsoleInterface, setupCreate2, setupDeployProxy, setupWaitForTx } from "./deploymentUtils";
 import { NetworkConfig, networks } from "./networks";
 
 export const deployProtocol = async function (
@@ -22,11 +18,14 @@ export const deployProtocol = async function (
     config?: NetworkConfig,
     logger: ConsoleInterface = console
 ) {
+    if (true as boolean) {
+        return;
+    }
     const { getNamedAccounts, ethers, network } = hre;
 
     logger.log(`Deploying to ${network.name}...`);
 
-    if (!network.name.match(/^ethereum/) && !network.name.match("hardhat")) {
+    if (!network.name.match(/^ethereumMainnet/) && !network.name.match("hardhat")) {
         return;
     }
 
@@ -58,7 +57,7 @@ export const deployProtocol = async function (
 
     logger.log(chalk.yellow("GetOperatorDarknodes"));
     const getOperatorDarknodes = await create2<GetOperatorDarknodes__factory>("GetOperatorDarknodes", [
-        governanceAddress,
+        darknodeRegistry,
     ]);
 
     // Deploy ClaimRewards ////////////////////////////////////////////////////
@@ -75,14 +74,36 @@ export const deployProtocol = async function (
         }
     );
 
+    const waitForTx = setupWaitForTx(logger);
+    const NULL32 = "0x" + "00".repeat(32);
+
     logger.log(chalk.yellow("Protocol"));
     const protocol = await create2<Protocol__factory>("Protocol", [renTimelock.address, [deployer]]);
-    logger.log(`Adding DarknodeRegistry to Protocol contract.`);
-    await protocol.addContract("DarknodeRegistry", darknodeRegistry);
-    logger.log(`Adding ClaimRewards to Protocol contract.`);
-    await protocol.addContract("ClaimRewards", claimRewards.address);
-    logger.log(`Adding GetOperatorDarknodes to Protocol contract.`);
-    await protocol.addContract("GetOperatorDarknodes", getOperatorDarknodes.address);
+    // await protocol.updateContract("DarknodeRegistry", darknodeRegistry);
+    // await protocol.updateContract("ClaimRewards", claimRewards.address);
+    // const txData = await protocol.populateTransaction.updateContract("ClaimRewards", claimRewards.address);
+    // const tx = await renTimelock.schedule(protocol.address, 0, txData.data!, NULL32, NULL32, 0);
+    // await waitForTx(tx);
+
+    // const tx2 = await renTimelock.execute(protocol.address, 0, txData.data!, NULL32, NULL32);
+    // await waitForTx(tx2);const txData = await protocol.populateTransaction.updateContract("ClaimRewards", claimRewards.address);
+    // const tx = await renTimelock.schedule(protocol.address, 0, txData.data!, NULL32, NULL32, 0);
+    // await waitForTx(tx);
+
+    // const tx2 = await renTimelock.execute(protocol.address, 0, txData.data!, NULL32, NULL32);
+    // await waitForTx(tx2);
+
+    // const txData = await protocol.populateTransaction.updateContract(
+    //     "GetOperatorDarknodes",
+    //     getOperatorDarknodes.address
+    // );
+    // const tx = await renTimelock.schedule(protocol.address, 0, txData.data!, NULL32, NULL32, 0);
+    // await waitForTx(tx);
+
+    // const tx2 = await renTimelock.execute(protocol.address, 0, txData.data!, NULL32, NULL32);
+    // await waitForTx(tx2);
+
+    // await protocol.updateContract("GetOperatorDarknodes", getOperatorDarknodes.address);
 
     return {
         protocol,

@@ -71,6 +71,7 @@
       "type": "receive"
     }
   ],
+<<<<<<< HEAD
   "transactionHash": "0x9ccc6440cd3ac1e7143228ce8fbc8de41c5db560646d48c258f0d9734f1209bb",
   "receipt": {
     "to": "0x2222229fb3318A6375FA78fd299A9a42aC6A8fbF",
@@ -101,6 +102,8 @@
     "status": 1,
     "byzantium": true
   },
+=======
+>>>>>>> release/2.0.0
   "args": [
     "0xD3B55b3CEf62339C51ACC9307373d8d2c6012453",
     []

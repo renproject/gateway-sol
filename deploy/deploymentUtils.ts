@@ -7,10 +7,7 @@ import { getAddress, keccak256 } from "ethers/lib/utils";
 import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import {
-    readValidations,
-    withDefaults,
-} from "@openzeppelin/hardhat-upgrades/dist/utils";
+import { readValidations, withDefaults } from "@openzeppelin/hardhat-upgrades/dist/utils";
 import {
     assertStorageUpgradeSafe,
     assertUpgradeSafe,

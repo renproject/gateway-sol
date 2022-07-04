@@ -91,7 +91,7 @@ const config: HardhatUserConfig = {
             },
         },
         polygonMainnet: {
-            url: `https://rpc-mainnet.maticvigil.com`,
+            url: `https://polygon-rpc.com/`,
             accounts: {
                 mnemonic: MNEMONIC_MAINNET,
             },

@@ -1,8 +1,6 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { utils } from "@renproject/utils";
-
 export enum Chain {
     Hardhat = "Hardhat",
 
@@ -157,6 +155,11 @@ export const mainnetTokens = [
         symbol: "GLMR",
         decimals: 18,
         origin: { chain: Chain.Moonbeam },
+    },
+    {
+        symbol: "oETH",
+        decimals: 18,
+        origin: { chain: Chain.Optimism },
     },
 ];
 

@@ -6,10 +6,7 @@ import { getAddress, keccak256 } from "ethers/lib/utils";
 import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import {
-    readValidations,
-    withDefaults,
-} from "@openzeppelin/hardhat-upgrades/dist/utils";
+import { readValidations, withDefaults } from "@openzeppelin/hardhat-upgrades/dist/utils";
 import {
     assertStorageUpgradeSafe,
     assertUpgradeSafe,
@@ -45,7 +42,7 @@ export const getContractAt =
     async <T extends BaseContract>(name: string, address: string) => {
         const { getNamedAccounts, ethers } = hre;
         const { deployer } = await getNamedAccounts();
-        await ethers.getContractAt<T>(name, address, deployer);
+        return await ethers.getContractAt<T>(name, address, deployer);
     };
 
 export const setupGetExistingDeployment =

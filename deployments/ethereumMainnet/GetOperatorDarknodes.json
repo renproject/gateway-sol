@@ -1,5 +1,5 @@
 {
-  "address": "0x3cAfB1422E382BF05991B1427abD277034069d7B",
+  "address": "0x1a0947F134Ea79A14eC7Fc089D541452D1157228",
   "abi": [
     {
       "inputs": [
@@ -45,24 +45,24 @@
       "type": "function"
     }
   ],
-  "transactionHash": "0xde49b023ed3d523bc4632602a2766f0c60e4b132167992ac665dc69816bc21e3",
+  "transactionHash": "0x005519542dccb4ab0e6f8f7c11df7c24022c56a1385fe00ff5c43f2cb5b0d1be",
   "receipt": {
     "to": "0x2222229fb3318A6375FA78fd299A9a42aC6A8fbF",
     "from": "0x000091178c828a9788f83Ab733Ff48fC1DA5Ba15",
     "contractAddress": null,
-    "transactionIndex": 279,
+    "transactionIndex": 36,
     "gasUsed": "405386",
     "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    "blockHash": "0x43cb79022f9287e2e5f816f0e005a5bf0aac1819e6c3c8f837ce128dc68cca65",
-    "transactionHash": "0xde49b023ed3d523bc4632602a2766f0c60e4b132167992ac665dc69816bc21e3",
+    "blockHash": "0x48bf2c239a85903cbaa8446d9d4476b05fa376de8c2b97fe535634c1d9e21b34",
+    "transactionHash": "0x005519542dccb4ab0e6f8f7c11df7c24022c56a1385fe00ff5c43f2cb5b0d1be",
     "logs": [],
-    "blockNumber": 13706789,
-    "cumulativeGasUsed": "13556465",
+    "blockNumber": 14349662,
+    "cumulativeGasUsed": "4259478",
     "status": 1,
     "byzantium": true
   },
   "args": [
-    "0x938f72C034f0E1B5df98c6Bf6d336c33ade5fb56"
+    "0x2D7b6C95aFeFFa50C068D50f89C5C0014e054f0A"
   ],
   "solcInputHash": "a9496affa4d304a759e42aaae070140b",
   "metadata": "{\"compiler\":{\"version\":\"0.8.7+commit.e28d00a7\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"darknodeRegistry_\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"darknodeRegistry\",\"outputs\":[{\"internalType\":\"contract IDarknodeRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_operator\",\"type\":\"address\"}],\"name\":\"getOperatorDarknodes\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/Protocol/GetOperatorDarknodes.sol\":\"GetOperatorDarknodes\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"src/Protocol/GetOperatorDarknodes.sol\":{\"content\":\"// SPDX-License-Identifier: GPL-3.0\\n\\npragma solidity ^0.8.7;\\n\\ninterface IDarknodeRegistry {\\n    function numDarknodes() external view returns (uint256);\\n\\n    function getDarknodes(address _start, uint256 _count) external view returns (address[] memory);\\n\\n    function getDarknodeOperator(address _darknodeID) external view returns (address payable);\\n}\\n\\ncontract GetOperatorDarknodes {\\n    IDarknodeRegistry public darknodeRegistry;\\n\\n    constructor(address darknodeRegistry_) {\\n        darknodeRegistry = IDarknodeRegistry(darknodeRegistry_);\\n    }\\n\\n    function getOperatorDarknodes(address _operator) public view returns (address[] memory) {\\n        uint256 numDarknodes = darknodeRegistry.numDarknodes();\\n        address[] memory nodesPadded = new address[](numDarknodes);\\n\\n        address[] memory allNodes = darknodeRegistry.getDarknodes(address(0), 0);\\n\\n        uint256 j = 0;\\n        for (uint256 i = 0; i < allNodes.length; i++) {\\n            if (darknodeRegistry.getDarknodeOperator(allNodes[i]) == _operator) {\\n                nodesPadded[j] = (allNodes[i]);\\n                j++;\\n            }\\n        }\\n\\n        address[] memory nodes = new address[](j);\\n        for (uint256 i = 0; i < j; i++) {\\n            nodes[i] = nodesPadded[i];\\n        }\\n\\n        return nodes;\\n    }\\n}\\n\",\"keccak256\":\"0x2c3d43b6dd289505ee73d1030d29ef029ab505702c0b17742910856e2238768c\",\"license\":\"GPL-3.0\"}},\"version\":1}",

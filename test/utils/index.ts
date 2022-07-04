@@ -3,11 +3,7 @@ import { BaseContract } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import log from "loglevel";
 
-import {
-    BinanceSmartChain,
-    Ethereum,
-    EvmNetworkConfig,
-} from "@renproject/chains-ethereum";
+import { BinanceSmartChain, Ethereum, EvmNetworkConfig } from "@renproject/chains-ethereum";
 import { MockChain, MockProvider } from "@renproject/mock-provider";
 import { RenVMProvider } from "@renproject/provider";
 import RenJS, { Gateway, GatewayTransaction } from "@renproject/ren";

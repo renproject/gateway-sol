@@ -1,10 +1,14 @@
 import BigNumber from "bignumber.js";
 import chalk from "chalk";
+import { Contract } from "ethers";
+import { deployments } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
     BasicBridge__factory,
+    BeaconProxy__factory,
     ERC20,
+    ForceSend__factory,
     GatewayRegistryV2,
     GatewayRegistryV2__factory,
     LockGatewayProxyBeacon,
@@ -13,16 +17,20 @@ import {
     MintGatewayProxyBeacon__factory,
     RenAssetProxyBeacon,
     RenAssetProxyBeacon__factory,
+    RenAssetV2,
     RenAssetV2__factory,
+    RenProxyAdmin,
     RenProxyAdmin__factory,
     RenTimelock__factory,
     RenVMSignatureVerifierV1,
     RenVMSignatureVerifierV1__factory,
     TestToken__factory,
+    TransparentUpgradeableProxy__factory,
 } from "../typechain";
 import {
     ConsoleInterface,
     CREATE2_DEPLOYER,
+    getContractAt,
     Ox0,
     setupCreate2,
     setupDeployProxy,
@@ -36,6 +44,9 @@ export const deployGatewaySol = async function (
     config?: NetworkConfig,
     logger: ConsoleInterface = console
 ) {
+    // if (true as boolean) {
+    //     return;
+    // }
     const { getNamedAccounts, ethers, network } = hre;
 
     logger.log(`Deploying to ${network.name}...`);
@@ -55,6 +66,22 @@ export const deployGatewaySol = async function (
     const getExistingDeployment = setupGetExistingDeployment(hre);
     const waitForTx = setupWaitForTx(logger);
 
+    // const provider = await ethers.getSigner(deployer);
+    // const gatewayRegistry2 = GatewayRegistryV2__factory.connect("0x5076a1F237531fa4dC8ad99bb68024aB6e1Ff701", provider);
+    // console.log("gatewayRegistry2", await gatewayRegistry2!.getMintGatewaySymbols(0, 100));
+    // const ibbtc = await gatewayRegistry2?.getMintGatewayBySymbol("ibBTC");
+    // console.log(ibbtc);
+    // // console.log("renLuna", renLuna);
+    // // const forceSend = await ForceSend__factory.connect(renLuna, provider);
+    // // console.log(
+    // //     await forceSend.send(deployer, {
+    // //         gasLimit: 1000000,
+    // //     })
+    // // );
+    // if (true as any) {
+    //     throw new Error("done");
+    // }
+
     // Deploy RenTimelock ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenTimelock"));
     const renTimelock = await create2<RenTimelock__factory>("RenTimelock", [0, [deployer], [deployer]]);
@@ -68,7 +95,10 @@ export const deployGatewaySol = async function (
 
     // Deploy RenProxyAdmin ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenProxyAdmin"));
-    const renProxyAdmin = await create2<RenProxyAdmin__factory>("RenProxyAdmin", [governanceAddress]);
+
+    const renProxyAdmin =
+        (await getExistingDeployment<RenProxyAdmin>("RenProxyAdmin")) ||
+        (await create2<RenProxyAdmin__factory>("RenProxyAdmin", [governanceAddress]));
     const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, logger);
 
     // This should only be false on hardhat.
@@ -144,13 +174,7 @@ export const deployGatewaySol = async function (
         },
         async (signatureVerifier) => {
             const currentMintAuthority = Ox(await signatureVerifier.getMintAuthority());
-            logger.log("currentMintAuthority", currentMintAuthority);
-            logger.log("mintAuthority", Ox(mintAuthority));
-            if (currentMintAuthority !== Ox(mintAuthority)) {
-                return false;
-            } else {
-                return true;
-            }
+            return currentMintAuthority === Ox(mintAuthority);
         }
     );
     if (Ox(await signatureVerifier.owner()) !== Ox(governanceAddress)) {
@@ -245,6 +269,15 @@ export const deployGatewaySol = async function (
         await waitForTx(lockGatewayProxyBeacon.transferOwnership(governanceAddress));
     }
 
+    logger.log(`Deploying contract verification helper contract.`);
+    const beaconProxy = await create2<BeaconProxy__factory>("BeaconProxy", [renAssetProxyBeacon!.address, []]);
+    const renAssetProxy = await getContractAt(hre)<RenAssetV2>("RenAssetV2", beaconProxy.address);
+    if ((await renAssetProxy.symbol()) === "") {
+        logger.log(`Initializing contract verification helper contract.`);
+        await waitForTx(renAssetProxy.__RenAsset_init(0, "1", "TESTDEPLOYMENT", "TESTDEPLOYMENT", 0, deployer));
+    }
+    const beaconDeployment = await deployments.get("BeaconProxy");
+
     logger.log(`Handling ${(config.mintGateways || []).length} mint assets.`);
     const prefix = config.tokenPrefix;
     for (const { symbol, gateway, token, decimals } of config.mintGateways) {
@@ -270,6 +303,25 @@ export const deployGatewaySol = async function (
         } else {
             logger.log(`Skipping ${symbol} - ${existingGateway}, ${existingToken}!`);
         }
+
+        const updatedGateway = existingGateway || Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
+        const updatedToken = existingToken || Ox(await gatewayRegistry.getRenAssetBySymbol(symbol));
+
+        const gatewayLabel = `ren${symbol}_MintGateway_Proxy`;
+        await deployments.save(gatewayLabel, {
+            ...beaconDeployment,
+            address: updatedGateway,
+            metadata: beaconDeployment.metadata && beaconDeployment.metadata.replace(/BeaconProxy/g, gatewayLabel),
+            args: [mintGatewayProxyBeacon.address, []],
+        });
+
+        const tokenLabel = `ren${symbol}_Proxy`;
+        await deployments.save(tokenLabel, {
+            ...beaconDeployment,
+            address: updatedToken,
+            metadata: beaconDeployment.metadata && beaconDeployment.metadata.replace(/BeaconProxy/g, tokenLabel),
+            args: [renAssetProxyBeacon.address, []],
+        });
     }
 
     // Test Tokens are deployed when a particular lock-asset doesn't exist on a
@@ -322,6 +374,15 @@ export const deployGatewaySol = async function (
         } else {
             logger.log(`Skipping ${symbol} - ${existingGateway}, ${existingToken}!`);
         }
+
+        const updatedGateway = existingGateway || Ox(await gatewayRegistry.getLockGatewayBySymbol(symbol));
+        const gatewayLabel = `ren${symbol}_LockGateway_Proxy`;
+        await deployments.save(gatewayLabel, {
+            ...beaconDeployment,
+            address: updatedGateway,
+            metadata: beaconDeployment.metadata && beaconDeployment.metadata.replace(/BeaconProxy/g, gatewayLabel),
+            args: [lockGatewayProxyBeacon.address, []],
+        });
     }
 
     // await gatewayRegistry.deployMintGatewayAndRenAsset(

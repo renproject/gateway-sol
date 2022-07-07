@@ -160,7 +160,7 @@ const config: HardhatUserConfig = {
         },
 
         kavaTestnet: {
-            url: `https://evm.evm-alpha.kava.io`,
+            url: `https://evm.testnet.kava.io`,
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },

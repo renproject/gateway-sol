@@ -165,6 +165,12 @@ const config: HardhatUserConfig = {
                 mnemonic: MNEMONIC_TESTNET,
             },
         },
+        kavaMainnet: {
+            url: `https://evm.kava.io`,
+            accounts: {
+                mnemonic: MNEMONIC_MAINNET,
+            },
+        },
 
         optimismTestnet: {
             url: `https://kovan.optimism.io`,

@@ -157,6 +157,11 @@ export const mainnetTokens = [
         origin: { chain: Chain.Moonbeam },
     },
     {
+        symbol: "KAVA",
+        decimals: 18,
+        origin: { chain: Chain.Kava },
+    },
+    {
         symbol: "oETH",
         decimals: 18,
         origin: { chain: Chain.Optimism },
@@ -1600,6 +1605,60 @@ export const networks: { [network: string]: NetworkConfig } = {
 
         lockGateways: [
             ...testnetTokens
+                .filter((x) => x.origin.chain === Chain.Kava && x.origin.token)
+                .map((x) => ({
+                    symbol: x.symbol,
+                    decimals: x.decimals,
+                    token: x.origin.token,
+                })),
+        ],
+    },
+
+    kavaMainnet: {
+        ...renvmMainnetConfig,
+        chainName: Chain.Kava,
+
+        mintGateways: [
+            {
+                // testBTC
+                symbol: "BTC",
+                decimals: 8,
+            },
+            {
+                // testZEC
+                symbol: "ZEC",
+                decimals: 8,
+            },
+            {
+                // testBCH
+                symbol: "BCH",
+                decimals: 8,
+            },
+            {
+                // testDGB
+                symbol: "DGB",
+                decimals: 8,
+            },
+            {
+                // testDOGE
+                symbol: "DOGE",
+                decimals: 8,
+            },
+            {
+                // testFIL
+                symbol: "FIL",
+                decimals: 18,
+            },
+            {
+                // testLUNA
+                symbol: "LUNA",
+                decimals: 6,
+            },
+            ...mainnetTokens.filter((x) => x.origin.chain !== Chain.Kava),
+        ],
+
+        lockGateways: [
+            ...mainnetTokens
                 .filter((x) => x.origin.chain === Chain.Kava && x.origin.token)
                 .map((x) => ({
                     symbol: x.symbol,

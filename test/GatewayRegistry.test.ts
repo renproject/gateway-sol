@@ -3,12 +3,7 @@ import ChaiAsPromised from "chai-as-promised";
 import hre from "hardhat";
 import log from "loglevel";
 
-import {
-    Ox0,
-    randomAddress,
-    setupCreate2,
-    setupDeployProxy,
-} from "../deploy/deploymentUtils";
+import { Ox0, randomAddress, setupCreate2, setupDeployProxy } from "../deploy/deploymentUtils";
 import {
     GatewayRegistryV2,
     GatewayRegistryV2__factory,

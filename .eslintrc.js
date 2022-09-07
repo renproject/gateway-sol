@@ -17,6 +17,7 @@ module.exports = {
   rules: {
     'no-empty': 'off',
     'no-empty-function': 'off',
+    'prefer-const': 'off',
     '@typescript-eslint/no-empty-function': 'off',
   },
 };

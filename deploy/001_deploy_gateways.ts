@@ -8,7 +8,7 @@ import {
     BasicBridge__factory,
     BeaconProxy__factory,
     ERC20,
-    ForceSend__factory,
+    // ForceSend__factory,
     GatewayRegistryV2,
     GatewayRegistryV2__factory,
     LockGatewayProxyBeacon,

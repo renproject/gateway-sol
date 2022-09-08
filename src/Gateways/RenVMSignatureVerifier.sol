@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {EDDSA} from "./EDDSA.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
@@ -15,12 +15,12 @@ interface IRenVMSignatureVerifier is IERC1271 {
 
     function getChain() external view returns (string memory);
 
-    function getMintAuthority() external view returns (address);
+    function getMintAuthority() external view returns (EDDSA.PubKey memory);
 }
 
 contract RenVMSignatureVerifierStateV1 {
     string internal _chain;
-    address internal _mintAuthority;
+    EDDSA.PubKey internal _mintAuthority;
 
     // Leave a gap so that storage values added in future upgrages don't corrupt
     // the storage of contracts that inherit from this contract.
@@ -43,7 +43,7 @@ contract RenVMSignatureVerifierV1 is
 {
     string public constant NAME = "RenVMSignatureVerifier";
 
-    event LogMintAuthorityUpdated(address indexed mintAuthority);
+    event LogMintAuthorityUpdated(uint256 indexed pubKeyX, uint8 indexed pubKeyY);
 
     // bytes4(keccak256("isValidSignature(bytes32,bytes)")
     bytes4 public constant CORRECT_SIGNATURE_RETURN_VALUE = 0x1626ba7e; // CORRECT_SIGNATURE_RETURN_VALUE_
@@ -51,7 +51,7 @@ contract RenVMSignatureVerifierV1 is
 
     function __RenVMSignatureVerifier_init(
         string calldata chain_,
-        address mintAuthority_,
+        EDDSA.PubKey calldata mintAuthority_,
         address contractOwner
     ) external initializer {
         __Context_init();
@@ -68,24 +68,18 @@ contract RenVMSignatureVerifierV1 is
         return _chain;
     }
 
-    function getMintAuthority() public view override returns (address) {
+    function getMintAuthority() public view override returns (EDDSA.PubKey memory) {
         return _mintAuthority;
-    }
-
-    // GOVERNANCE //////////////////////////////////////////////////////////////
-
-    modifier onlyOwnerOrMintAuthority() {
-        require(_msgSender() == owner() || _msgSender() == getMintAuthority(), "SignatureVerifier: not authorized");
-        _;
     }
 
     /// @notice Allow the owner or mint authority to update the mint authority.
     ///
-    /// @param nextMintAuthority The new mint authority address.
-    function updateMintAuthority(address nextMintAuthority) public onlyOwnerOrMintAuthority {
-        require(nextMintAuthority != address(0), "SignatureVerifier: mintAuthority cannot be set to address zero");
+    /// @param nextMintAuthority The new mint mint authority.
+    function updateMintAuthority(EDDSA.PubKey memory nextMintAuthority) public onlyOwner {
+        require(nextMintAuthority.x != 0, "SignatureVerifier: mintAuthority cannot be set to address zero");
+        require(EDDSA.lessThanP(nextMintAuthority.x), "SignatureVerifier: mintAuthority cannot be greater than p");
         _mintAuthority = nextMintAuthority;
-        emit LogMintAuthorityUpdated(_mintAuthority);
+        emit LogMintAuthorityUpdated(_mintAuthority.x, _mintAuthority.parity);
     }
 
     // PUBLIC //////////////////////////////////////////////////////////////////
@@ -93,9 +87,9 @@ contract RenVMSignatureVerifierV1 is
     /// @notice verifySignature checks the the provided signature matches the
     /// provided parameters. Returns a 4-byte value as defined by ERC1271.
     function isValidSignature(bytes32 sigHash, bytes calldata signature) external view override returns (bytes4) {
-        address mintAuthority_ = getMintAuthority();
-        require(mintAuthority_ != address(0x0), "SignatureVerifier: mintAuthority not initialized");
-        if (mintAuthority_ == ECDSA.recover(sigHash, signature)) {
+        EDDSA.PubKey memory mintAuthority_ = getMintAuthority();
+        require(mintAuthority_.x != 0, "SignatureVerifier: mintAuthority not initialized");
+        if (EDDSA.verify(mintAuthority_, sigHash, signature)) {
             return CORRECT_SIGNATURE_RETURN_VALUE;
         } else {
             return INCORRECT_SIGNATURE_RETURN_VALUE;

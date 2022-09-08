@@ -12,11 +12,11 @@ import {
     Manifest,
     setProxyKind,
 } from "@openzeppelin/upgrades-core";
-import { SyncOrPromise } from "@renproject/utils";
+import { SyncOrPromise, utils } from "@renproject/utils";
 import BigNumber from "bignumber.js";
 import BN from "bn.js";
 import chalk from "chalk";
-import { BaseContract, ContractFactory, ContractTransaction } from "ethers";
+import { BaseContract, ContractFactory, ContractTransaction, PopulatedTransaction } from "ethers";
 import { getAddress, keccak256 } from "ethers/lib/utils";
 import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -25,6 +25,7 @@ import {
     AccessControlEnumerableUpgradeable,
     ERC20,
     Ownable,
+    Ownable__factory,
     RenProxyAdmin,
     RenTimelock,
     TransparentUpgradeableProxy,
@@ -93,7 +94,7 @@ export const setupDeploy =
             skipIfAlreadyDeployed: false,
             ...overrides,
         });
-        logger.log(`Deployed ${name} at ${result.address}.`);
+        logger.log(`Deployed ${name} at ${result.address}`);
         const contract = await ethers.getContractAt<C>(name, result.address, deployer);
 
         let owner;
@@ -147,7 +148,7 @@ export const setupCreate2 =
             skipIfAlreadyDeployed: true,
             ...overrides,
         });
-        logger.log(`Deployed ${name} at ${result.address}.`);
+        logger.log(`Deployed ${name} at ${result.address}`);
         const contract = await ethers.getContractAt<C>(name, result.address, deployer);
 
         let owner;
@@ -205,6 +206,7 @@ export const setupDeployProxy =
         const { initializer, constructorArgs } = options;
 
         const waitForTx = setupWaitForTx(logger);
+        const waitForTimelockedTx = setupWaitForTimelockedTx(hre, renTimelock, logger);
 
         const existingProxyDeployment = await setupGetExistingDeployment(hre)<TransparentUpgradeableProxy>(proxyName);
         let proxy: TransparentUpgradeableProxy;
@@ -266,15 +268,9 @@ export const setupDeployProxy =
                 );
 
                 // Check if the proxyAdmin is owned by the timelock.
-                if (Ox(await proxyAdmin.owner()) === Ox(renTimelock.address)) {
-                    const txData = await proxyAdmin.populateTransaction.upgrade(proxy.address, implementation.address);
-                    const tx = await renTimelock.schedule(proxyAdmin.address, 0, txData.data!, Ox0_32, Ox0_32, 0);
-                    await waitForTx(tx);
-                    const tx2 = await renTimelock.execute(proxyAdmin.address, 0, txData.data!, Ox0_32, Ox0_32);
-                    await waitForTx(tx2);
-                } else {
-                    await waitForTx(proxyAdmin.upgrade(proxy.address, implementation.address));
-                }
+                await waitForTimelockedTx(
+                    proxyAdmin.populateTransaction.upgrade(proxy.address, implementation.address)
+                );
             }
         } else {
             proxy = await create2<TransparentUpgradeableProxy__factory>(
@@ -324,6 +320,74 @@ export const setupWaitForTx =
         // Clear the line
         process.stdout.write(`\x1B[2K\r`);
         logger.log(`Transaction confirmed: ${tx.hash}`);
+    };
+
+export const setupWaitForTimelockedTx =
+    (hre: HardhatRuntimeEnvironment, renTimelock: RenTimelock, logger: ConsoleInterface = console) =>
+    async (txDetailsPromise: Promise<PopulatedTransaction> | PopulatedTransaction, msg?: string) => {
+        const waitForTx = setupWaitForTx(logger);
+
+        const { ethers, getNamedAccounts } = hre;
+        const Ox = ethers.utils.getAddress;
+        const { deployer } = await getNamedAccounts();
+        const provider = await ethers.getSigner(deployer);
+
+        const txDetails = await txDetailsPromise;
+
+        const ownableContract = await Ownable__factory.connect(txDetails.to || Ox0, provider);
+
+        // Check if the proxyAdmin is owned by the timelock.
+        if (Ox(await ownableContract.owner()) === Ox(renTimelock.address)) {
+            const minimumDelay = (await renTimelock.getMinDelay()).toNumber();
+
+            // If the call hasn't already been scheduled, schedule it with the
+            // smallest delay.
+            const hash = await renTimelock.hashOperation(
+                txDetails.to || Ox0,
+                0,
+                txDetails.data || Buffer.from([]),
+                Ox0_32,
+                Ox0_32
+            );
+            if (!(await renTimelock.isOperation(hash))) {
+                const tx = renTimelock.schedule(
+                    txDetails.to || Ox0,
+                    0,
+                    txDetails.data || Buffer.from([]),
+                    Ox0_32,
+                    Ox0_32,
+                    minimumDelay
+                );
+                await waitForTx(tx, `Sheduling ${msg || "timelock call"}`);
+            }
+
+            // Check if the timelocked call is ready to be called.
+            const readyTimestamp = (await renTimelock.getTimestamp(hash)).toNumber() - Date.now() / 1000;
+            if (readyTimestamp <= 60) {
+                if (readyTimestamp > 0) {
+                    console.log(`Sleeping ${readyTimestamp.toFixed(2)} seconds for timelock`);
+                    await utils.sleep(readyTimestamp * utils.sleep.SECONDS);
+                }
+                const tx2 = renTimelock.execute(
+                    txDetails.to || Ox0,
+                    0,
+                    txDetails.data || Buffer.from([]),
+                    Ox0_32,
+                    Ox0_32
+                );
+                await waitForTx(tx2, msg);
+            } else {
+                const hoursRemaining = readyTimestamp / 60 / 60;
+                logger.log(
+                    `WARNING: Timelock not ready for another ${hoursRemaining.toFixed(2)} hours: ${msg || hash}`
+                );
+                // Continue without calling `execute`. If there's any calls in
+                // the rest of the migration that depend on the execution, they
+                // will fail.
+            }
+        } else {
+            await waitForTx((await ethers.getSigner(deployer)).sendTransaction(txDetails), msg);
+        }
     };
 
 export const fixNonce = async (hre: HardhatRuntimeEnvironment, nonce: number) => {

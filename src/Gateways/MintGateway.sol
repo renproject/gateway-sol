@@ -8,7 +8,7 @@ import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Cont
 import {AddressUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
-import {RenAssetV2} from "../RenAsset/RenAsset.sol";
+import {RenAssetV3} from "../RenAsset/RenAsset.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
 import {IMintGateway} from "./interfaces/IMintGateway.sol";
@@ -41,7 +41,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         require(nextTokenOwner != address(0x0), "MintGateway: invalid next token owner");
 
         address token_ = getToken();
-        RenAssetV2(token_).transferOwnership(address(nextTokenOwner));
+        RenAssetV3(token_).transferOwnership(address(nextTokenOwner));
 
         emit TokenOwnershipTransferred(token_, nextTokenOwner);
     }
@@ -166,7 +166,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         _status[sigHash] = true;
 
         // Mint the amount to the recipient.
-        RenAssetV2(getToken()).mint(recipient, amount);
+        RenAssetV3(getToken()).mint(recipient, amount);
 
         // Emit mint log. For backwards compatiblity reasons, the sigHash is
         // cast to a uint256.
@@ -201,7 +201,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
 
         // Burn the tokens. If the user doesn't have enough tokens, this will
         // throw.
-        RenAssetV2(getToken()).burn(caller, amount);
+        RenAssetV3(getToken()).burn(caller, amount);
 
         uint256 burnNonce = getEventNonce();
 

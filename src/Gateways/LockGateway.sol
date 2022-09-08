@@ -14,7 +14,7 @@ import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
 import {ILockGateway} from "./interfaces/ILockGateway.sol";
 import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./RenVMSignatureVerifier.sol";
-import {RenAssetV2} from "../RenAsset/RenAsset.sol";
+import {RenAssetV3} from "../RenAsset/RenAsset.sol";
 import {String} from "../libraries/String.sol";
 
 /// LockGatewayV3 handles verifying lock and release requests. A mint authority

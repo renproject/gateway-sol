@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {RenAssetV2} from "../RenAsset/RenAsset.sol";
+import {RenAssetV3} from "../RenAsset/RenAsset.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "../Gateways/common/GatewayState.sol";
 import {RenVMHashes} from "../Gateways/common/RenVMHashes.sol";
 import {IMintGateway} from "../Gateways/interfaces/IMintGateway.sol";

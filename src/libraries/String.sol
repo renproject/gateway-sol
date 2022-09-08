@@ -11,7 +11,9 @@ library String {
     function isAlphanumeric(string memory str) internal pure returns (bool) {
         for (uint256 i = 0; i < bytes(str).length; i++) {
             uint8 char = uint8(bytes(str)[i]);
-            if (!((char >= 65 && char <= 90) || (char >= 97 && char <= 122) || (char >= 48 && char <= 57) || char == 95)) {
+            if (
+                !((char >= 65 && char <= 90) || (char >= 97 && char <= 122) || (char >= 48 && char <= 57) || char == 95)
+            ) {
                 return false;
             }
         }

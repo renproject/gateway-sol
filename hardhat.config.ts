@@ -65,12 +65,6 @@ const config: HardhatUserConfig = {
             },
             gasPrice: 2.5 * 1e9,
         },
-        ethereumDevnet: {
-            url: `https://kovan.infura.io/v3/${INFURA_KEY}`,
-            accounts: {
-                mnemonic: MNEMONIC_DEVNET,
-            },
-        },
         bscTestnet: {
             url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
             accounts: {

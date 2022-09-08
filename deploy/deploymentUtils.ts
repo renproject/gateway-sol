@@ -26,12 +26,14 @@ import {
     ERC20,
     Ownable,
     RenProxyAdmin,
+    RenTimelock,
     TransparentUpgradeableProxy,
     TransparentUpgradeableProxy__factory,
 } from "../typechain";
 import { NetworkConfig, networks } from "./networks";
 
 export const Ox0 = "0x0000000000000000000000000000000000000000";
+export const Ox0_32 = "0x" + "00".repeat(32);
 export const CREATE2_DEPLOYER = "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf";
 export interface ConsoleInterface {
     log(message?: any, ...optionalParams: any[]): void;
@@ -174,6 +176,7 @@ export const setupDeployProxy =
         hre: HardhatRuntimeEnvironment,
         create2: ReturnType<typeof setupCreate2>,
         proxyAdmin: RenProxyAdmin,
+        renTimelock: RenTimelock,
         logger: ConsoleInterface = console
     ) =>
     async <
@@ -195,6 +198,7 @@ export const setupDeployProxy =
         create2SaltOverrideAlt?: string
     ): Promise<C> => {
         const { getNamedAccounts, ethers } = hre;
+        const Ox = ethers.utils.getAddress;
 
         const { deployer } = await getNamedAccounts();
 
@@ -260,7 +264,17 @@ export const setupDeployProxy =
                 logger.log(
                     `Updating ${proxyName} to point to ${implementation.address} instead of ${currentImplementation}`
                 );
-                await waitForTx(proxyAdmin.upgrade(proxy.address, implementation.address));
+
+                // Check if the proxyAdmin is owned by the timelock.
+                if (Ox(await proxyAdmin.owner()) === Ox(renTimelock.address)) {
+                    const txData = await proxyAdmin.populateTransaction.upgrade(proxy.address, implementation.address);
+                    const tx = await renTimelock.schedule(proxyAdmin.address, 0, txData.data!, Ox0_32, Ox0_32, 0);
+                    await waitForTx(tx);
+                    const tx2 = await renTimelock.execute(proxyAdmin.address, 0, txData.data!, Ox0_32, Ox0_32);
+                    await waitForTx(tx2);
+                } else {
+                    await waitForTx(proxyAdmin.upgrade(proxy.address, implementation.address));
+                }
             }
         } else {
             proxy = await create2<TransparentUpgradeableProxy__factory>(

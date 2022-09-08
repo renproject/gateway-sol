@@ -53,7 +53,7 @@ export const deployProtocol = async function (
     // Deploy RenProxyAdmin ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenProxyAdmin"));
     const renProxyAdmin = await create2<RenProxyAdmin__factory>("RenProxyAdmin", [governanceAddress]);
-    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, logger);
+    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, renTimelock, logger);
 
     logger.log(chalk.yellow("GetOperatorDarknodes"));
     const getOperatorDarknodes = await create2<GetOperatorDarknodes__factory>("GetOperatorDarknodes", [

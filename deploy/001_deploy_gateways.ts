@@ -104,7 +104,7 @@ export const deployGatewaySol = async function (
     const renProxyAdmin =
         (await getExistingDeployment<RenProxyAdmin>("RenProxyAdmin")) ||
         (await create2<RenProxyAdmin__factory>("RenProxyAdmin", [governanceAddress]));
-    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, logger);
+    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, renTimelock, logger);
 
     // This should only be false on hardhat.
     const create2IsContract = (await ethers.provider.getCode(CREATE2_DEPLOYER)).replace(/^0x/, "").length > 0;

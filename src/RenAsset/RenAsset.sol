@@ -23,10 +23,6 @@ abstract contract RenAssetStateV3 {
     uint256[45] private __gap;
 }
 
-/// @title A title that should describe the contract/interface
-/// @author The name of the author
-/// @notice Explain to an end user what this does
-/// @dev Explain to a developer any extra details
 contract RenAssetV3 is Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC20WithPermit, RenAssetStateV3 {
     string public constant NAME = "RenAsset";
 
@@ -92,6 +88,10 @@ contract RenAssetV3 is Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC2
         return super.transfer(recipient, tokenAmount(amount));
     }
 
+    function transferUnderlying(address recipient, uint256 amount) public returns (bool) {
+        return transfer(recipient, tokenAmount(amount));
+    }
+
     function transferFrom(
         address sender,
         address recipient,
@@ -103,15 +103,23 @@ contract RenAssetV3 is Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC2
         return super.transferFrom(sender, recipient, tokenAmount(amount));
     }
 
-    function balanceOf(address _owner) public view override returns (uint256) {
+    function transferFromUnderlying(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public returns (bool) {
+        transferFromUnderlying(sender, recipient, tokenAmount(amount));
+    }
+
+    function balanceOfUnderlying(address _owner) public view returns (uint256) {
         return underlyingAmount(balanceOf(_owner));
     }
 
-    function approve(address recipient, uint256 amount) public override returns (bool) {
+    function approveUnderlying(address recipient, uint256 amount) public returns (bool) {
         return super.approve(recipient, tokenAmount(amount));
     }
 
-    function allowance(address sender, address recipient) public view override returns (uint256) {
+    function allowanceUnderlying(address sender, address recipient) public view returns (uint256) {
         return underlyingAmount(super.allowance(sender, recipient));
     }
 

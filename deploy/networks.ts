@@ -346,7 +346,7 @@ export const testnetTokens = [
         decimals: 6,
         origin: {
             chain: Chain.Goerli,
-            token: { symbol: "USDT", totalSupply: "30,000,000,000" },
+            token: "0x270203070650134837F3C33Fa7D97DC456eF624e" /* { symbol: "USDT", totalSupply: "30,000,000,000" } */,
         },
     },
 ];

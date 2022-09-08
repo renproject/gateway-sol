@@ -18,7 +18,7 @@ interface IRenVMSignatureVerifier is IERC1271 {
     function getMintAuthority() external view returns (EDDSA.PubKey memory);
 }
 
-contract RenVMSignatureVerifierStateV1 {
+contract RenVMSignatureVerifierStateV2 {
     string internal _chain;
     EDDSA.PubKey internal _mintAuthority;
 
@@ -33,11 +33,11 @@ contract RenVMSignatureVerifierStateV1 {
 // See https://github.com/ethereum/EIPs/issues/1271#issuecomment-442328339.
 bytes4 constant CORRECT_SIGNATURE_RETURN_VALUE_ = 0x1626ba7e;
 
-contract RenVMSignatureVerifierV1 is
+contract RenVMSignatureVerifierV2 is
     Initializable,
     ContextUpgradeable,
     OwnableUpgradeable,
-    RenVMSignatureVerifierStateV1,
+    RenVMSignatureVerifierStateV2,
     IERC1271,
     IRenVMSignatureVerifier
 {

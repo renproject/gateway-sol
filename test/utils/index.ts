@@ -3,7 +3,7 @@ import { BaseContract } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import log from "loglevel";
 
-import { BinanceSmartChain, Ethereum, EvmNetworkConfig } from "@renproject/chains-ethereum";
+import { BinanceSmartChain, Ethereum, EVMNetworkConfig } from "@renproject/chains-ethereum";
 import { MockChain, MockProvider } from "@renproject/mock-provider";
 import { RenVMProvider } from "@renproject/provider";
 import RenJS, { Gateway, GatewayTransaction } from "@renproject/ren";
@@ -30,7 +30,7 @@ export const LocalEthereumNetwork = (
     networkID: number,
     gatewayRegistry: string,
     basicBridge: string
-): EvmNetworkConfig => ({
+): EVMNetworkConfig => ({
     selector: selector,
     nativeAsset: {
         name: symbol,
@@ -40,7 +40,7 @@ export const LocalEthereumNetwork = (
     averageConfirmationTime: 1,
     isTestnet: true,
 
-    network: {
+    config: {
         chainId: utils.Ox(networkID),
         chainName: "Hardhat",
         nativeCurrency: { name: "Hardhat Ether", symbol: symbol, decimals: 18 },

@@ -375,6 +375,7 @@ export const deployGatewaySol = async function (
         const existingGateway = Ox(await gatewayRegistry.getLockGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getLockAssetBySymbol(symbol));
         const totalSupply = typeof token === "object" ? token.totalSupply : undefined;
+        const tokenSymbol = typeof token === "object" ? token.symbol : undefined;
         let deployedToken = typeof token === "string" ? token : "";
         if (existingGateway === Ox0) {
             // Check token symbol and decimals
@@ -398,8 +399,8 @@ export const deployGatewaySol = async function (
                     totalSupply !== undefined ? totalSupply.replace(/,/g, "") : 1000000
                 ).shiftedBy(decimals !== undefined ? decimals : 18);
                 const deployedTokenInstance = await create2<TestToken__factory>("TestToken", [
-                    symbol,
-                    symbol,
+                    tokenSymbol ? tokenSymbol : symbol,
+                    tokenSymbol ? tokenSymbol : symbol,
                     decimals,
                     supply.toFixed(),
                     deployer,

@@ -361,7 +361,7 @@ const renvmMainnetConfig = {
 };
 
 const renvmTestnetConfig = {
-    darknodeRegistry: "0x9954C9F839b31E82bc9CA98F234313112D269712",
+    darknodeRegistry: "0xC791dB283bc6FFbcC00e474B9F7eb130e48E8bC4",
     mintAuthority: "0x44Bb4eF43408072bC888Afd1a5986ba0Ce35Cb54",
     tokenPrefix: "test" as const,
 };

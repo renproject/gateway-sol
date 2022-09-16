@@ -11,6 +11,10 @@
     {
       "address": "0x5076a1F237531fa4dC8ad99bb68024aB6e1Ff701",
       "kind": "transparent"
+    },
+    {
+      "address": "0x577AC3Aae2685004AAE125f198D4FC8f17727607",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -797,6 +801,59 @@
               }
             ],
             "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        }
+      }
+    },
+    "2f7770c5b6fbb8d85e3baeb55980251464d362f21cfa5f4e0a9a1c9ed7bdd2c0": {
+      "address": "0x7869aE8a85178eeD8e9e05B32b0c6a99365Cb355",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:21"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:26"
+          },
+          {
+            "label": "_nextClaimNonce",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256",
+            "contract": "ClaimRewardsStateV1",
+            "src": "src/Protocol/ClaimRewards.sol:13"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ClaimRewardsStateV1",
+            "src": "src/Protocol/ClaimRewards.sol:15"
+          }
+        ],
+        "types": {
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
           },
           "t_uint256": {
             "label": "uint256",

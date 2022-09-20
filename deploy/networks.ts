@@ -16,10 +16,16 @@ export enum Chain {
     Optimism = "Optimism",
 }
 
+export interface MintAuthority {
+    x: string,
+    parity: number,
+}
+
 export interface NetworkConfig {
     tokenPrefix: "dev" | "test" | "ren";
     chainName: Chain | string;
     mintAuthority: string;
+    mintAuthorityV2: MintAuthority;
     darknodeRegistry: string;
     governanceAddress?: string;
     create2SaltOverride?: string;
@@ -28,6 +34,7 @@ export interface NetworkConfig {
         decimals: number;
         token?: string;
         gateway?: string;
+        isNFT?: boolean;
         version?: string;
     }>;
 
@@ -36,6 +43,7 @@ export interface NetworkConfig {
         token?: string | { totalSupply: string };
         gateway?: string;
         decimals: number;
+        isNFT?: boolean;
         version?: string;
     }>;
 }
@@ -323,24 +331,40 @@ export const testnetTokens = [
 const renvmMainnetConfig = {
     darknodeRegistry: "0x2D7b6C95aFeFFa50C068D50f89C5C0014e054f0A",
     mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7",
+    mintAuthorityV2: {
+        x: "0x0000000000000000000000000000000000000001",
+        parity: 0,
+    },
     tokenPrefix: "ren" as const,
 };
 
 const renvmTestnetConfig = {
     darknodeRegistry: "0x9954C9F839b31E82bc9CA98F234313112D269712",
     mintAuthority: "0x44Bb4eF43408072bC888Afd1a5986ba0Ce35Cb54",
+    mintAuthorityV2: {
+        x: "0x0000000000000000000000000000000000000001",
+        parity: 0,
+    },
     tokenPrefix: "test" as const,
 };
 
 const renvmDevnetConfig = {
     darknodeRegistry: "",
     mintAuthority: "0x1A5650DAd360803ea7912b7a0a747446b554a5BE",
+    mintAuthorityV2: {
+        x: "0x0000000000000000000000000000000000000001",
+        parity: 0,
+    },
     tokenPrefix: "dev" as const,
 };
 
 export const networks: { [network: string]: NetworkConfig } = {
     hardhat: {
         mintAuthority: "0x0000000000000000000000000000000000000001",
+        mintAuthorityV2: {
+            x: "0x0000000000000000000000000000000000000001",
+            parity: 0,
+        },
         darknodeRegistry: "0x0000000000000000000000000000000000000002",
         tokenPrefix: "dev",
         chainName: Chain.Hardhat,

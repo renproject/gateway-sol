@@ -9,23 +9,27 @@ import {
     BeaconProxy__factory,
     ERC20,
     // ForceSend__factory,
-    GatewayRegistryV2,
-    GatewayRegistryV2__factory,
+    GatewayRegistryV3,
+    GatewayRegistryV3__factory,
     LockGatewayProxyBeacon,
     LockGatewayProxyBeacon__factory,
-    LockGatewayV3,
+    LockGatewayV4,
     MintGatewayProxyBeacon,
     MintGatewayProxyBeacon__factory,
-    MintGatewayV3,
-    RenAssetProxyBeacon,
-    RenAssetProxyBeacon__factory,
-    RenAssetV2,
-    RenAssetV2__factory,
+    MintGatewayV4,
+    RenERC20ProxyBeacon,
+    RenERC20ProxyBeacon__factory,
+    RenERC721ProxyBeacon,
+    RenERC721ProxyBeacon__factory,
+    RenERC20V1,
+    RenERC20V1__factory,
+    RenERC721V1,
+    RenERC721V1__factory,
     RenProxyAdmin,
     RenProxyAdmin__factory,
     RenTimelock__factory,
-    RenVMSignatureVerifierV1,
-    RenVMSignatureVerifierV1__factory,
+    RenVMSignatureVerifierV2,
+    RenVMSignatureVerifierV2__factory,
     TestToken__factory,
 } from "../typechain";
 import {
@@ -57,24 +61,24 @@ export const deployGatewaySol = async function (
         throw new Error(`No network configuration found for ${network.name}!`);
     }
 
-    const { mintAuthority, chainName, create2SaltOverride } = config;
+    const { mintAuthorityV2, chainName, create2SaltOverride } = config;
     const chainId: number = (await ethers.provider.getNetwork()).chainId;
     const { deployer } = await getNamedAccounts();
 
     logger.log(`Deploying to ${network.name} from ${deployer}...`);
 
-    if (Ox(mintAuthority) === Ox0) {
-        throw new Error(`Invalid empty mintAuthority.`);
-    }
+    // if (Ox(mintAuthority) === Ox0) {
+    //     throw new Error(`Invalid empty mintAuthority.`);
+    // }
 
     const create2 = setupCreate2(hre, create2SaltOverride, logger);
     const getExistingDeployment = setupGetExistingDeployment(hre);
     const waitForTx = setupWaitForTx(logger);
 
     // const provider = await ethers.getSigner(deployer);
-    // const gatewayRegistry2 = GatewayRegistryV2__factory.connect("0x5076a1F237531fa4dC8ad99bb68024aB6e1Ff701", provider);
-    // console.log("gatewayRegistry2", await gatewayRegistry2!.getMintGatewaySymbols(0, 100));
-    // const ibbtc = await gatewayRegistry2?.getMintGatewayBySymbol("ibBTC");
+    // const gatewayRegistry3 = GatewayRegistryV3__factory.connect("0x5076a1F237531fa4dC8ad99bb68024aB6e1Ff701", provider);
+    // console.log("gatewayRegistry3", await gatewayRegistry3!.getMintGatewaySymbols(0, 100));
+    // const ibbtc = await gatewayRegistry3?.getMintGatewayBySymbol("ibBTC");
     // console.log(ibbtc);
     // // console.log("renLuna", renLuna);
     // // const forceSend = await ForceSend__factory.connect(renLuna, provider);
@@ -109,27 +113,45 @@ export const deployGatewaySol = async function (
     // This should only be false on hardhat.
     const create2IsContract = (await ethers.provider.getCode(CREATE2_DEPLOYER)).replace(/^0x/, "").length > 0;
 
-    // Deploy RenAssetProxyBeacon ////////////////////////////////////////////////
-    logger.log(chalk.yellow("RenAsset beacon"));
-    const renAssetImplementation = await create2<RenAssetV2__factory>("RenAssetV2", []);
-    const existingRenAssetProxyBeacon = await getExistingDeployment<RenAssetProxyBeacon>("RenAssetProxyBeacon");
-    const renAssetProxyBeacon =
-        existingRenAssetProxyBeacon ||
-        (await create2<RenAssetProxyBeacon__factory>("RenAssetProxyBeacon", [
+    // Deploy RenERC20ProxyBeacon ////////////////////////////////////////////////
+    logger.log(chalk.yellow("RenERC20 beacon"));
+    const renERC20Implementation = await create2<RenERC20V1__factory>("RenERC20V1", []);
+    const existingRenERC20ProxyBeacon = await getExistingDeployment<RenERC20ProxyBeacon>("RenERC20ProxyBeacon");
+    const renERC20ProxyBeacon =
+        existingRenERC20ProxyBeacon ||
+        (await create2<RenERC20ProxyBeacon__factory>("RenERC20ProxyBeacon", [
             // Temporary value, gets overwritten in the next step. This is to
             // ensure that the address doesn't change between networks even when
             // the implementation changes.
-            create2IsContract ? CREATE2_DEPLOYER : renAssetImplementation.address,
+            create2IsContract ? CREATE2_DEPLOYER : renERC20Implementation.address,
             deployer,
         ]));
-    if (Ox(await renAssetProxyBeacon.implementation()) !== Ox(renAssetImplementation.address)) {
-        logger.log(`Updating RenAsset implementation to ${Ox(renAssetImplementation.address)}`);
-        await waitForTx(renAssetProxyBeacon.upgradeTo(renAssetImplementation.address));
+    if (Ox(await renERC20ProxyBeacon.implementation()) !== Ox(renERC20Implementation.address)) {
+        logger.log(`Updating RenERC20 implementation to ${Ox(renERC20Implementation.address)}`);
+        await waitForTx(renERC20ProxyBeacon.upgradeTo(renERC20Implementation.address));
+    }
+
+    // Deploy RenERC721ProxyBeacon ////////////////////////////////////////////////
+    logger.log(chalk.yellow("RenERC721 beacon"));
+    const renERC721Implementation = await create2<RenERC721V1__factory>("RenERC721V1", []);
+    const existingRenERC721ProxyBeacon = await getExistingDeployment<RenERC721ProxyBeacon>("RenERC721ProxyBeacon");
+    const renERC721ProxyBeacon =
+        existingRenERC721ProxyBeacon ||
+        (await create2<RenERC721ProxyBeacon__factory>("RenERC721ProxyBeacon", [
+            // Temporary value, gets overwritten in the next step. This is to
+            // ensure that the address doesn't change between networks even when
+            // the implementation changes.
+            create2IsContract ? CREATE2_DEPLOYER : renERC721Implementation.address,
+            deployer,
+        ]));
+    if (Ox(await renERC721ProxyBeacon.implementation()) !== Ox(renERC721Implementation.address)) {
+        logger.log(`Updating RenERC721 implementation to ${Ox(renERC721Implementation.address)}`);
+        await waitForTx(renERC721ProxyBeacon.upgradeTo(renERC721Implementation.address));
     }
 
     // Deploy MintGatewayProxyBeacon /////////////////////////////////////////////
     logger.log(chalk.yellow("MintGateway beacon"));
-    const mintGatewayImplementation = await create2("MintGatewayV3", []);
+    const mintGatewayImplementation = await create2("MintGatewayV4", []);
     const existingMintGatewayProxyBeacon = await getExistingDeployment<MintGatewayProxyBeacon>(
         "MintGatewayProxyBeacon"
     );
@@ -149,7 +171,7 @@ export const deployGatewaySol = async function (
 
     // Deploy LockGatewayProxyBeacon /////////////////////////////////////////////
     logger.log(chalk.yellow("LockGateway beacon"));
-    const lockGatewayImplementation = await create2("LockGatewayV3", []);
+    const lockGatewayImplementation = await create2("LockGatewayV4", []);
     const existingLockGatewayProxyBeacon = await getExistingDeployment<LockGatewayProxyBeacon>(
         "LockGatewayProxyBeacon"
     );
@@ -168,17 +190,20 @@ export const deployGatewaySol = async function (
     }
 
     logger.log(chalk.yellow("Signature Verifier"));
-    const signatureVerifier = await deployProxy<RenVMSignatureVerifierV1__factory>(
-        "RenVMSignatureVerifierV1",
+    const signatureVerifier = await deployProxy<RenVMSignatureVerifierV2__factory>(
+        "RenVMSignatureVerifierV2",
         "RenVMSignatureVerifierProxy",
         {
             initializer: "__RenVMSignatureVerifier_init",
-            constructorArgs: [chainName, mintAuthority, governanceAddress] as Parameters<
-                RenVMSignatureVerifierV1["__RenVMSignatureVerifier_init"]
+            constructorArgs: [chainName, mintAuthorityV2, governanceAddress] as Parameters<
+                RenVMSignatureVerifierV2["__RenVMSignatureVerifier_init"]
             >,
         },
         // isInitialized:
-        async (signatureVerifier) => Ox(await signatureVerifier.getMintAuthority()) === Ox(mintAuthority)
+        async (signatureVerifier) => {
+            const mAuth = await signatureVerifier.getMintAuthority()
+            return (mAuth[0].toHexString() === mintAuthorityV2.x && mAuth[1] === mintAuthorityV2.parity)
+        }
     );
     const signatureVerifierOwner = Ox(await signatureVerifier.owner());
     if (signatureVerifierOwner !== Ox(governanceAddress)) {
@@ -195,8 +220,8 @@ export const deployGatewaySol = async function (
 
     // Deploy GatewayRegistry ////////////////////////////////////////////////////
     logger.log(chalk.yellow("GatewayRegistry"));
-    const gatewayRegistry = await deployProxy<GatewayRegistryV2__factory>(
-        "GatewayRegistryV2",
+    const gatewayRegistry = await deployProxy<GatewayRegistryV3__factory>(
+        "GatewayRegistryV3",
         "GatewayRegistryProxy",
         {
             initializer: "__GatewayRegistry_init",
@@ -204,12 +229,13 @@ export const deployGatewaySol = async function (
                 chainId,
                 signatureVerifier.address,
                 transferWithLog.address,
-                renAssetProxyBeacon.address,
+                renERC20ProxyBeacon.address,
+                renERC721ProxyBeacon.address,
                 mintGatewayProxyBeacon.address,
                 lockGatewayProxyBeacon.address,
                 governanceAddress,
                 [deployer],
-            ] as Parameters<GatewayRegistryV2["__GatewayRegistry_init"]>,
+            ] as Parameters<GatewayRegistryV3["__GatewayRegistry_init"]>,
         },
         async (gatewayRegistry) => {
             try {
@@ -240,8 +266,11 @@ export const deployGatewaySol = async function (
         await waitForTx(gatewayRegistry.updateTransferContract(transferWithLog.address));
     }
 
-    if (Ox(await gatewayRegistry.getRenAssetProxyBeacon()) !== Ox(renAssetProxyBeacon.address)) {
-        throw new Error(`GatewayRegistry's renAssetProxyBeacon address is not correct.`);
+    if (Ox(await gatewayRegistry.getRenERC20ProxyBeacon()) !== Ox(renERC20ProxyBeacon.address)) {
+        throw new Error(`GatewayRegistry's renERC20ProxyBeacon address is not correct.`);
+    }
+    if (Ox(await gatewayRegistry.getRenERC721ProxyBeacon()) !== Ox(renERC721ProxyBeacon.address)) {
+        throw new Error(`GatewayRegistry's renERC721ProxyBeacon address is not correct.`);
     }
     if (Ox(await gatewayRegistry.getMintGatewayProxyBeacon()) !== Ox(mintGatewayProxyBeacon.address)) {
         throw new Error(`GatewayRegistry's mintGatewayProxyBeacon address is not correct.`);
@@ -250,13 +279,22 @@ export const deployGatewaySol = async function (
         throw new Error(`GatewayRegistry's lockGatewayProxyBeacon address is not correct.`);
     }
 
-    if (Ox(await renAssetProxyBeacon.getProxyDeployer()) !== Ox(gatewayRegistry.address)) {
-        logger.log(`Granting deployer role to gateway registry in renAssetProxyBeacon.`);
-        await waitForTx(renAssetProxyBeacon.updateProxyDeployer(gatewayRegistry.address));
+    if (Ox(await renERC20ProxyBeacon.getProxyDeployer()) !== Ox(gatewayRegistry.address)) {
+        logger.log(`Granting deployer role to gateway registry in renERC20ProxyBeacon.`);
+        await waitForTx(renERC20ProxyBeacon.updateProxyDeployer(gatewayRegistry.address));
     }
-    if ((await renAssetProxyBeacon.owner()) !== governanceAddress) {
-        logger.log(`Transferring renAssetProxyBeacon ownership to timelock.`);
-        await waitForTx(renAssetProxyBeacon.transferOwnership(governanceAddress));
+    if ((await renERC20ProxyBeacon.owner()) !== governanceAddress) {
+        logger.log(`Transferring renERC20ProxyBeacon ownership to timelock.`);
+        await waitForTx(renERC20ProxyBeacon.transferOwnership(governanceAddress));
+    }
+
+    if (Ox(await renERC721ProxyBeacon.getProxyDeployer()) !== Ox(gatewayRegistry.address)) {
+        logger.log(`Granting deployer role to gateway registry in renERC721ProxyBeacon.`);
+        await waitForTx(renERC721ProxyBeacon.updateProxyDeployer(gatewayRegistry.address));
+    }
+    if ((await renERC721ProxyBeacon.owner()) !== governanceAddress) {
+        logger.log(`Transferring renERC721ProxyBeacon ownership to timelock.`);
+        await waitForTx(renERC721ProxyBeacon.transferOwnership(governanceAddress));
     }
 
     if (Ox(await mintGatewayProxyBeacon.getProxyDeployer()) !== Ox(gatewayRegistry.address)) {
@@ -278,17 +316,17 @@ export const deployGatewaySol = async function (
     }
 
     logger.log(`Deploying contract verification helper contract.`);
-    const beaconProxy = await create2<BeaconProxy__factory>("BeaconProxy", [renAssetProxyBeacon!.address, []]);
-    const renAssetProxy = await getContractAt(hre)<RenAssetV2>("RenAssetV2", beaconProxy.address);
+    const beaconProxy = await create2<BeaconProxy__factory>("BeaconProxy", [renERC20ProxyBeacon!.address, []]);
+    const renAssetProxy = await getContractAt(hre)<RenERC20V1>("RenERC20V1", beaconProxy.address);
     if ((await renAssetProxy.symbol()) === "") {
         logger.log(`Initializing contract verification helper contract.`);
-        await waitForTx(renAssetProxy.__RenAsset_init(0, "1", "TESTDEPLOYMENT", "TESTDEPLOYMENT", 0, deployer));
+        await waitForTx(renAssetProxy.__RenERC20_init(0, "1", "TESTDEPLOYMENT", "TESTDEPLOYMENT", 0, deployer));
     }
     const beaconDeployment = await deployments.get("BeaconProxy");
 
     logger.log(`Handling ${(config.mintGateways || []).length} mint assets.`);
     const prefix = config.tokenPrefix;
-    for (const { symbol, gateway, token, decimals, version } of config.mintGateways) {
+    for (const { symbol, gateway, token, decimals, isNFT, version } of config.mintGateways) {
         logger.log(chalk.yellow(`Mint asset: ${symbol}`));
         const existingGateway = Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getRenAssetBySymbol(symbol));
@@ -300,18 +338,30 @@ export const deployGatewaySol = async function (
                         version || "1"
                     }')`
                 );
-                await waitForTx(
-                    gatewayRegistry.deployMintGatewayAndRenAsset(
-                        symbol,
-                        prefixedSymbol,
-                        prefixedSymbol,
-                        decimals,
-                        version || "1"
-                    )
-                );
+
+                if (isNFT) {
+                    await waitForTx(
+                        gatewayRegistry.deployMintGatewayAndRenERC721(
+                            symbol,
+                            prefixedSymbol,
+                            prefixedSymbol,
+                            version || "1"
+                        )
+                    );
+                } else {
+                    await waitForTx(
+                        gatewayRegistry.deployMintGatewayAndRenERC20(
+                            symbol,
+                            prefixedSymbol,
+                            prefixedSymbol,
+                            decimals,
+                            version || "1"
+                        )
+                    );
+                }
             } else if (!gateway) {
                 logger.log(`Calling deployMintGateway(${symbol}, ${token}, '${version || "1"}')`);
-                await waitForTx(gatewayRegistry.deployMintGateway(symbol, token, version || "1"));
+                await waitForTx(gatewayRegistry.deployMintGateway(symbol, token, isNFT ? true: false, version || "1"));
             } else {
                 logger.log(`Calling addMintGateway(${symbol}, ${token}, ${gateway})`);
                 await waitForTx(gatewayRegistry.addMintGateway(symbol, token, gateway));
@@ -344,7 +394,7 @@ export const deployGatewaySol = async function (
 
         try {
             // Update signature verifier.
-            const gatewayInstance = await getContractAt(hre)<MintGatewayV3>("MintGatewayV3", updatedGateway);
+            const gatewayInstance = await getContractAt(hre)<MintGatewayV4>("MintGatewayV4", updatedGateway);
             const existingSignatureVerifier = Ox(await gatewayInstance.getSignatureVerifier());
             if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
                 logger.log(
@@ -370,7 +420,7 @@ export const deployGatewaySol = async function (
     // Test Tokens are deployed when a particular lock-asset doesn't exist on a
     // testnet.
     logger.log(`Handling ${(config.lockGateways || []).length} lock assets.`);
-    for (const { symbol, gateway, token, decimals, version } of config.lockGateways || []) {
+    for (const { symbol, gateway, token, decimals, isNFT, version } of config.lockGateways || []) {
         logger.log(chalk.yellow(`Lock asset: ${symbol}`));
         const existingGateway = Ox(await gatewayRegistry.getLockGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getLockAssetBySymbol(symbol));
@@ -409,7 +459,7 @@ export const deployGatewaySol = async function (
 
             if (!gateway) {
                 logger.log(`Calling deployLockGateway(${symbol}, ${deployedToken}, '${version || "1"}')`);
-                await waitForTx(gatewayRegistry.deployLockGateway(symbol, deployedToken, version || "1"));
+                await waitForTx(gatewayRegistry.deployLockGateway(symbol, deployedToken, isNFT ? true: false, version || "1"));
             } else {
                 logger.log(`Calling addLockGateway(${symbol}, ${deployedToken}, ${gateway})`);
                 await waitForTx(gatewayRegistry.addLockGateway(symbol, deployedToken, gateway));
@@ -429,7 +479,7 @@ export const deployGatewaySol = async function (
 
         try {
             // Update signature verifier.
-            const gatewayInstance = await getContractAt(hre)<LockGatewayV3>("LockGatewayV3", updatedGateway);
+            const gatewayInstance = await getContractAt(hre)<LockGatewayV4>("LockGatewayV4", updatedGateway);
             const existingSignatureVerifier = Ox(await gatewayInstance.getSignatureVerifier());
             if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
                 logger.log(
@@ -526,8 +576,8 @@ export const deployGatewaySol = async function (
     // const usdcLockGatewayAddress = await gatewayRegistry.getLockGatewayBySymbol(
     //   'USDC'
     // );
-    // const usdcGateway = await ethers.getContractAt<LockGatewayV3>(
-    //   'LockGatewayV3',
+    // const usdcGateway = await ethers.getContractAt<LockGatewayV4>(
+    //   'LockGatewayV4',
     //   usdcLockGatewayAddress,
     //   deployer
     // );
@@ -557,15 +607,17 @@ export default async function func(env: HardhatRuntimeEnvironment): Promise<void
 }
 
 func.tags = [
-    "RenAssetV2",
-    "RenAssetProxyBeacon",
-    "MintGatewayV3",
+    "RenERC20V1",
+    "RenERC721V1",
+    "RenERC20ProxyBeacon",
+    "RenERC721ProxyBeacon",
+    "MintGatewayV4",
     "MintGatewayProxyBeacon",
-    "LockGatewayV3",
+    "LockGatewayV4",
     "LockGatewayProxyBeacon",
-    "RenVMSignatureVerifierV1",
+    "RenVMSignatureVerifierV2",
     "RenVMSignatureVerifierProxy",
-    "GatewayRegistryV2",
+    "GatewayRegistryV3",
     "BasicBridge",
     "ERC20PresetMinterPauserUpgradeable",
 ];

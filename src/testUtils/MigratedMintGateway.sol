@@ -5,19 +5,18 @@ pragma solidity ^0.8.0;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {RenAssetV3} from "../RenAsset/RenAsset.sol";
-import {GatewayStateV3, GatewayStateManagerV3} from "../Gateways/common/GatewayState.sol";
+import {GatewayStateV4, GatewayStateManagerV4} from "../Gateways/common/GatewayState.sol";
 import {RenVMHashes} from "../Gateways/common/RenVMHashes.sol";
 import {IMintGateway} from "../Gateways/interfaces/IMintGateway.sol";
-import {MintGatewayV3} from "../Gateways/MintGateway.sol";
+import {MintGatewayV4} from "../Gateways/MintGateway.sol";
 import {CORRECT_SIGNATURE_RETURN_VALUE_} from "../Gateways/RenVMSignatureVerifier.sol";
 
 // TESTING CONTRACT
-contract MigratedMintGateway is Initializable, GatewayStateV3, GatewayStateManagerV3, IMintGateway {
-    MintGatewayV3 public nextGateway;
+contract MigratedMintGateway is Initializable, GatewayStateV4, GatewayStateManagerV4, IMintGateway {
+    MintGatewayV4 public nextGateway;
 
     function setNextGateway(address nextGateway_) public onlySignatureVerifierOwner {
-        nextGateway = MintGatewayV3(nextGateway_);
+        nextGateway = MintGatewayV4(nextGateway_);
     }
 
     function mint(

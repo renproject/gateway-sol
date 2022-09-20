@@ -8,10 +8,11 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
+import {IRenAsset} from "./interfaces/IRenAsset.sol";
 import {ERC20WithPermit} from "./ERC20WithPermit.sol";
 import {String} from "../libraries/String.sol";
 
-abstract contract RenAssetStateV3 {
+abstract contract RenERC20WithDemurrageStateV1 {
     uint8 internal _decimals;
     uint256 public _exchangeRate = 50;
     uint256 public _demourageRateMantissa;
@@ -23,11 +24,11 @@ abstract contract RenAssetStateV3 {
     uint256[45] private __gap;
 }
 
-contract RenAssetV3 is Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC20WithPermit, RenAssetStateV3 {
-    string public constant NAME = "RenAsset";
+contract RenERC20WithDemurrageV1 is IRenAsset, Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC20WithPermit, RenERC20WithDemurrageStateV1 {
+    string public constant NAME = "RenERC20WithDemurrage";
 
-    // If these parameters are changed, RenAssetFactory must be updated as well.
-    function __RenAsset_init(
+    // If these parameters are changed, RenERC20WithDemurrageFactory must be updated as well.
+    function __RenERC20WithDemurrage_init(
         uint256 chainId,
         string calldata version_,
         string calldata name_,
@@ -36,16 +37,16 @@ contract RenAssetV3 is Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC2
         uint256 demourageRateMantissa_,
         address contractOwner
     ) external initializer {
-        require(String.isValidString(version_), "RenAsset: invalid version");
-        require(String.isValidString(name_), "RenAsset: invalid name");
-        require(String.isValidString(symbol_), "RenAsset: invalid symbol");
+        require(String.isValidString(version_), "RenERC20WithDemurrage: invalid version");
+        require(String.isValidString(name_), "RenERC20WithDemurrage: invalid name");
+        require(String.isValidString(symbol_), "RenERC20WithDemurrage: invalid symbol");
 
         __Ownable_init();
         __ERC20_init(name_, symbol_);
         __ERC20WithPermit_init(chainId, version_, name_, symbol_);
 
-        RenAssetStateV3._decimals = decimals_;
-        RenAssetStateV3._demourageRateMantissa = demourageRateMantissa_;
+        RenERC20WithDemurrageStateV1._decimals = decimals_;
+        RenERC20WithDemurrageStateV1._demourageRateMantissa = demourageRateMantissa_;
 
         if (owner() != contractOwner) {
             transferOwnership(contractOwner);
@@ -53,30 +54,30 @@ contract RenAssetV3 is Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC2
     }
 
     function decimals() public view override returns (uint8) {
-        return RenAssetStateV3._decimals;
+        return RenERC20WithDemurrageStateV1._decimals;
     }
 
     /// @notice mint can only be called by the tokens' associated Gateway
     /// contract. See Gateway's mint function instead.
-    function mint(address to, uint256 amount) external onlyOwner {
+    function mint(address to, uint256 amount) external override onlyOwner {
         uint256 mintAmount;
-        if (RenAssetStateV3._blockNumber == 0) {
-            RenAssetStateV3._blockNumber = block.number;
-            mintAmount = amount * RenAssetStateV3._exchangeRate;
+        if (RenERC20WithDemurrageStateV1._blockNumber == 0) {
+            RenERC20WithDemurrageStateV1._blockNumber = block.number;
+            mintAmount = amount * RenERC20WithDemurrageStateV1._exchangeRate;
         } else {
             mintAmount =
                 (amount *
-                    RenAssetStateV3._exchangeRate *
-                    (block.number - RenAssetStateV3._blockNumber) *
-                    RenAssetStateV3._demourageRateMantissa) /
-                RenAssetStateV3._demourageRateBase;
+                    RenERC20WithDemurrageStateV1._exchangeRate *
+                    (block.number - RenERC20WithDemurrageStateV1._blockNumber) *
+                    RenERC20WithDemurrageStateV1._demourageRateMantissa) /
+                RenERC20WithDemurrageStateV1._demourageRateBase;
         }
         _mint(to, mintAmount);
     }
 
     /// @notice burn can only be called by the tokens' associated Gateway
     /// contract. See Gateway's burn functions instead.
-    function burn(address from, uint256 amount) external onlyOwner {
+    function burn(address from, uint256 amount) external override onlyOwner {
         return _burn(from, tokenAmount(amount));
     }
 
@@ -132,18 +133,22 @@ contract RenAssetV3 is Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC2
     }
 
     function newExchangeRate() public view returns (uint256) {
-        if (RenAssetStateV3._blockNumber == 0 || block.number == RenAssetStateV3._blockNumber)
-            return RenAssetStateV3._exchangeRate;
+        if (RenERC20WithDemurrageStateV1._blockNumber == 0 || block.number == RenERC20WithDemurrageStateV1._blockNumber)
+            return RenERC20WithDemurrageStateV1._exchangeRate;
         return
-            (RenAssetStateV3._exchangeRate *
-                (RenAssetStateV3._demourageRateBase + RenAssetStateV3._demourageRateMantissa) **
-                    (block.number - RenAssetStateV3._blockNumber)) /
-            (RenAssetStateV3._demourageRateBase**(block.number - RenAssetStateV3._blockNumber));
+            (RenERC20WithDemurrageStateV1._exchangeRate *
+                (RenERC20WithDemurrageStateV1._demourageRateBase + RenERC20WithDemurrageStateV1._demourageRateMantissa) **
+                    (block.number - RenERC20WithDemurrageStateV1._blockNumber)) /
+            (RenERC20WithDemurrageStateV1._demourageRateBase**(block.number - RenERC20WithDemurrageStateV1._blockNumber));
     }
 
     function updateDemourageRate(uint256 _newRate) public onlyOwner {
-        RenAssetStateV3._exchangeRate = newExchangeRate();
-        RenAssetStateV3._blockNumber = block.number;
-        RenAssetStateV3._demourageRateMantissa = _newRate;
+        RenERC20WithDemurrageStateV1._exchangeRate = newExchangeRate();
+        RenERC20WithDemurrageStateV1._blockNumber = block.number;
+        RenERC20WithDemurrageStateV1._demourageRateMantissa = _newRate;
+    }
+
+    function transferOwnership(address newOwner) public override(IRenAsset, OwnableUpgradeable) {
+        OwnableUpgradeable.transferOwnership(newOwner);
     }
 }

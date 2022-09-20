@@ -7,21 +7,21 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import {SafeTransferWithFeesUpgradeable} from "./common/SafeTransferWithFees.sol";
-import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
+import {GatewayStateV4, GatewayStateManagerV4} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
 import {ILockGateway} from "./interfaces/ILockGateway.sol";
 import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./RenVMSignatureVerifier.sol";
-import {RenAssetV3} from "../RenAsset/RenAsset.sol";
 import {String} from "../libraries/String.sol";
 
-/// LockGatewayV3 handles verifying lock and release requests. A mint authority
+/// LockGatewayV4 handles verifying lock and release requests. A mint authority
 /// approves assets being released by providing a digital signature.
 /// The balance of assets is assumed not to change without a transfer, so
 /// rebasing assets and assets with a demurrage fee are not supported.
-contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, GatewayStateManagerV3, ILockGateway {
+contract LockGatewayV4 is Initializable, ContextUpgradeable, GatewayStateV4, GatewayStateManagerV4, ILockGateway {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeTransferWithFeesUpgradeable for IERC20Upgradeable;
 
@@ -31,10 +31,11 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
     function __LockGateway_init(
         string calldata asset_,
         address signatureVerifier_,
-        address token_
+        address token_,
+        bool isNFT_
     ) external initializer {
         __Context_init();
-        __GatewayStateManager_init(asset_, signatureVerifier_, token_);
+        __GatewayStateManager_init(asset_, signatureVerifier_, token_, isNFT_);
     }
 
     // Public functions ////////////////////////////////////////////////////////
@@ -49,13 +50,14 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
     ///        moved to.
     /// @param recipientPayload An optional payload to be passed to the
     ///        recipient chain along with the address.
-    /// @param amount The amount of the token being locked, in the asset's
-    ///        smallest unit. (e.g. satoshis for BTC)
+    /// @param amountOrTokenId The amount of the token being locked, in the 
+    ///        asset's smallest unit or tokenId if it is an NFT. (e.g. satoshis 
+    ///        for BTC)
     function lock(
         string calldata recipientAddress,
         string calldata recipientChain,
         bytes calldata recipientPayload,
-        uint256 amount
+        uint256 amountOrTokenId
     ) external override returns (uint256) {
         // The recipient must not be empty. Better validation is possible,
         // but would need to be customized for each destination ledger.
@@ -64,11 +66,21 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         // Lock the tokens. If the user doesn't have enough tokens, this will
         // throw. Note that some assets may transfer less than the provided
         // `amount`, due to transfer fees.
-        uint256 transferredAmount = IERC20Upgradeable(getToken()).safeTransferFromWithFees(
-            _msgSender(),
-            address(this),
-            amount
-        );
+        uint256 transferredAmountOrTokenId = amountOrTokenId;
+        if (_isNFT) {
+            transferredAmountOrTokenId = amountOrTokenId;
+            IERC721Upgradeable(getToken()).safeTransferFrom(
+                _msgSender(),
+                address(this),
+                amountOrTokenId
+            );
+        } else {
+            transferredAmountOrTokenId = IERC20Upgradeable(getToken()).safeTransferFromWithFees(
+                _msgSender(),
+                address(this),
+                amountOrTokenId
+            );
+        }
 
         // Get the latest nonce (also known as lock reference).
         uint256 lockNonce = getEventNonce();
@@ -77,7 +89,7 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
             recipientAddress,
             recipientChain,
             recipientPayload,
-            transferredAmount,
+            transferredAmountOrTokenId,
             lockNonce,
             recipientAddress,
             recipientChain
@@ -85,7 +97,7 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
 
         _eventNonce = lockNonce + 1;
 
-        return transferredAmount;
+        return transferredAmountOrTokenId;
     }
 
     /// @notice release verifies a release approval signature from RenVM and
@@ -93,14 +105,14 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
     ///
     /// @param pHash (payload hash) The hash of the payload associated with the
     ///        release.
-    /// @param amount The amount of the token being released, in its smallest
-    ///        value.
+    /// @param amountOrTokenId The amount of the token being released, in its 
+    ///        smallest value or the token id of the NFT.
     /// @param nHash (nonce hash) The hash of the nonce, amount and pHash.
     /// @param sig The signature of the hash of the following values:
     ///        (pHash, amount, recipient, nHash), signed by the mintAuthority.
     function release(
         bytes32 pHash,
-        uint256 amount,
+        uint256 amountOrTokenId,
         bytes32 nHash,
         bytes calldata sig
     ) external override returns (uint256) {
@@ -108,8 +120,8 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         address recipient = _msgSender();
 
         // Calculate the hash signed by RenVM. This binds the payload hash,
-        // amount, recipient and nonce hash to the signature.
-        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, getSelectorHash(), recipient, nHash);
+        // amountOrTokenId, recipient and nonce hash to the signature.
+        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amountOrTokenId, getSelectorHash(), recipient, nHash);
 
         // Check that the signature hasn't been redeemed.
         require(!status(sigHash), "LockGateway: signature already spent");
@@ -123,8 +135,8 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
                     abi.encodePacked(
                         "LockGateway: invalid signature. phash: ",
                         StringsUpgradeable.toHexString(uint256(pHash), 32),
-                        ", amount: ",
-                        StringsUpgradeable.toString(amount),
+                        ", amountOrTokenId: ",
+                        StringsUpgradeable.toString(amountOrTokenId),
                         ", shash",
                         StringsUpgradeable.toHexString(uint256(getSelectorHash()), 32),
                         ", msg.sender: ",
@@ -139,12 +151,17 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         // Update the status for both the signature hash and the nHash.
         _status[sigHash] = true;
 
-        // Release the amount to the recipient.
-        IERC20Upgradeable(getToken()).safeTransfer(recipient, amount);
+        if (_isNFT) {
+            // Release the nft to the recipient.
+            IERC721Upgradeable(getToken()).safeTransferFrom(address(this), recipient, amountOrTokenId);
+        } else {
+            // Release the amountOrTokenId to the recipient.
+            IERC20Upgradeable(getToken()).safeTransfer(recipient, amountOrTokenId);
+        }
 
         // Emit a log with a unique identifier 'n'.
-        emit LogRelease(recipient, amount, sigHash, nHash);
+        emit LogRelease(recipient, amountOrTokenId, sigHash, nHash);
 
-        return amount;
+        return amountOrTokenId;
     }
 }

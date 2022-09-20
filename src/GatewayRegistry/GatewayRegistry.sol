@@ -174,11 +174,11 @@ contract GatewayRegistryV2 is
         _signatureVerifier = signatureVerifier_;
         _transferContract = transferContract;
 
-        AccessControlEnumerableUpgradeable._setupRole(AccessControlUpgradeable.DEFAULT_ADMIN_ROLE, adminAddress);
-        AccessControlEnumerableUpgradeable._setupRole(CAN_UPDATE_GATEWAYS, adminAddress);
-        AccessControlEnumerableUpgradeable._setupRole(CAN_ADD_GATEWAYS, adminAddress);
+        AccessControlEnumerableUpgradeable._grantRole(AccessControlUpgradeable.DEFAULT_ADMIN_ROLE, adminAddress);
+        AccessControlEnumerableUpgradeable._grantRole(CAN_UPDATE_GATEWAYS, adminAddress);
+        AccessControlEnumerableUpgradeable._grantRole(CAN_ADD_GATEWAYS, adminAddress);
         for (uint256 i = 0; i < gatewayDeployers.length; ++i) {
-            _setupRole(CAN_ADD_GATEWAYS, gatewayDeployers[i]);
+            _grantRole(CAN_ADD_GATEWAYS, gatewayDeployers[i]);
         }
     }
 

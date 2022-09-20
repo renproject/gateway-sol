@@ -8,8 +8,8 @@ import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Cont
 import {AddressUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
-import {RenAssetV3} from "../RenAsset/RenAsset.sol";
-import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
+import {IRenAsset} from "../RenAsset/interfaces/IRenAsset.sol";
+import {GatewayStateV4, GatewayStateManagerV4} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
 import {IMintGateway} from "./interfaces/IMintGateway.sol";
 import {String} from "../libraries/String.sol";
@@ -18,7 +18,7 @@ import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./RenVMSignatureVerifier.sol";
 /// MintGateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
-contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, GatewayStateManagerV3, IMintGateway {
+contract MintGatewayV4 is Initializable, ContextUpgradeable, GatewayStateV4, GatewayStateManagerV4, IMintGateway {
     string public constant NAME = "MintGateway";
 
     event TokenOwnershipTransferred(address indexed tokenAddress, address indexed nextTokenOwner);
@@ -27,10 +27,11 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
     function __MintGateway_init(
         string calldata asset_,
         address signatureVerifier_,
-        address token_
+        address token_,
+        bool isNFT_
     ) external initializer {
         __Context_init();
-        __GatewayStateManager_init(asset_, signatureVerifier_, token_);
+        __GatewayStateManager_init(asset_, signatureVerifier_, token_, isNFT_);
     }
 
     // Governance functions ////////////////////////////////////////////////////
@@ -41,7 +42,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         require(nextTokenOwner != address(0x0), "MintGateway: invalid next token owner");
 
         address token_ = getToken();
-        RenAssetV3(token_).transferOwnership(address(nextTokenOwner));
+        IRenAsset(token_).transferOwnership(address(nextTokenOwner));
 
         emit TokenOwnershipTransferred(token_, nextTokenOwner);
     }
@@ -53,18 +54,18 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
     ///
     /// @param pHash (payload hash) The hash of the payload associated with the
     ///        mint.
-    /// @param amount The amount of the token being minted, in its smallest
-    ///        value. (e.g. satoshis for BTC).
-    /// @param nHash (nonce hash) The hash of the nonce, amount and pHash.
+    /// @param amountOrTokenId The amount of the token being minted, in its smallest
+    ///        value (e.g. satoshis for BTC) or the tokenID of the NFT.
+    /// @param nHash (nonce hash) The hash of the nonce, amountOrTokenId and pHash.
     /// @param sig The signature of the hash of the following values:
-    ///        (pHash, amount, recipient, nHash), signed by the mintAuthority.
+    ///        (pHash, amountOrTokenId, recipient, nHash), signed by the mintAuthority.
     function mint(
         bytes32 pHash,
-        uint256 amount,
+        uint256 amountOrTokenId,
         bytes32 nHash,
         bytes calldata sig
     ) external override returns (uint256) {
-        return _mint(pHash, amount, nHash, sig, _msgSender());
+        return _mint(pHash, amountOrTokenId, nHash, sig, _msgSender());
     }
 
     /// @notice burnWithPayload allows minted assets to be released to their
@@ -80,62 +81,62 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
     ///        moved to.
     /// @param recipientPayload An optional payload to be passed to the
     ///        recipient chain along with the address.
-    /// @param amount The amount of the token being locked, in the asset's
-    ///        smallest unit. (e.g. satoshis for BTC)
+    /// @param amountOrTokenId The amount of the token being minted, in its smallest
+    ///        value (e.g. satoshis for BTC) or the tokenID of the NFT.
     function burnWithPayload(
         string calldata recipientAddress,
         string calldata recipientChain,
         bytes calldata recipientPayload,
-        uint256 amount
+        uint256 amountOrTokenId
     ) external override returns (uint256) {
-        return _burnWithPayload(recipientAddress, recipientChain, recipientPayload, amount, _msgSender());
+        return _burnWithPayload(recipientAddress, recipientChain, recipientPayload, amountOrTokenId, _msgSender());
     }
 
     /// @notice burn is a convenience function that is equivalent to calling
     ///         `burnWithPayload` with an empty payload and chain, releasing
     ///         the asset to the native chain.
-    function burn(string calldata recipient, uint256 amount) external virtual override returns (uint256) {
-        return _burnWithPayload(recipient, "", "", amount, _msgSender());
+    function burn(string calldata recipient, uint256 amountOrTokenId) external virtual override returns (uint256) {
+        return _burnWithPayload(recipient, "", "", amountOrTokenId, _msgSender());
     }
 
     /// Same as `burn` with the recipient parameter being `bytes` instead of
     /// a `string`. For backwards compatibility with the MintGatewayV2.
-    function burn(bytes calldata recipient, uint256 amount) external virtual override returns (uint256) {
-        return _burnWithPayload(string(recipient), "", "", amount, _msgSender());
+    function burn(bytes calldata recipient, uint256 amountOrTokenId) external virtual override returns (uint256) {
+        return _burnWithPayload(string(recipient), "", "", amountOrTokenId, _msgSender());
     }
 
     function _mintFromPreviousGateway(
         bytes32 pHash,
-        uint256 amount,
+        uint256 amountOrTokenId,
         bytes32 nHash,
         bytes calldata sig,
         address caller
     ) external onlyPreviousGateway returns (uint256) {
-        return _mint(pHash, amount, nHash, sig, caller);
+        return _mint(pHash, amountOrTokenId, nHash, sig, caller);
     }
 
     function _burnFromPreviousGateway(
         string calldata recipientAddress,
         string calldata recipientChain,
         bytes calldata recipientPayload,
-        uint256 amount,
+        uint256 amountOrTokenId,
         address caller
     ) external onlyPreviousGateway returns (uint256) {
-        return _burnWithPayload(string(recipientAddress), recipientChain, recipientPayload, amount, caller);
+        return _burnWithPayload(string(recipientAddress), recipientChain, recipientPayload, amountOrTokenId, caller);
     }
 
     // INTERNAL FUNCTIONS //////////////////////////////////////////////////////
 
     function _mint(
         bytes32 pHash,
-        uint256 amount,
+        uint256 amountOrTokenId,
         bytes32 nHash,
         bytes memory sig,
         address recipient
     ) internal returns (uint256) {
         // Calculate the hash signed by RenVM. This binds the payload hash,
-        // amount, recipient and nonce hash to the signature.
-        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amount, getSelectorHash(), recipient, nHash);
+        // amountOrTokenId, recipient and nonce hash to the signature.
+        bytes32 sigHash = RenVMHashes.calculateSigHash(pHash, amountOrTokenId, getSelectorHash(), recipient, nHash);
 
         // Check that the signature hasn't been redeemed.
         require(!status(sigHash), "MintGateway: signature already spent");
@@ -149,8 +150,8 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
                     abi.encodePacked(
                         "MintGateway: invalid signature. phash: ",
                         StringsUpgradeable.toHexString(uint256(pHash), 32),
-                        ", amount: ",
-                        StringsUpgradeable.toString(amount),
+                        ", amountOrTokenId: ",
+                        StringsUpgradeable.toString(amountOrTokenId),
                         ", shash",
                         StringsUpgradeable.toHexString(uint256(getSelectorHash()), 32),
                         ", msg.sender: ",
@@ -165,14 +166,14 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         // Update the status for the signature hash.
         _status[sigHash] = true;
 
-        // Mint the amount to the recipient.
-        RenAssetV3(getToken()).mint(recipient, amount);
+        // Mint the amountOrTokenId to the recipient.
+        IRenAsset(getToken()).mint(recipient, amountOrTokenId);
 
         // Emit mint log. For backwards compatiblity reasons, the sigHash is
         // cast to a uint256.
-        emit LogMint(recipient, amount, uint256(sigHash), nHash);
+        emit LogMint(recipient, amountOrTokenId, uint256(sigHash), nHash);
 
-        return amount;
+        return amountOrTokenId;
     }
 
     /// @notice burn destroys tokens after taking a fee for the `_feeRecipient`,
@@ -186,13 +187,13 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
     ///        moved to.
     /// @param recipientPayload An optional payload to be passed to the
     ///        recipient chain along with the address.
-    /// @param amount The amount of the token being locked, in the asset's
-    ///        smallest unit. (e.g. satoshis for BTC)
+    /// @param amountOrTokenId The amount of the token being minted, in its smallest
+    ///        value (e.g. satoshis for BTC) or the tokenID of the NFT.
     function _burnWithPayload(
         string memory recipientAddress,
         string memory recipientChain,
         bytes memory recipientPayload,
-        uint256 amount,
+        uint256 amountOrTokenId,
         address caller
     ) internal returns (uint256) {
         // The recipient must not be empty. Better validation is possible,
@@ -201,7 +202,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
 
         // Burn the tokens. If the user doesn't have enough tokens, this will
         // throw.
-        RenAssetV3(getToken()).burn(caller, amount);
+        IRenAsset(getToken()).burn(caller, amountOrTokenId);
 
         uint256 burnNonce = getEventNonce();
 
@@ -212,17 +213,17 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
                 recipientAddress,
                 recipientChain,
                 recipientPayload,
-                amount,
+                amountOrTokenId,
                 burnNonce,
                 recipientAddress,
                 recipientChain
             );
         } else {
-            emit LogBurn(bytes(recipientAddress), amount, burnNonce, bytes(recipientAddress));
+            emit LogBurn(bytes(recipientAddress), amountOrTokenId, burnNonce, bytes(recipientAddress));
         }
 
         _eventNonce = burnNonce + 1;
 
-        return amount;
+        return amountOrTokenId;
     }
 }

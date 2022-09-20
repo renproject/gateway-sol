@@ -11,7 +11,7 @@ import {IRenVMSignatureVerifier} from "../RenVMSignatureVerifier.sol";
 import {String} from "../../libraries/String.sol";
 import {RenVMHashes} from "./RenVMHashes.sol";
 
-abstract contract GatewayStateV3 {
+abstract contract GatewayStateV4 {
     // Selector hash details.
     string internal _asset;
     bytes32 internal _selectorHash;
@@ -28,12 +28,14 @@ abstract contract GatewayStateV3 {
 
     uint256 internal _eventNonce;
 
+    bool internal _isNFT;
+
     // Leave a gap so that storage values added in future upgrages don't corrupt
     // the storage of contracts that inherit from this contract.
-    uint256[43] private __gap;
+    uint256[42] private __gap;
 }
 
-abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, GatewayStateV3 {
+abstract contract GatewayStateManagerV4 is Initializable, ContextUpgradeable, GatewayStateV4 {
     event LogAssetUpdated(string asset, bytes32 indexed selectorHash);
     event LogTokenUpdated(address indexed token);
     event LogSignatureVerifierUpdated(address indexed oldSignatureVerifier, address indexed newSignatureVerifier);
@@ -42,8 +44,10 @@ abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, Ga
     function __GatewayStateManager_init(
         string calldata asset_,
         address signatureVerifier_,
-        address token_
+        address token_,
+        bool isNFT_
     ) public initializer {
+        _isNFT = isNFT_;
         __Context_init();
         _updateSignatureVerifier(signatureVerifier_);
         _updateAsset(asset_);
@@ -148,7 +152,7 @@ abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, Ga
 
         address previousGateway_ = getPreviousGateway();
         if (previousGateway_ != address(0x0)) {
-            return GatewayStateManagerV3(previousGateway_).status(hash);
+            return GatewayStateManagerV4(previousGateway_).status(hash);
         }
 
         return false;

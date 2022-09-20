@@ -5,7 +5,8 @@ pragma solidity ^0.8.0;
 
 import "./RenProxyAdmin.sol";
 import "./RenAsset/ERC20WithPermit.sol";
-import "./RenAsset/RenAsset.sol";
+import "./RenAsset/RenERC20.sol";
+import "./RenAsset/RenERC721.sol";
 
 import "./Gateways/LockGateway.sol";
 import "./Gateways/MintGateway.sol";

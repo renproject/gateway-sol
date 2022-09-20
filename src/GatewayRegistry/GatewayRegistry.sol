@@ -14,7 +14,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {IMintGateway} from "../Gateways/interfaces/IMintGateway.sol";
 import {ILockGateway} from "../Gateways/interfaces/ILockGateway.sol";
 import {String} from "../libraries/String.sol";
-import {RenAssetFactory} from "./RenAssetFactory.sol";
+import {RenAssetFactoryV2} from "./RenAssetFactory.sol";
 import {StringSet} from "../libraries/StringSet.sol";
 
 contract GatewayRegistryStateV2 {
@@ -145,10 +145,10 @@ contract GatewayRegistryGettersV2 is GatewayRegistryStateV2 {
 
 /// GatewayRegistry is a mapping from assets to their associated
 /// RenERC20 and Gateway contracts.
-contract GatewayRegistryV2 is
+contract GatewayRegistryV3 is
     Initializable,
     AccessControlEnumerableUpgradeable,
-    RenAssetFactory,
+    RenAssetFactoryV2,
     GatewayRegistryStateV2,
     GatewayRegistryGettersV2
 {
@@ -162,14 +162,15 @@ contract GatewayRegistryV2 is
         uint256 chainId_,
         address signatureVerifier_,
         address transferContract,
-        address renAssetProxyBeacon_,
+        address renERC20ProxyBeacon_,
+        address renERC721ProxyBeacon_,
         address mintGatewayProxyBeacon_,
         address lockGatewayProxyBeacon_,
         address adminAddress,
         address[] calldata gatewayDeployers
     ) external initializer {
         __AccessControlEnumerable_init();
-        __RenAssetFactory_init(renAssetProxyBeacon_, mintGatewayProxyBeacon_, lockGatewayProxyBeacon_);
+        __RenAssetFactory_init(renERC20ProxyBeacon_, renERC721ProxyBeacon_, mintGatewayProxyBeacon_, lockGatewayProxyBeacon_);
         _chainId = chainId_;
         _signatureVerifier = signatureVerifier_;
         _transferContract = transferContract;
@@ -316,6 +317,7 @@ contract GatewayRegistryV2 is
     function deployMintGateway(
         string calldata symbol,
         address renAsset,
+        bool isNFT,
         string calldata version
     ) external onlyRoleVerbose(CAN_ADD_GATEWAYS, "CAN_ADD_GATEWAYS") {
         if (mintGatewaySymbols.contains(symbol)) {
@@ -323,11 +325,11 @@ contract GatewayRegistryV2 is
             checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
         }
 
-        address mintGateway = address(_deployMintGateway(symbol, getSignatureVerifier(), renAsset, version));
+        address mintGateway = address(_deployMintGateway(symbol, getSignatureVerifier(), renAsset, isNFT, version));
         addMintGateway(symbol, renAsset, mintGateway);
     }
 
-    function deployMintGatewayAndRenAsset(
+    function deployMintGatewayAndRenERC20(
         string calldata symbol,
         string calldata erc20Name,
         string calldata erc20Symbol,
@@ -340,9 +342,28 @@ contract GatewayRegistryV2 is
         }
 
         address renAsset = address(
-            _deployRenAsset(getChainId(), symbol, erc20Name, erc20Symbol, erc20Decimals, version)
+            _deployRenERC20(getChainId(), symbol, erc20Name, erc20Symbol, erc20Decimals, version)
         );
-        address mintGateway = address(_deployMintGateway(symbol, getSignatureVerifier(), renAsset, version));
+        address mintGateway = address(_deployMintGateway(symbol, getSignatureVerifier(), renAsset, false, version));
+        OwnableUpgradeable(renAsset).transferOwnership(mintGateway);
+        addMintGateway(symbol, renAsset, mintGateway);
+    }
+
+    function deployMintGatewayAndRenERC721(
+        string calldata symbol,
+        string calldata erc721Name,
+        string calldata erc721Symbol,
+        string calldata version
+    ) external onlyRoleVerbose(CAN_ADD_GATEWAYS, "CAN_ADD_GATEWAYS") {
+        if (mintGatewaySymbols.contains(symbol)) {
+            // Check role before expensive contract deployment.
+            checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
+        }
+
+        address renAsset = address(
+            _deployRenERC721(getChainId(), symbol, erc721Name, erc721Symbol, version)
+        );
+        address mintGateway = address(_deployMintGateway(symbol, getSignatureVerifier(), renAsset, true, version));
         OwnableUpgradeable(renAsset).transferOwnership(mintGateway);
         addMintGateway(symbol, renAsset, mintGateway);
     }
@@ -411,6 +432,7 @@ contract GatewayRegistryV2 is
     function deployLockGateway(
         string calldata symbol,
         address lockToken,
+        bool isNFT,
         string calldata version
     ) external onlyRoleVerbose(CAN_ADD_GATEWAYS, "CAN_ADD_GATEWAYS") {
         if (lockGatewaySymbols.contains(symbol)) {
@@ -418,7 +440,7 @@ contract GatewayRegistryV2 is
             checkRoleVerbose(CAN_UPDATE_GATEWAYS, "CAN_UPDATE_GATEWAYS", _msgSender());
         }
 
-        address lockGateway = address(_deployLockGateway(symbol, getSignatureVerifier(), lockToken, version));
+        address lockGateway = address(_deployLockGateway(symbol, getSignatureVerifier(), lockToken, isNFT, version));
         addLockGateway(symbol, lockToken, lockGateway);
     }
 

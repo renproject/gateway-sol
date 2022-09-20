@@ -64,8 +64,14 @@ contract ProxyBeacon is Context, UpgradeableBeacon {
     }
 }
 
-contract RenAssetProxyBeacon is ProxyBeacon {
-    string public constant NAME = "RenAssetProxyBeacon";
+contract RenERC20ProxyBeacon is ProxyBeacon {
+    string public constant NAME = "RenERC20ProxyBeacon";
+
+    constructor(address implementation, address adminAddress) ProxyBeacon(implementation, adminAddress) {}
+}
+
+contract RenERC721ProxyBeacon is ProxyBeacon {
+    string public constant NAME = "RenERC721ProxyBeacon";
 
     constructor(address implementation, address adminAddress) ProxyBeacon(implementation, adminAddress) {}
 }

@@ -9,19 +9,19 @@ library EDDSA {
         uint8 parity;
     }
 
-    function p() public pure returns (uint256) {
+    function p() internal pure returns (uint256) {
         return 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F;
     }
 
-    function n() public pure returns (uint256) {
+    function n() internal pure returns (uint256) {
         return 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
     }
 
-    function lessThanP(uint256 _num) public pure returns (bool) {
+    function lessThanP(uint256 _num) internal pure returns (bool) {
         return _num < p();
     }
 
-    function lessThanN(uint256 _num) public pure returns (bool) {
+    function lessThanN(uint256 _num) internal pure returns (bool) {
         return _num < n();
     }
 

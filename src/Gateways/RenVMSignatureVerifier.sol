@@ -10,17 +10,19 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
+import "hardhat/console.sol";
+
 interface IRenVMSignatureVerifier is IERC1271 {
     // See IERC1271
 
     function getChain() external view returns (string memory);
 
-    function getMintAuthority() external view returns (EDDSA.PubKey memory);
+    function getMintAuthority() external view returns (bytes memory);
 }
 
 contract RenVMSignatureVerifierStateV2 {
     string internal _chain;
-    EDDSA.PubKey internal _mintAuthority;
+    bytes internal _mintAuthority;
 
     // Leave a gap so that storage values added in future upgrages don't corrupt
     // the storage of contracts that inherit from this contract.
@@ -43,7 +45,7 @@ contract RenVMSignatureVerifierV2 is
 {
     string public constant NAME = "RenVMSignatureVerifier";
 
-    event LogMintAuthorityUpdated(uint256 indexed pubKeyX, uint8 indexed pubKeyY);
+    event LogMintAuthorityUpdated(bytes indexed oldPubKey, bytes indexed newPubKey);
 
     // bytes4(keccak256("isValidSignature(bytes32,bytes)")
     bytes4 public constant CORRECT_SIGNATURE_RETURN_VALUE = 0x1626ba7e; // CORRECT_SIGNATURE_RETURN_VALUE_
@@ -51,13 +53,15 @@ contract RenVMSignatureVerifierV2 is
 
     function __RenVMSignatureVerifier_init(
         string calldata chain_,
-        EDDSA.PubKey calldata mintAuthority_,
+        bytes calldata mintAuthority_,
         address contractOwner
     ) external initializer {
         __Context_init();
         __Ownable_init();
         _chain = chain_;
+
         updateMintAuthority(mintAuthority_);
+        console.log("updated mint authority", _mintAuthority.length);
 
         if (owner() != contractOwner) {
             transferOwnership(contractOwner);
@@ -68,18 +72,17 @@ contract RenVMSignatureVerifierV2 is
         return _chain;
     }
 
-    function getMintAuthority() public view override returns (EDDSA.PubKey memory) {
-        return _mintAuthority;
+    function getMintAuthority() public view override returns (bytes memory) {
+        return RenVMSignatureVerifierStateV2._mintAuthority;
     }
 
-    /// @notice Allow the owner or mint authority to update the mint authority.
+    /// @notice Allow the owner to update the mint authority.
     ///
-    /// @param nextMintAuthority The new mint mint authority.
-    function updateMintAuthority(EDDSA.PubKey memory nextMintAuthority) public onlyOwner {
-        require(nextMintAuthority.x != 0, "SignatureVerifier: mintAuthority cannot be set to address zero");
-        require(EDDSA.lessThanP(nextMintAuthority.x), "SignatureVerifier: mintAuthority cannot be greater than p");
-        _mintAuthority = nextMintAuthority;
-        emit LogMintAuthorityUpdated(_mintAuthority.x, _mintAuthority.parity);
+    /// @param _nextMintAuthority The new mint mint authority.
+    function updateMintAuthority(bytes memory _nextMintAuthority) public onlyOwner {
+        EDDSA.validate(_nextMintAuthority);
+        emit LogMintAuthorityUpdated(_mintAuthority, _nextMintAuthority);
+        RenVMSignatureVerifierStateV2._mintAuthority = _nextMintAuthority;
     }
 
     // PUBLIC //////////////////////////////////////////////////////////////////
@@ -87,8 +90,8 @@ contract RenVMSignatureVerifierV2 is
     /// @notice verifySignature checks the the provided signature matches the
     /// provided parameters. Returns a 4-byte value as defined by ERC1271.
     function isValidSignature(bytes32 sigHash, bytes calldata signature) external view override returns (bytes4) {
-        EDDSA.PubKey memory mintAuthority_ = getMintAuthority();
-        require(mintAuthority_.x != 0, "SignatureVerifier: mintAuthority not initialized");
+        bytes memory mintAuthority_ = getMintAuthority();
+        require(mintAuthority_.length != 0, "SignatureVerifier: mintAuthority not initialized");
         if (EDDSA.verify(mintAuthority_, sigHash, signature)) {
             return CORRECT_SIGNATURE_RETURN_VALUE;
         } else {

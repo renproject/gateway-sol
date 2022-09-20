@@ -149,7 +149,6 @@ contract GatewayRegistryV3 is
     Initializable,
     AccessControlEnumerableUpgradeable,
     RenAssetFactoryV2,
-    GatewayRegistryStateV2,
     GatewayRegistryGettersV2
 {
     using StringSet for StringSet.Set;

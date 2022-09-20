@@ -61,7 +61,7 @@ export const deployGatewaySol = async function (
         throw new Error(`No network configuration found for ${network.name}!`);
     }
 
-    const { mintAuthorityV2, chainName, create2SaltOverride } = config;
+    const { mintAuthority, chainName, create2SaltOverride } = config;
     const chainId: number = (await ethers.provider.getNetwork()).chainId;
     const { deployer } = await getNamedAccounts();
 
@@ -195,15 +195,12 @@ export const deployGatewaySol = async function (
         "RenVMSignatureVerifierProxy",
         {
             initializer: "__RenVMSignatureVerifier_init",
-            constructorArgs: [chainName, mintAuthorityV2, governanceAddress] as Parameters<
+            constructorArgs: [chainName, mintAuthority, governanceAddress] as Parameters<
                 RenVMSignatureVerifierV2["__RenVMSignatureVerifier_init"]
             >,
         },
         // isInitialized:
-        async (signatureVerifier) => {
-            const mAuth = await signatureVerifier.getMintAuthority()
-            return (mAuth[0].toHexString() === mintAuthorityV2.x && mAuth[1] === mintAuthorityV2.parity)
-        }
+        async (signatureVerifier): Promise<boolean> => await signatureVerifier.getMintAuthority() === mintAuthority
     );
     const signatureVerifierOwner = Ox(await signatureVerifier.owner());
     if (signatureVerifierOwner !== Ox(governanceAddress)) {
@@ -240,8 +237,10 @@ export const deployGatewaySol = async function (
         async (gatewayRegistry) => {
             try {
                 await gatewayRegistry.getSignatureVerifier();
+                console.log("successful");
                 return true;
             } catch (error: any) {
+                console.log("failed");
                 return false;
             }
         }

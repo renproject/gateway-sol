@@ -46,7 +46,7 @@ abstract contract GatewayStateManagerV4 is Initializable, ContextUpgradeable, Ga
         address signatureVerifier_,
         address token_,
         bool isNFT_
-    ) public initializer {
+    ) public onlyInitializing {
         _isNFT = isNFT_;
         __Context_init();
         _updateSignatureVerifier(signatureVerifier_);

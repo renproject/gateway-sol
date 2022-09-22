@@ -33,7 +33,7 @@ contract ERC20WithPermit is Initializable, ERC20Upgradeable, ERC20WithPermitStat
         string calldata version_,
         string calldata name_,
         string calldata symbol_
-    ) public initializer {
+    ) public onlyInitializing {
         __ERC20_init(name_, symbol_);
         _version = version_;
         _domainSeparator = keccak256(

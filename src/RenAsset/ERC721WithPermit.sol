@@ -33,7 +33,7 @@ contract ERC721WithPermit is Initializable, ERC721Upgradeable, ERC721WithPermitS
         string calldata version_,
         string calldata name_,
         string calldata symbol_
-    ) public initializer {
+    ) public onlyInitializing {
         __ERC721_init(name_, symbol_);
         _version = version_;
         _domainSeparator = keccak256(

@@ -8,7 +8,7 @@ import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Cont
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-
+import "hardhat/console.sol";
 import {IMintGateway} from "../Gateways/interfaces/IMintGateway.sol";
 import {ILockGateway} from "../Gateways/interfaces/ILockGateway.sol";
 import {RenERC20ProxyBeacon, RenERC721ProxyBeacon, MintGatewayProxyBeacon, LockGatewayProxyBeacon} from "./ProxyBeacon.sol";
@@ -38,8 +38,8 @@ abstract contract RenAssetFactoryV2 is Initializable, ContextUpgradeable, RenAss
         return _renERC20ProxyBeacon;
     }
 
-    function getRenERC721ProxyBeacon() public view returns (RenERC20ProxyBeacon) {
-        return _renERC20ProxyBeacon;
+    function getRenERC721ProxyBeacon() public view returns (RenERC721ProxyBeacon) {
+        return _renERC721ProxyBeacon;
     }
 
     function getMintGatewayProxyBeacon() public view returns (MintGatewayProxyBeacon) {
@@ -55,7 +55,7 @@ abstract contract RenAssetFactoryV2 is Initializable, ContextUpgradeable, RenAss
         address renERC721ProxyBeacon_,
         address mintGatewayProxyBeacon_,
         address lockGatewayProxyBeacon_
-    ) public initializer {
+    ) public onlyInitializing {
         __Context_init();
         _renERC20ProxyBeacon = RenERC20ProxyBeacon(renERC20ProxyBeacon_);
         _renERC721ProxyBeacon = RenERC721ProxyBeacon(renERC721ProxyBeacon_);

@@ -3,7 +3,7 @@ import { BaseContract } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import log from "loglevel";
 
-import { BinanceSmartChain, Ethereum, EvmNetworkConfig } from "@renproject/chains-ethereum";
+import { BinanceSmartChain, Ethereum, EVMNetworkConfig } from "@renproject/chains-ethereum";
 import { MockChain, MockProvider } from "@renproject/mock-provider";
 import { RenVMProvider } from "@renproject/provider";
 import RenJS, { Gateway, GatewayTransaction } from "@renproject/ren";
@@ -30,7 +30,7 @@ export const LocalEthereumNetwork = (
     networkID: number,
     gatewayRegistry: string,
     basicBridge: string
-): EvmNetworkConfig => ({
+): EVMNetworkConfig => ({
     selector: selector,
     nativeAsset: {
         name: symbol,
@@ -40,7 +40,7 @@ export const LocalEthereumNetwork = (
     averageConfirmationTime: 1,
     isTestnet: true,
 
-    network: {
+    config: {
         chainId: utils.Ox(networkID),
         chainName: "Hardhat",
         nativeCurrency: { name: "Hardhat Ether", symbol: symbol, decimals: 18 },
@@ -140,10 +140,10 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
         log
     );
 
-    await ethGatewayRegistry.deployMintGatewayAndRenAsset("BTC", "renBTC", "renBTC", 8, "1");
-    await bscGatewayRegistry.deployMintGatewayAndRenAsset("BTC", "renBTC", "renBTC", 8, "1");
+    await ethGatewayRegistry.deployMintGatewayAndRenERC20("BTC", "renBTC", "renBTC", 8, "1");
+    await bscGatewayRegistry.deployMintGatewayAndRenERC20("BTC", "renBTC", "renBTC", 8, "1");
 
-    await bscGatewayRegistry.deployMintGatewayAndRenAsset("ETH", "renETH", "renETH", 18, "1");
+    await bscGatewayRegistry.deployMintGatewayAndRenERC20("ETH", "renETH", "renETH", 18, "1");
 
     const create2 = setupCreate2(hre, undefined, log);
     const getExistingDeployment = setupGetExistingDeployment(hre);
@@ -155,8 +155,8 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
     await usdc.initialize("USDC", "USDC");
     const usdcDecimals = await usdc.decimals();
     await usdc.mint(user, new BigNumber(100).shiftedBy(usdcDecimals).toFixed());
-    await ethGatewayRegistry.deployLockGateway("USDC", usdc.address, "1");
-    await bscGatewayRegistry.deployMintGatewayAndRenAsset("USDC", "renUSDC", "renUSDC", usdcDecimals, "1");
+    await ethGatewayRegistry.deployLockGateway("USDC", usdc.address,false, "1");
+    await bscGatewayRegistry.deployMintGatewayAndRenERC20("USDC", "renUSDC", "renUSDC", usdcDecimals, "1");
 
     // Set up mock Bitcoin chain.
     const bitcoin = new MockChain({

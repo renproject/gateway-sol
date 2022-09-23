@@ -237,10 +237,8 @@ export const deployGatewaySol = async function (
         async (gatewayRegistry) => {
             try {
                 await gatewayRegistry.getSignatureVerifier();
-                console.log("successful");
                 return true;
             } catch (error: any) {
-                console.log("failed");
                 return false;
             }
         }
@@ -333,8 +331,7 @@ export const deployGatewaySol = async function (
             const prefixedSymbol = `${prefix}${symbol}`;
             if (!token) {
                 logger.log(
-                    `Calling deployMintGatewayAndRenAsset(${symbol}, ${prefixedSymbol}, ${prefixedSymbol}, ${decimals}, '${
-                        version || "1"
+                    `Calling deployMintGatewayAndRenAsset(${symbol}, ${prefixedSymbol}, ${prefixedSymbol}, ${decimals}, '${version || "1"
                     }')`
                 );
 
@@ -360,7 +357,7 @@ export const deployGatewaySol = async function (
                 }
             } else if (!gateway) {
                 logger.log(`Calling deployMintGateway(${symbol}, ${token}, '${version || "1"}')`);
-                await waitForTx(gatewayRegistry.deployMintGateway(symbol, token, isNFT ? true: false, version || "1"));
+                await waitForTx(gatewayRegistry.deployMintGateway(symbol, token, isNFT ? true : false, version || "1"));
             } else {
                 logger.log(`Calling addMintGateway(${symbol}, ${token}, ${gateway})`);
                 await waitForTx(gatewayRegistry.addMintGateway(symbol, token, gateway));
@@ -368,8 +365,15 @@ export const deployGatewaySol = async function (
         } else {
             logger.log(`Skipping ${symbol} - ${existingGateway}, ${existingToken}!`);
         }
+        let updatedGateway;
+        if (network.name === "hardhat") {
+            // This is cause the gatewayRegistry doesnot return a falsey value in hardhat rather return a 0x0 string address
+            updatedGateway = (existingGateway !== Ox0) ? existingGateway : Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
+        }
+        else {
+            updatedGateway = existingGateway || Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
+        }
 
-        const updatedGateway = existingGateway || Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
         const updatedToken = existingToken || Ox(await gatewayRegistry.getRenAssetBySymbol(symbol));
 
         const gatewayLabel = `ren${symbol}_MintGateway_Proxy`;
@@ -458,7 +462,7 @@ export const deployGatewaySol = async function (
 
             if (!gateway) {
                 logger.log(`Calling deployLockGateway(${symbol}, ${deployedToken}, '${version || "1"}')`);
-                await waitForTx(gatewayRegistry.deployLockGateway(symbol, deployedToken, isNFT ? true: false, version || "1"));
+                await waitForTx(gatewayRegistry.deployLockGateway(symbol, deployedToken, isNFT ? true : false, version || "1"));
             } else {
                 logger.log(`Calling addLockGateway(${symbol}, ${deployedToken}, ${gateway})`);
                 await waitForTx(gatewayRegistry.addLockGateway(symbol, deployedToken, gateway));
@@ -466,8 +470,14 @@ export const deployGatewaySol = async function (
         } else {
             logger.log(`Skipping ${symbol} - ${existingGateway}, ${existingToken}!`);
         }
-
-        const updatedGateway = existingGateway || Ox(await gatewayRegistry.getLockGatewayBySymbol(symbol));
+        let updatedGateway;
+        if (network.name === "hardhat") {
+            // This is cause the gatewayRegistry doesnot return a falsey value in hardhat rather returns a 0x0 string address
+            updatedGateway = (existingGateway !== Ox0) ? existingGateway : Ox(await gatewayRegistry.getLockGatewayBySymbol(symbol));
+        }
+        else {
+            updatedGateway = existingGateway || Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
+        }
         const gatewayLabel = `ren${symbol}_LockGateway_Proxy`;
         await deployments.save(gatewayLabel, {
             ...beaconDeployment,

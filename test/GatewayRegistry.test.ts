@@ -5,14 +5,14 @@ import log from "loglevel";
 
 import { Ox0, randomAddress, setupCreate2, setupDeployProxy } from "../deploy/deploymentUtils";
 import {
-    GatewayRegistryV2,
-    GatewayRegistryV2__factory,
-    LockGatewayV3,
-    LockGatewayV3__factory,
-    MintGatewayV3,
-    MintGatewayV3__factory,
-    RenAssetV2,
-    RenAssetV2__factory,
+    GatewayRegistryV3,
+    GatewayRegistryV3__factory,
+    LockGatewayV4,
+    LockGatewayV4__factory,
+    MintGatewayV4,
+    MintGatewayV4__factory,
+    RenERC20V1,
+    RenERC20V1__factory,
     RenProxyAdmin,
     TestToken,
 } from "../typechain";
@@ -29,7 +29,7 @@ const setup = hre.deployments.createFixture(async () => {
     const [_, gatewayAdder, gatewayUpdater] = await getUnnamedAccounts();
 
     await deployments.fixture("GatewayRegistryV2");
-    const gatewayRegistryV2 = await ethers.getContractAt<GatewayRegistryV2>(
+    const gatewayRegistryV2 = await ethers.getContractAt<GatewayRegistryV3>(
         "GatewayRegistryV2",
         (
             await ethers.getContract("GatewayRegistryProxy")
@@ -63,7 +63,7 @@ describe("GatewayRegistry", function () {
         const renBTCAddress_2 = await gatewayRegistryV2.getRenAssetBySymbol("BTC");
         expect(renBTCAddress_1).to.not.equal(Ox0);
         expect(renBTCAddress_1).to.equal(renBTCAddress_2);
-        const renBTC = await ethers.getContractAt<RenAssetV2>("RenAssetV2", renBTCAddress_1);
+        const renBTC = await ethers.getContractAt<RenERC20V1>("RenERC20V1", renBTCAddress_1);
         expect(await renBTC.symbol()).to.equal("devBTC");
 
         // Check that the returned Gateway address for renBTC is correct.
@@ -73,7 +73,7 @@ describe("GatewayRegistry", function () {
         expect(renBTCGateway_1).to.not.equal(Ox0);
         expect(renBTCGateway_1).to.equal(renBTCGateway_2);
         expect(renBTCGateway_1).to.equal(renBTCGateway_3);
-        const renBTCGateway = await ethers.getContractAt<MintGatewayV3>("MintGatewayV3", renBTCGateway_1);
+        const renBTCGateway = await ethers.getContractAt<MintGatewayV4>("MintGatewayV3", renBTCGateway_1);
         expect(await renBTCGateway.getAsset()).to.equal("BTC");
 
         // Lock
@@ -89,7 +89,7 @@ describe("GatewayRegistry", function () {
         const renDAIGateway_2 = await gatewayRegistryV2.getLockGatewayBySymbol("DAI");
         expect(renDAIGateway_1).to.not.equal(Ox0);
         expect(renDAIGateway_1).to.equal(renDAIGateway_2);
-        const renDAIGateway = await ethers.getContractAt<LockGatewayV3>("LockGatewayV3", renDAIGateway_1);
+        const renDAIGateway = await ethers.getContractAt<LockGatewayV4>("LockGatewayV3", renDAIGateway_1);
         expect(await renDAIGateway.getAsset()).to.equal("DAI");
     });
 
@@ -107,58 +107,60 @@ describe("GatewayRegistry", function () {
             // deployMintGatewayAndRenAsset
 
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST0")).to.be.false;
-            await gatewayRegistryV2.deployMintGatewayAndRenAsset("TEST0", "TEST0", "TEST0", 18, "3");
+            await gatewayRegistryV2.deployMintGatewayAndRenERC20("TEST0", "TEST0", "TEST0", 18, "3");
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST0")).to.be.true;
 
             // deployLockGateway and deployMintGateway
 
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST1")).to.be.false;
             const test1 = await deployToken(hre, "TEST1");
-            await gatewayRegistryV2.deployLockGateway("TEST1", test1.address, "1");
+            await gatewayRegistryV2.deployLockGateway("TEST1", test1.address,false, "1");
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST1")).to.be.true;
 
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST1")).to.be.false;
-            const renTEST1 = await create2<RenAssetV2__factory>("RenAssetV2", [], undefined, "TEST1");
-            await gatewayRegistryV2.deployMintGateway("TEST1", renTEST1.address, "1");
+            const renTEST1 = await create2<RenERC20V1__factory>("RenERC20V1", [], undefined, "TEST1");
+            await gatewayRegistryV2.deployMintGateway("TEST1", renTEST1.address,false ,"1");
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST1")).to.be.true;
 
             // addLockGateway and addMintGateway
 
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.false;
             const test2 = await deployToken(hre, "TEST2");
-            const test2LockGateway = await create2<LockGatewayV3__factory>("LockGatewayV3", [], undefined, "TEST2");
+            const test2LockGateway = await create2<LockGatewayV4__factory>("LockGatewayV3", [], undefined, "TEST2");
             await test2LockGateway.__LockGateway_init(
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                test2.address
+                test2.address,
+                false
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway.address);
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
 
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.false;
-            const renTEST2 = await create2<RenAssetV2__factory>("RenAssetV2", [], undefined, "TEST2");
-            const test2MintGateway = await create2<MintGatewayV3__factory>("MintGatewayV3", [], undefined, "TEST2");
+            const renTEST2 = await create2<RenERC20V1__factory>("RenERC20V1", [], undefined, "TEST2");
+            const test2MintGateway = await create2<MintGatewayV4__factory>("MintGatewayV3", [], undefined, "TEST2");
             await test2MintGateway.__MintGateway_init(
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                renTEST2.address
+                renTEST2.address,
+                false
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway.address);
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
 
             // Not updater
 
-            await expect(gatewayRegistryV2.deployLockGateway("TEST1", Ox0, "1")).to.be.rejectedWith(
+            await expect(gatewayRegistryV2.deployLockGateway("TEST1", Ox0,false, "1")).to.be.rejectedWith(
                 /GatewayRegistry: account 0x[a-fA-F0-9]{40} is missing role CAN_UPDATE_GATEWAYS/
             );
-            await expect(gatewayRegistryV2.deployMintGateway("TEST1", Ox0, "1")).to.be.rejectedWith(
+            await expect(gatewayRegistryV2.deployMintGateway("TEST1", Ox0,false, "1")).to.be.rejectedWith(
                 /GatewayRegistry: account 0x[a-fA-F0-9]{40} is missing role CAN_UPDATE_GATEWAYS/
             );
 
-            await expect(gatewayRegistryV2.deployLockGateway("TEST3", test1.address, "1")).to.be.rejectedWith(
+            await expect(gatewayRegistryV2.deployLockGateway("TEST3", test1.address,false, "1")).to.be.rejectedWith(
                 /GatewayRegistry: TEST3 token already registered as TEST1/
             );
-            await expect(gatewayRegistryV2.deployMintGateway("TEST3", renTEST1.address, "1")).to.be.rejectedWith(
+            await expect(gatewayRegistryV2.deployMintGateway("TEST3", renTEST1.address,false, "1")).to.be.rejectedWith(
                 /GatewayRegistry: TEST3 token already registered as TEST1/
             );
 
@@ -209,7 +211,7 @@ describe("GatewayRegistry", function () {
             expect(await gatewayRegistryV2.getMintGatewaySymbols(3, 1)).to.deep.equal(["TEST0"]);
             expect(await gatewayRegistryV2.getMintGatewaySymbols(4, 2)).to.deep.equal(["TEST1", "TEST2"]);
 
-            const uninitializedGateway = await create2<GatewayRegistryV2__factory>(
+            const uninitializedGateway = await create2<GatewayRegistryV3__factory>(
                 "GatewayRegistryV2",
                 [],
                 undefined,
@@ -238,64 +240,68 @@ describe("GatewayRegistry", function () {
             // deployMintGatewayAndRenAsset
 
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST0")).to.be.false;
-            await gatewayRegistryV2.deployMintGatewayAndRenAsset("TEST0", "TEST0", "TEST0", 18, "1");
-            await gatewayRegistryV2.deployMintGatewayAndRenAsset("TEST0", "TEST0", "TEST0", 18, "2");
+            await gatewayRegistryV2.deployMintGatewayAndRenERC20("TEST0", "TEST0", "TEST0", 18, "1");
+            await gatewayRegistryV2.deployMintGatewayAndRenERC20("TEST0", "TEST0", "TEST0", 18, "2");
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST0")).to.be.true;
 
             // deployLockGateway and deployMintGateway
 
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST1")).to.be.false;
             const test1_1 = await deployToken(hre, "TEST1");
-            await gatewayRegistryV2.deployLockGateway("TEST1", test1_1.address, "1");
+            await gatewayRegistryV2.deployLockGateway("TEST1", test1_1.address,false, "1");
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST1")).to.be.true;
             const test1_2 = await deployToken(hre, "TEST1");
-            await gatewayRegistryV2.deployLockGateway("TEST1", test1_2.address, "2");
+            await gatewayRegistryV2.deployLockGateway("TEST1", test1_2.address,false, "2");
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST1")).to.be.true;
 
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST1")).to.be.false;
-            const renTEST1_1 = await create2<RenAssetV2__factory>("RenAssetV2", [], undefined, "TEST1_1");
-            await gatewayRegistryV2.deployMintGateway("TEST1", renTEST1_1.address, "1");
+            const renTEST1_1 = await create2<RenERC20V1__factory>("RenERC20V1", [], undefined, "TEST1_1");
+            await gatewayRegistryV2.deployMintGateway("TEST1", renTEST1_1.address,false, "1");
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST1")).to.be.true;
-            const renTEST1_2 = await create2<RenAssetV2__factory>("RenAssetV2", [], undefined, "TEST1_1");
-            await gatewayRegistryV2.deployMintGateway("TEST1", renTEST1_2.address, "2");
+            const renTEST1_2 = await create2<RenERC20V1__factory>("RenERC20V1", [], undefined, "TEST1_1");
+            await gatewayRegistryV2.deployMintGateway("TEST1", renTEST1_2.address,false, "2");
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST1")).to.be.true;
 
             // // addLockGateway and addMintGateway
 
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.false;
             const test2 = await deployToken(hre, "TEST2");
-            const test2LockGateway_1 = await create2<LockGatewayV3__factory>("LockGatewayV3", [], undefined, "TEST2_1");
+            const test2LockGateway_1 = await create2<LockGatewayV4__factory>("LockGatewayV3", [], undefined, "TEST2_1");
             await test2LockGateway_1.__LockGateway_init(
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                test2.address
+                test2.address,
+                false
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway_1.address);
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
-            const test2LockGateway_2 = await create2<LockGatewayV3__factory>("LockGatewayV3", [], undefined, "TEST2_2");
+            const test2LockGateway_2 = await create2<LockGatewayV4__factory>("LockGatewayV3", [], undefined, "TEST2_2");
             await test2LockGateway_2.__LockGateway_init(
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                test2.address
+                test2.address,
+                false
             );
             await gatewayRegistryV2.addLockGateway("TEST2", test2.address, test2LockGateway_2.address);
             expect((await gatewayRegistryV2.getLockGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
 
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.false;
-            const renTEST2 = await create2<RenAssetV2__factory>("RenAssetV2", [], undefined, "TEST2");
-            const test2MintGateway_1 = await create2<MintGatewayV3__factory>("MintGatewayV3", [], undefined, "TEST2_1");
+            const renTEST2 = await create2<RenERC20V1__factory>("RenERC20V1", [], undefined, "TEST2");
+            const test2MintGateway_1 = await create2<MintGatewayV4__factory>("MintGatewayV3", [], undefined, "TEST2_1");
             await test2MintGateway_1.__MintGateway_init(
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                renTEST2.address
+                renTEST2.address,
+                false
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway_1.address);
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;
-            const test2MintGateway_2 = await create2<MintGatewayV3__factory>("MintGatewayV3", [], undefined, "TEST2_2");
+            const test2MintGateway_2 = await create2<MintGatewayV4__factory>("MintGatewayV3", [], undefined, "TEST2_2");
             await test2MintGateway_2.__MintGateway_init(
                 "TEST2",
                 await gatewayRegistryV2.getSignatureVerifier(),
-                renTEST2.address
+                renTEST2.address,
+                false
             );
             await gatewayRegistryV2.addMintGateway("TEST2", renTEST2.address, test2MintGateway_2.address);
             expect((await gatewayRegistryV2.getMintGatewaySymbols(0, 0)).includes("TEST2")).to.be.true;

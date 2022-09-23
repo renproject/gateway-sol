@@ -6,9 +6,9 @@ import hre from "hardhat";
 import {
     MigratedMintGateway,
     MigratedMintGateway__factory,
-    MintGatewayV3,
-    MintGatewayV3__factory,
-    RenAssetV2,
+    MintGatewayV4,
+    MintGatewayV4__factory,
+    RenERC20V1,
 } from "../typechain";
 import { completeGateway, setupNetworks } from "./utils";
 
@@ -31,22 +31,22 @@ describe("Gateway Migration", () => {
         ethGatewayRegistry = ethGatewayRegistry.connect(await ethers.getSigner(deployer));
 
         const renBTC = (
-            await ethers.getContractAt<RenAssetV2>("RenAssetV2", await ethereum.getMintAsset("BTC"))
+            await ethers.getContractAt<RenERC20V1>("RenAssetV2", await ethereum.getMintAsset("BTC"))
         ).connect(await ethers.getSigner(deployer));
         const existingGateway = (
-            await ethers.getContractAt<MintGatewayV3>(
+            await ethers.getContractAt<MintGatewayV4>(
                 "MintGatewayV3",
                 await ethGatewayRegistry.getMintGatewayBySymbol("BTC")
             )
         ).connect(await ethers.getSigner(deployer));
         const signatureVerifier = await ethGatewayRegistry.getSignatureVerifier();
-        const gateway_1 = await deployProxy<MintGatewayV3__factory>(
+        const gateway_1 = await deployProxy<MintGatewayV4__factory>(
             "MintGatewayV3",
             "TransparentUpgradeableProxy",
             {
                 initializer: "__MintGateway_init",
-                constructorArgs: ["BTC", signatureVerifier, renBTC.address] as Parameters<
-                    MintGatewayV3["__MintGateway_init"]
+                constructorArgs: ["BTC", signatureVerifier, renBTC.address, false] as Parameters<
+                    MintGatewayV4["__MintGateway_init"]
                 >,
             },
             async (gateway) => {
@@ -91,13 +91,13 @@ describe("Gateway Migration", () => {
             await completeGateway(burn);
         }
 
-        const gateway_2 = await deployProxy<MintGatewayV3__factory>(
+        const gateway_2 = await deployProxy<MintGatewayV4__factory>(
             "MintGatewayV3",
             "TransparentUpgradeableProxy",
             {
                 initializer: "__MintGateway_init",
-                constructorArgs: ["BTC", signatureVerifier, renBTC.address] as Parameters<
-                    MintGatewayV3["__MintGateway_init"]
+                constructorArgs: ["BTC", signatureVerifier, renBTC.address, false] as Parameters<
+                    MintGatewayV4["__MintGateway_init"]
                 >,
             },
             async (gateway) => {

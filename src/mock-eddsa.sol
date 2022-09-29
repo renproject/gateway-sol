@@ -1,39 +1,47 @@
 // SPDX-License-Identifier: GPL-3.0
-
+import "hardhat/console.sol";
 // solhint-disable-next-line
 pragma solidity ^0.8.0;
 
-library EDDSA {
-    struct PubKey {
-        uint256 x;
-        uint8 parity;
+contract MockEDDSA {
+    constructor() {
+        console.log("Hello, world!");
     }
+    // struct PubKey {
+    //     uint256 x;
+    //     uint8 parity;
+    // }
 
-    function p() internal pure returns (uint256) {
+    function p() public pure returns (uint256) {
         return 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F;
     }
 
-    function n() internal pure returns (uint256) {
+    function n() public pure returns (uint256) {
         return 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
     }
 
-    function lessThanP(uint256 _num) internal pure returns (bool) {
+    function lessThanP(uint256 _num) public pure returns (bool) {
         return _num < p();
     }
 
-    function lessThanN(uint256 _num) internal pure returns (bool) {
+    function lessThanN(uint256 _num) public pure returns (bool) {
         return _num < n();
     }
 
-    function validate(bytes memory _pubKey) internal pure {
+    function validate(uint256  _x,uint8 _parity) public view {
         // PubKey
         uint256 x;
         uint8 parity;
+        bytes memory _pubKey = abi.encodePacked(_x,_parity);
+
 
         assembly {
             x := mload(add(_pubKey, 0x20))
             parity := byte(0, mload(add(_pubKey, 0x60)))
         }
+        console.log("x", x,_x);
+        console.log("parity", parity,_parity);
+        console.log("pubKey", string(_pubKey));
 
         require(x != 0, "EDDSA: pubKey cannot be set to address zero");
         require(lessThanP(x), "EDDSA: pubKey cannot be greater than p");
@@ -44,7 +52,7 @@ library EDDSA {
         bytes memory pubKey,
         bytes32 sigHash,
         bytes memory signature
-    ) internal pure returns (bool) {
+    ) public pure returns (bool) {
         require(signature.length == 96, "EDDSA: Invalid signature length");
 
         // PubKey

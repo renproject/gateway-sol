@@ -341,6 +341,89 @@ const renvmDevnetConfig = {
 };
 
 export const networks: { [network: string]: NetworkConfig } = {
+    testGoerli: {
+        mintAuthority: "0xb2fc7715492a0f1bef5809f4d75e5ebab224abc8ed07ff5091fde2b3a27db5d900",
+        darknodeRegistry: "0x9954C9F839b31E82bc9CA98F234313112D269712",
+        tokenPrefix: "test",
+        chainName: Chain.Ethereum,
+
+        mintGateways: [
+            {
+                //  renBTC
+                symbol: "BTC",
+                decimals: 8,
+                token: "",
+                gateway: "",
+            },
+            {
+                // renZEC
+                symbol: "ZEC",
+                decimals: 8,
+                token: "",
+                gateway: "",
+            },
+            {
+                // renBCH
+                symbol: "BCH",
+                decimals: 8,
+                token: "",
+                gateway: "",
+            },
+        ],
+        lockGateways: [
+            {
+                symbol: "DAI",
+                token: { totalSupply: "500,000,000" },
+                decimals: 18,
+            },
+            {
+                symbol: "REN",
+                token: { totalSupply: "1,000,000,000" },
+                decimals: 18,
+            },
+        ],
+    },
+    bscTestnet: {
+        mintAuthority: "0xb2fc7715492a0f1bef5809f4d75e5ebab224abc8ed07ff5091fde2b3a27db5d900",
+        darknodeRegistry: "0x9954C9F839b31E82bc9CA98F234313112D269712",
+        tokenPrefix: "test",
+        chainName: Chain.BinanceSmartChain,
+        lockGateways: [
+          {
+              //  renBTC
+              symbol: "BTC",
+              decimals: 8,
+              token: { totalSupply: "500,000,000" },
+              gateway: "",
+          },
+          {
+              // renZEC
+              symbol: "ZEC",
+              decimals: 8,
+              token: { totalSupply: "500,000,000" },
+              gateway: "",
+          },
+          {
+              // renBCH
+              symbol: "BCH",
+              decimals: 8,
+              token: { totalSupply: "500,000,000" },
+              gateway: "",
+          },
+      ],
+      mintGateways: [
+          {
+              symbol: "DAI",
+              token: "",
+              decimals: 18,
+          },
+          {
+              symbol: "REN",
+              token: "",
+              decimals: 18,
+          },
+      ],
+    },
     hardhat: {
         mintAuthority: "0x000000000000000000000000000000000000000100",
         darknodeRegistry: "0x0000000000000000000000000000000000000002",
@@ -704,7 +787,7 @@ export const networks: { [network: string]: NetworkConfig } = {
         ],
     },
 
-    bscTestnet: {
+    bscTestnetOld: {
         ...renvmTestnetConfig,
         chainName: Chain.BinanceSmartChain,
 

@@ -50,8 +50,8 @@ contract LockGatewayV4 is Initializable, ContextUpgradeable, GatewayStateV4, Gat
     ///        moved to.
     /// @param recipientPayload An optional payload to be passed to the
     ///        recipient chain along with the address.
-    /// @param amountOrTokenId The amount of the token being locked, in the 
-    ///        asset's smallest unit or tokenId if it is an NFT. (e.g. satoshis 
+    /// @param amountOrTokenId The amount of the token being locked, in the
+    ///        asset's smallest unit or tokenId if it is an NFT. (e.g. satoshis
     ///        for BTC)
     function lock(
         string calldata recipientAddress,
@@ -105,7 +105,7 @@ contract LockGatewayV4 is Initializable, ContextUpgradeable, GatewayStateV4, Gat
     ///
     /// @param pHash (payload hash) The hash of the payload associated with the
     ///        release.
-    /// @param amountOrTokenId The amount of the token being released, in its 
+    /// @param amountOrTokenId The amount of the token being released, in its
     ///        smallest value or the token id of the NFT.
     /// @param nHash (nonce hash) The hash of the nonce, amount and pHash.
     /// @param sig The signature of the hash of the following values:
@@ -137,7 +137,7 @@ contract LockGatewayV4 is Initializable, ContextUpgradeable, GatewayStateV4, Gat
                         StringsUpgradeable.toHexString(uint256(pHash), 32),
                         ", amountOrTokenId: ",
                         StringsUpgradeable.toString(amountOrTokenId),
-                        ", shash",
+                        ", shash: ",
                         StringsUpgradeable.toHexString(uint256(getSelectorHash()), 32),
                         ", msg.sender: ",
                         StringsUpgradeable.toHexString(uint160(recipient), 20),

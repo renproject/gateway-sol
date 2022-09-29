@@ -19,7 +19,7 @@ if (process.env.HARDHAT_FORK) {
 const MNEMONIC_DEVNET = process.env.MNEMONIC_DEVNET || process.env.MNEMONIC || "";
 const MNEMONIC_TESTNET = process.env.MNEMONIC_TESTNET || process.env.MNEMONIC || "";
 const MNEMONIC_MAINNET = process.env.MNEMONIC_MAINNET || process.env.MNEMONIC || "";
-const INFURA_KEY = process.env.INFURA_KEY || "";
+const INFURA_KEY = process.env.INFURA_KEY || "c7894559919041f5a4ebb718f6066dfd";
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -73,9 +73,7 @@ const config: HardhatUserConfig = {
         },
         bscTestnet: {
             url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
-            accounts: {
-                mnemonic: MNEMONIC_TESTNET,
-            },
+            accounts:["3460d69759f6ed1fc445cf538735096a62579ab3a20019da26f2a595cb8e8ef3"],
         },
         bscMainnet: {
             url: `https://bsc-dataseed1.binance.org/`,
@@ -138,12 +136,12 @@ const config: HardhatUserConfig = {
             // gas: 80000000,
         },
 
-        goerliTestnet: {
+        testGoerli: {
             url: `https://goerli.infura.io/v3/${INFURA_KEY}`,
-            accounts: {
-                mnemonic: MNEMONIC_TESTNET,
-            },
-            gasPrice: 2000000000,
+            accounts:["3460d69759f6ed1fc445cf538735096a62579ab3a20019da26f2a595cb8e8ef3"],
+            // gasPrice: 2000000000,
+
+
         },
 
         moonbeamTestnet: {

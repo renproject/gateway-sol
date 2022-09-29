@@ -200,7 +200,12 @@ export const deployGatewaySol = async function (
             >,
         },
         // isInitialized:
-        async (signatureVerifier): Promise<boolean> => await signatureVerifier.getMintAuthority() === mintAuthority
+        async (signatureVerifier): Promise<boolean> => {
+          console.log(
+            "signatureVerifier",
+            await signatureVerifier.getMintAuthority());
+          return await signatureVerifier.getMintAuthority() === mintAuthority;
+        }
     );
     const signatureVerifierOwner = Ox(await signatureVerifier.owner());
     if (signatureVerifierOwner !== Ox(governanceAddress)) {
@@ -366,13 +371,13 @@ export const deployGatewaySol = async function (
             logger.log(`Skipping ${symbol} - ${existingGateway}, ${existingToken}!`);
         }
         let updatedGateway;
-        if (network.name === "hardhat") {
+        // if (network.name === "hardhat") {
             // This is cause the gatewayRegistry doesnot return a falsey value in hardhat rather return a 0x0 string address
             updatedGateway = (existingGateway !== Ox0) ? existingGateway : Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
-        }
-        else {
-            updatedGateway = existingGateway || Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
-        }
+        // }
+        // else {
+        //     updatedGateway = existingGateway || Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
+        // }
 
         const updatedToken = existingToken || Ox(await gatewayRegistry.getRenAssetBySymbol(symbol));
 
@@ -409,9 +414,12 @@ export const deployGatewaySol = async function (
             }
 
             // Update selector hash, by updating symbol.
+            console.log("symbol",symbol);
+            console.log("chainName",chainName);
             const expectedSelectorHash = keccak256(
                 Buffer.concat([Buffer.from(symbol), Buffer.from("/to"), Buffer.from(chainName)])
             );
+            console.log("expectedSelectorHash",expectedSelectorHash);
             if (expectedSelectorHash !== (await gatewayInstance.getSelectorHash())) {
                 await gatewayInstance.updateAsset(symbol);
             }
@@ -468,16 +476,19 @@ export const deployGatewaySol = async function (
                 await waitForTx(gatewayRegistry.addLockGateway(symbol, deployedToken, gateway));
             }
         } else {
+          const gatewayInstance = await getContractAt(hre)<LockGatewayV4>("LockGatewayV4", existingGateway);
+          console.log("existingGateway", existingGateway);
+          console.log(Ox(await gatewayInstance.getSignatureVerifier()));
             logger.log(`Skipping ${symbol} - ${existingGateway}, ${existingToken}!`);
         }
         let updatedGateway;
-        if (network.name === "hardhat") {
-            // This is cause the gatewayRegistry doesnot return a falsey value in hardhat rather returns a 0x0 string address
+        // if (network.name === "hardhat") {
+        //     // This is cause the gatewayRegistry doesnot return a falsey value in hardhat rather returns a 0x0 string address
             updatedGateway = (existingGateway !== Ox0) ? existingGateway : Ox(await gatewayRegistry.getLockGatewayBySymbol(symbol));
-        }
-        else {
-            updatedGateway = existingGateway || Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
-        }
+        // }
+        // else {
+        //  updatedGateway = existingGateway || Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
+        // }
         const gatewayLabel = `ren${symbol}_LockGateway_Proxy`;
         await deployments.save(gatewayLabel, {
             ...beaconDeployment,
@@ -596,6 +607,7 @@ export const deployGatewaySol = async function (
 
     logger.log("mint gateway symbols:", await gatewayRegistry.getMintGatewaySymbols(0, 0));
     const lockSymbols = await gatewayRegistry.getLockGatewaySymbols(0, 0);
+    console.log("gatewayRegistry address for symbols ",gatewayRegistry.address);
     logger.log("lock gateway symbols:", lockSymbols);
     for (const lockSymbol of lockSymbols) {
         const lockToken = await gatewayRegistry.getLockAssetBySymbol(lockSymbol);

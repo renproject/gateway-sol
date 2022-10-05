@@ -8,7 +8,6 @@ import {
     BasicBridge__factory,
     BeaconProxy__factory,
     ERC20,
-    // ForceSend__factory,
     GatewayRegistryV2,
     GatewayRegistryV2__factory,
     LockGatewayProxyBeacon,
@@ -36,6 +35,7 @@ import {
     setupCreate2,
     setupDeployProxy,
     setupGetExistingDeployment,
+    setupWaitForTimelockedTx,
     setupWaitForTx,
 } from "./deploymentUtils";
 import { NetworkConfig, networks } from "./networks";
@@ -64,7 +64,7 @@ export const deployGatewaySol = async function (
     logger.log(`Deploying to ${network.name} from ${deployer}...`);
 
     if (Ox(mintAuthority) === Ox0) {
-        throw new Error(`Invalid empty mintAuthority.`);
+        throw new Error(`Invalid empty mintAuthority`);
     }
 
     const create2 = setupCreate2(hre, create2SaltOverride, logger);
@@ -91,6 +91,8 @@ export const deployGatewaySol = async function (
     logger.log(chalk.yellow("RenTimelock"));
     const renTimelock = await create2<RenTimelock__factory>("RenTimelock", [0, [deployer], [deployer]]);
 
+    const waitForTimelockedTx = setupWaitForTimelockedTx(hre, renTimelock, logger);
+
     let governanceAddress: string;
     if (network.name === "hardhat") {
         governanceAddress = deployer;
@@ -104,7 +106,7 @@ export const deployGatewaySol = async function (
     const renProxyAdmin =
         (await getExistingDeployment<RenProxyAdmin>("RenProxyAdmin")) ||
         (await create2<RenProxyAdmin__factory>("RenProxyAdmin", [governanceAddress]));
-    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, logger);
+    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, renTimelock, logger);
 
     // This should only be false on hardhat.
     const create2IsContract = (await ethers.provider.getCode(CREATE2_DEPLOYER)).replace(/^0x/, "").length > 0;
@@ -123,8 +125,10 @@ export const deployGatewaySol = async function (
             deployer,
         ]));
     if (Ox(await renAssetProxyBeacon.implementation()) !== Ox(renAssetImplementation.address)) {
-        logger.log(`Updating RenAsset implementation to ${Ox(renAssetImplementation.address)}`);
-        await waitForTx(renAssetProxyBeacon.upgradeTo(renAssetImplementation.address));
+        await waitForTimelockedTx(
+            renAssetProxyBeacon.populateTransaction.upgradeTo(renAssetImplementation.address),
+            `Updating RenAssetProxy beacon implementation to ${renAssetImplementation.address}`
+        );
     }
 
     // Deploy MintGatewayProxyBeacon /////////////////////////////////////////////
@@ -143,8 +147,10 @@ export const deployGatewaySol = async function (
             deployer,
         ]));
     if (Ox(await mintGatewayProxyBeacon.implementation()) !== Ox(mintGatewayImplementation.address)) {
-        logger.log(`Updating MintGateway implementation to ${Ox(mintGatewayImplementation.address)}`);
-        await waitForTx(mintGatewayProxyBeacon.upgradeTo(mintGatewayImplementation.address));
+        await waitForTimelockedTx(
+            mintGatewayProxyBeacon.populateTransaction.upgradeTo(mintGatewayImplementation.address),
+            `Updating MintGateway implementation to ${Ox(mintGatewayImplementation.address)}`
+        );
     }
 
     // Deploy LockGatewayProxyBeacon /////////////////////////////////////////////
@@ -163,8 +169,10 @@ export const deployGatewaySol = async function (
             deployer,
         ]));
     if (Ox(await lockGatewayProxyBeacon.implementation()) !== Ox(lockGatewayImplementation.address)) {
-        logger.log(`Updating LockGateway implementation to ${Ox(lockGatewayImplementation.address)}`);
-        await waitForTx(lockGatewayProxyBeacon.upgradeTo(lockGatewayImplementation.address));
+        await waitForTimelockedTx(
+            lockGatewayProxyBeacon.populateTransaction.upgradeTo(lockGatewayImplementation.address),
+            `Updating LockGateway implementation to ${Ox(lockGatewayImplementation.address)}`
+        );
     }
 
     logger.log(chalk.yellow("Signature Verifier"));
@@ -182,12 +190,12 @@ export const deployGatewaySol = async function (
     );
     const signatureVerifierOwner = Ox(await signatureVerifier.owner());
     if (signatureVerifierOwner !== Ox(governanceAddress)) {
-        logger.log(
+        await waitForTimelockedTx(
+            signatureVerifier.populateTransaction.transferOwnership(governanceAddress),
             `Transferring RenVMSignatureVerifier ownership to governance address. (Was ${signatureVerifierOwner}, changing to ${Ox(
                 governanceAddress
-            )}) Deployer: ${deployer}.`
+            )}) Deployer: ${deployer}`
         );
-        await waitForTx(signatureVerifier.transferOwnership(governanceAddress));
     }
 
     logger.log(chalk.yellow("TransferWithLog"));
@@ -222,12 +230,12 @@ export const deployGatewaySol = async function (
     );
     const existingSignatureVerifier = Ox(await gatewayRegistry.getSignatureVerifier());
     if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
-        logger.log(
+        await waitForTimelockedTx(
+            gatewayRegistry.populateTransaction.updateSignatureVerifier(signatureVerifier.address),
             `Updating signature verifier in gateway registry. Was ${existingSignatureVerifier}, updating to ${Ox(
                 signatureVerifier.address
-            )}.`
+            )}`
         );
-        await waitForTx(gatewayRegistry.updateSignatureVerifier(signatureVerifier.address));
     }
 
     const existingTransferWithLog = Ox(await gatewayRegistry.getTransferContract());
@@ -235,9 +243,9 @@ export const deployGatewaySol = async function (
         logger.log(
             `Updating TransferWithLog in gateway registry. Was ${existingTransferWithLog}, updating to ${Ox(
                 transferWithLog.address
-            )}.`
+            )}`
         );
-        await waitForTx(gatewayRegistry.updateTransferContract(transferWithLog.address));
+        await waitForTimelockedTx(gatewayRegistry.populateTransaction.updateTransferContract(transferWithLog.address));
     }
 
     if (Ox(await gatewayRegistry.getRenAssetProxyBeacon()) !== Ox(renAssetProxyBeacon.address)) {
@@ -252,29 +260,33 @@ export const deployGatewaySol = async function (
 
     if (Ox(await renAssetProxyBeacon.getProxyDeployer()) !== Ox(gatewayRegistry.address)) {
         logger.log(`Granting deployer role to gateway registry in renAssetProxyBeacon.`);
-        await waitForTx(renAssetProxyBeacon.updateProxyDeployer(gatewayRegistry.address));
+        await waitForTimelockedTx(renAssetProxyBeacon.populateTransaction.updateProxyDeployer(gatewayRegistry.address));
     }
     if ((await renAssetProxyBeacon.owner()) !== governanceAddress) {
         logger.log(`Transferring renAssetProxyBeacon ownership to timelock.`);
-        await waitForTx(renAssetProxyBeacon.transferOwnership(governanceAddress));
+        await waitForTimelockedTx(renAssetProxyBeacon.populateTransaction.transferOwnership(governanceAddress));
     }
 
     if (Ox(await mintGatewayProxyBeacon.getProxyDeployer()) !== Ox(gatewayRegistry.address)) {
         logger.log(`Granting deployer role to gateway registry in mintGatewayProxyBeacon.`);
-        await waitForTx(mintGatewayProxyBeacon.updateProxyDeployer(gatewayRegistry.address));
+        await waitForTimelockedTx(
+            mintGatewayProxyBeacon.populateTransaction.updateProxyDeployer(gatewayRegistry.address)
+        );
     }
     if ((await mintGatewayProxyBeacon.owner()) !== governanceAddress) {
         logger.log(`Transferring mintGatewayProxyBeacon ownership to timelock.`);
-        await waitForTx(mintGatewayProxyBeacon.transferOwnership(governanceAddress));
+        await waitForTimelockedTx(mintGatewayProxyBeacon.populateTransaction.transferOwnership(governanceAddress));
     }
 
     if (Ox(await lockGatewayProxyBeacon.getProxyDeployer()) !== Ox(gatewayRegistry.address)) {
         logger.log(`Granting deployer role to gateway registry in lockGatewayProxyBeacon.`);
-        await waitForTx(lockGatewayProxyBeacon.updateProxyDeployer(gatewayRegistry.address));
+        await waitForTimelockedTx(
+            lockGatewayProxyBeacon.populateTransaction.updateProxyDeployer(gatewayRegistry.address)
+        );
     }
     if ((await lockGatewayProxyBeacon.owner()) !== governanceAddress) {
         logger.log(`Transferring lockGatewayProxyBeacon ownership to timelock.`);
-        await waitForTx(lockGatewayProxyBeacon.transferOwnership(governanceAddress));
+        await waitForTimelockedTx(lockGatewayProxyBeacon.populateTransaction.transferOwnership(governanceAddress));
     }
 
     logger.log(`Deploying contract verification helper contract.`);
@@ -288,7 +300,7 @@ export const deployGatewaySol = async function (
 
     logger.log(`Handling ${(config.mintGateways || []).length} mint assets.`);
     const prefix = config.tokenPrefix;
-    for (const { symbol, gateway, token, decimals, version } of config.mintGateways) {
+    for (const { symbol, gateway, token, decimals, version, legacy } of config.mintGateways) {
         logger.log(chalk.yellow(`Mint asset: ${symbol}`));
         const existingGateway = Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getRenAssetBySymbol(symbol));
@@ -320,8 +332,10 @@ export const deployGatewaySol = async function (
             logger.log(`Skipping ${symbol} - ${existingGateway}, ${existingToken}!`);
         }
 
-        const updatedGateway = existingGateway || Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
-        const updatedToken = existingToken || Ox(await gatewayRegistry.getRenAssetBySymbol(symbol));
+        const updatedGateway =
+            existingGateway !== Ox0 ? existingGateway : Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
+        const updatedToken =
+            existingToken !== Ox0 ? existingToken : Ox(await gatewayRegistry.getRenAssetBySymbol(symbol));
 
         const gatewayLabel = `ren${symbol}_MintGateway_Proxy`;
         await deployments.save(gatewayLabel, {
@@ -347,12 +361,12 @@ export const deployGatewaySol = async function (
             const gatewayInstance = await getContractAt(hre)<MintGatewayV3>("MintGatewayV3", updatedGateway);
             const existingSignatureVerifier = Ox(await gatewayInstance.getSignatureVerifier());
             if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
-                logger.log(
+                await waitForTimelockedTx(
+                    gatewayInstance.populateTransaction.updateSignatureVerifier(signatureVerifier.address),
                     `Updating signature verifier in the ${symbol} mint gateway. Was ${existingSignatureVerifier}, updating to ${Ox(
                         signatureVerifier.address
-                    )}.`
+                    )}`
                 );
-                await waitForTx(gatewayInstance.updateSignatureVerifier(signatureVerifier.address));
             }
 
             // Update selector hash, by updating symbol.
@@ -360,10 +374,15 @@ export const deployGatewaySol = async function (
                 Buffer.concat([Buffer.from(symbol), Buffer.from("/to"), Buffer.from(chainName)])
             );
             if (expectedSelectorHash !== (await gatewayInstance.getSelectorHash())) {
-                await gatewayInstance.updateAsset(symbol);
+                await waitForTimelockedTx(
+                    gatewayInstance.populateTransaction.updateAsset(symbol),
+                    `Updating ${symbol} mint gateway symbol.`
+                );
             }
         } catch (error) {
-            console.error(error);
+            if (!legacy) {
+                throw error;
+            }
         }
     }
 
@@ -375,6 +394,7 @@ export const deployGatewaySol = async function (
         const existingGateway = Ox(await gatewayRegistry.getLockGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getLockAssetBySymbol(symbol));
         const totalSupply = typeof token === "object" ? token.totalSupply : undefined;
+        const tokenSymbol = typeof token === "object" ? token.symbol : undefined;
         let deployedToken = typeof token === "string" ? token : "";
         if (existingGateway === Ox0) {
             // Check token symbol and decimals
@@ -398,8 +418,8 @@ export const deployGatewaySol = async function (
                     totalSupply !== undefined ? totalSupply.replace(/,/g, "") : 1000000
                 ).shiftedBy(decimals !== undefined ? decimals : 18);
                 const deployedTokenInstance = await create2<TestToken__factory>("TestToken", [
-                    symbol,
-                    symbol,
+                    tokenSymbol ? tokenSymbol : symbol,
+                    tokenSymbol ? tokenSymbol : symbol,
                     decimals,
                     supply.toFixed(),
                     deployer,
@@ -432,12 +452,12 @@ export const deployGatewaySol = async function (
             const gatewayInstance = await getContractAt(hre)<LockGatewayV3>("LockGatewayV3", updatedGateway);
             const existingSignatureVerifier = Ox(await gatewayInstance.getSignatureVerifier());
             if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
-                logger.log(
+                await waitForTimelockedTx(
+                    gatewayInstance.populateTransaction.updateSignatureVerifier(signatureVerifier.address),
                     `Updating signature verifier in the ${symbol} lock gateway. Was ${existingSignatureVerifier}, updating to ${Ox(
                         signatureVerifier.address
-                    )}.`
+                    )}`
                 );
-                await waitForTx(gatewayInstance.updateSignatureVerifier(signatureVerifier.address));
             }
 
             // Update selector hash, by updating symbol.
@@ -445,7 +465,10 @@ export const deployGatewaySol = async function (
                 Buffer.concat([Buffer.from(symbol), Buffer.from("/to"), Buffer.from(chainName)])
             );
             if (expectedSelectorHash !== (await gatewayInstance.getSelectorHash())) {
-                await gatewayInstance.updateAsset(symbol);
+                await waitForTimelockedTx(
+                    gatewayInstance.populateTransaction.updateAsset(symbol),
+                    `Updating ${symbol} lock gateway symbol.`
+                );
             }
         } catch (error) {
             console.error(error);

@@ -10,7 +10,7 @@ import {
     RenProxyAdmin__factory,
     RenTimelock__factory,
 } from "../typechain";
-import { ConsoleInterface, setupCreate2, setupDeployProxy, setupWaitForTx } from "./deploymentUtils";
+import { ConsoleInterface, setupCreate2, setupDeployProxy, setupWaitForTimelockedTx, setupWaitForTx } from "./deploymentUtils";
 import { NetworkConfig, networks } from "./networks";
 
 export const deployProtocol = async function (
@@ -18,14 +18,14 @@ export const deployProtocol = async function (
     config?: NetworkConfig,
     logger: ConsoleInterface = console
 ) {
-    if (true as boolean) {
-        return;
-    }
+    // if (true as boolean) {
+    //     return;
+    // }
     const { getNamedAccounts, ethers, network } = hre;
 
     logger.log(`Deploying to ${network.name}...`);
 
-    if (!network.name.match(/^ethereumMainnet/) && !network.name.match("hardhat")) {
+    if (!network.name.match(/^ethereumMainnet/) && !network.name.match(/^goerliTestnet/) && !network.name.match("hardhat")) {
         return;
     }
 
@@ -38,10 +38,12 @@ export const deployProtocol = async function (
     const { deployer } = await getNamedAccounts();
 
     const create2 = setupCreate2(hre, create2SaltOverride, logger);
-
+    
     // Deploy RenTimelock ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenTimelock"));
     const renTimelock = await create2<RenTimelock__factory>("RenTimelock", [0, [deployer], [deployer]]);
+
+    const waitForTimelockedTx = setupWaitForTimelockedTx(hre, renTimelock, logger);
 
     let governanceAddress: string;
     if (network.name === "hardhat") {
@@ -53,7 +55,7 @@ export const deployProtocol = async function (
     // Deploy RenProxyAdmin ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenProxyAdmin"));
     const renProxyAdmin = await create2<RenProxyAdmin__factory>("RenProxyAdmin", [governanceAddress]);
-    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, logger);
+    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, renTimelock, logger);
 
     logger.log(chalk.yellow("GetOperatorDarknodes"));
     const getOperatorDarknodes = await create2<GetOperatorDarknodes__factory>("GetOperatorDarknodes", [
@@ -79,6 +81,15 @@ export const deployProtocol = async function (
 
     logger.log(chalk.yellow("Protocol"));
     const protocol = await create2<Protocol__factory>("Protocol", [renTimelock.address, [deployer]]);
+    
+    await waitForTimelockedTx(
+        protocol.populateTransaction.updateContract("DarknodeRegistry", darknodeRegistry),
+        `Updating DarknodeRegistry in protocol to ${darknodeRegistry}`
+    );
+    await waitForTimelockedTx(
+        protocol.populateTransaction.updateContract("ClaimRewards", claimRewards.address),
+        `Updating ClaimRewards in protocol to ${claimRewards.address}`
+    );
     // await protocol.updateContract("DarknodeRegistry", darknodeRegistry);
     // await protocol.updateContract("ClaimRewards", claimRewards.address);
     // const txData = await protocol.populateTransaction.updateContract("ClaimRewards", claimRewards.address);

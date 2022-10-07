@@ -6,7 +6,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
-import {String} from "../libraries/String.sol";
+import {StringV1} from "../libraries/StringV1.sol";
 import {IClaimRewards} from "./IClaimRewards.sol";
 
 contract ClaimRewardsStateV1 {
@@ -71,17 +71,17 @@ contract ClaimRewardsV1 is Initializable, ClaimRewardsStateV1, IClaimRewards {
         uint256 fractionInBps
     ) public returns (uint256) {
         // Validate asset symbol.
-        require(String.isNotEmpty(assetSymbol), "ClaimRewards: invalid empty asset");
-        require(String.isAlphanumeric(assetSymbol), "ClaimRewards: invalid asset");
+        require(StringV1.isNotEmpty(assetSymbol), "ClaimRewards: invalid empty asset");
+        require(StringV1.isAlphanumeric(assetSymbol), "ClaimRewards: invalid asset");
 
         // Validate recipient address.
-        require(String.isNotEmpty(recipientAddress), "ClaimRewards: invalid empty recipient address");
-        require(String.isAlphanumeric(recipientAddress), "ClaimRewards: invalid recipient address");
+        require(StringV1.isNotEmpty(recipientAddress), "ClaimRewards: invalid empty recipient address");
+        require(StringV1.isAlphanumeric(recipientAddress), "ClaimRewards: invalid recipient address");
 
         // Validate recipient chain.
         // Note that the chain can be empty - which is planned to represent the
         // asset's native lock chain.
-        require(String.isAlphanumeric(recipientChain), "ClaimRewards: invalid recipient chain");
+        require(StringV1.isAlphanumeric(recipientChain), "ClaimRewards: invalid recipient chain");
 
         // Validate the fraction being withdrawn.
         require(fractionInBps <= BPS_DENOMINATOR, "ClaimRewards: invalid fraction value greater than 10000");

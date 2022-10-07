@@ -10,7 +10,7 @@ import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Stri
 
 import {ERC20WithPermit} from "./ERC20WithPermit.sol";
 import {ERC20WithPermit} from "./ERC20WithPermit.sol";
-import {String} from "../libraries/String.sol";
+import {StringV1} from "../libraries/StringV1.sol";
 
 abstract contract RenAssetStateV2 {
     uint8 internal _decimals;
@@ -35,9 +35,9 @@ contract RenAssetV2 is Initializable, OwnableUpgradeable, ERC20Upgradeable, ERC2
         uint8 decimals_,
         address contractOwner
     ) external initializer {
-        require(String.isValidString(version_), "RenAsset: invalid version");
-        require(String.isValidString(name_), "RenAsset: invalid name");
-        require(String.isValidString(symbol_), "RenAsset: invalid symbol");
+        require(StringV1.isValidString(version_), "RenAsset: invalid version");
+        require(StringV1.isValidString(name_), "RenAsset: invalid name");
+        require(StringV1.isValidString(symbol_), "RenAsset: invalid symbol");
 
         __Ownable_init();
         __ERC20_init(name_, symbol_);

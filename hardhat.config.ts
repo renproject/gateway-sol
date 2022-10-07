@@ -65,12 +65,6 @@ const config: HardhatUserConfig = {
             },
             gasPrice: 2.5 * 1e9,
         },
-        ethereumDevnet: {
-            url: `https://kovan.infura.io/v3/${INFURA_KEY}`,
-            accounts: {
-                mnemonic: MNEMONIC_DEVNET,
-            },
-        },
         bscTestnet: {
             url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
             accounts: {
@@ -122,7 +116,7 @@ const config: HardhatUserConfig = {
         },
 
         arbitrumTestnet: {
-            url: `https://rinkeby.arbitrum.io/rpc`,
+            url: `https://goerli-rollup.arbitrum.io/rpc`,
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },
@@ -173,7 +167,7 @@ const config: HardhatUserConfig = {
         },
 
         optimismTestnet: {
-            url: `https://kovan.optimism.io`,
+            url: `https://goerli.optimism.io`,
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },

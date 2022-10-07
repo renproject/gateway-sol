@@ -13,7 +13,7 @@ import "./Gateways/RenVMSignatureVerifier.sol";
 
 import "./GatewayRegistry/ProxyBeacon.sol";
 import "./GatewayRegistry/RenAssetFactory.sol";
-import "./GatewayRegistry/GatewayRegistry.sol";
+import "./GatewayRegistry/GatewayRegistryV3.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {ERC20PresetMinterPauserUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinterPauserUpgradeable.sol";

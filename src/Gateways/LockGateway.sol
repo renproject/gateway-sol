@@ -15,7 +15,7 @@ import {RenVMHashes} from "./common/RenVMHashes.sol";
 import {ILockGateway} from "./interfaces/ILockGateway.sol";
 import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./RenVMSignatureVerifier.sol";
 import {RenAssetV2} from "../RenAsset/RenAsset.sol";
-import {String} from "../libraries/String.sol";
+import {StringV1} from "../libraries/StringV1.sol";
 
 /// LockGatewayV3 handles verifying lock and release requests. A mint authority
 /// approves assets being released by providing a digital signature.
@@ -59,7 +59,7 @@ contract LockGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
     ) external override returns (uint256) {
         // The recipient must not be empty. Better validation is possible,
         // but would need to be customized for each destination ledger.
-        require(String.isNotEmpty(recipientAddress), "LockGateway: to address is empty");
+        require(StringV1.isNotEmpty(recipientAddress), "LockGateway: to address is empty");
 
         // Lock the tokens. If the user doesn't have enough tokens, this will
         // throw. Note that some assets may transfer less than the provided

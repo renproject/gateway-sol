@@ -116,7 +116,7 @@ const config: HardhatUserConfig = {
         },
 
         arbitrumTestnet: {
-            url: `https://rinkeby.arbitrum.io/rpc`,
+            url: `https://goerli-rollup.arbitrum.io/rpc`,
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },

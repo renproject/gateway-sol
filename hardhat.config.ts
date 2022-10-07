@@ -167,7 +167,7 @@ const config: HardhatUserConfig = {
         },
 
         optimismTestnet: {
-            url: `https://kovan.optimism.io`,
+            url: `https://goerli.optimism.io`,
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },

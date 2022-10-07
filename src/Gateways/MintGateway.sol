@@ -12,7 +12,7 @@ import {RenAssetV2} from "../RenAsset/RenAsset.sol";
 import {GatewayStateV3, GatewayStateManagerV3} from "./common/GatewayState.sol";
 import {RenVMHashes} from "./common/RenVMHashes.sol";
 import {IMintGateway} from "./interfaces/IMintGateway.sol";
-import {String} from "../libraries/String.sol";
+import {StringV1} from "../libraries/StringV1.sol";
 import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./RenVMSignatureVerifier.sol";
 
 /// MintGateway handles verifying mint and burn requests. A mintAuthority
@@ -197,7 +197,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
     ) internal returns (uint256) {
         // The recipient must not be empty. Better validation is possible,
         // but would need to be customized for each destination ledger.
-        require(String.isNotEmpty(recipientAddress), "MintGateway: to address is empty");
+        require(StringV1.isNotEmpty(recipientAddress), "MintGateway: to address is empty");
 
         // Burn the tokens. If the user doesn't have enough tokens, this will
         // throw.
@@ -207,7 +207,7 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
 
         // If a paylaod of recipient chain has been included, emit more detailed
         // event.
-        if (String.isNotEmpty(recipientChain) || recipientPayload.length > 0) {
+        if (StringV1.isNotEmpty(recipientChain) || recipientPayload.length > 0) {
             emit LogBurnToChain(
                 recipientAddress,
                 recipientChain,

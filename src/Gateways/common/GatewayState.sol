@@ -8,7 +8,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {IRenVMSignatureVerifier} from "../RenVMSignatureVerifier.sol";
-import {String} from "../../libraries/String.sol";
+import {StringV1} from "../../libraries/StringV1.sol";
 import {RenVMHashes} from "./RenVMHashes.sol";
 
 abstract contract GatewayStateV3 {
@@ -160,7 +160,7 @@ abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, Ga
     ///
     /// @param nextAsset The new asset.
     function _updateAsset(string calldata nextAsset) internal {
-        require(String.isValidString(nextAsset), "Gateway: invalid asset");
+        require(StringV1.isValidString(nextAsset), "Gateway: invalid asset");
 
         _asset = nextAsset;
 

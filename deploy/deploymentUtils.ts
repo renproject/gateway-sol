@@ -1,6 +1,9 @@
 import { randomBytes } from "crypto";
 
-import { readValidations, withDefaults } from "@openzeppelin/hardhat-upgrades/dist/utils";
+import {
+    readValidations,
+    withDefaults,
+} from "@openzeppelin/hardhat-upgrades/dist/utils";
 import {
     assertStorageUpgradeSafe,
     assertUpgradeSafe,
@@ -16,7 +19,12 @@ import { SyncOrPromise, utils } from "@renproject/utils";
 import BigNumber from "bignumber.js";
 import BN from "bn.js";
 import chalk from "chalk";
-import { BaseContract, ContractFactory, ContractTransaction, PopulatedTransaction } from "ethers";
+import {
+    BaseContract,
+    ContractFactory,
+    ContractTransaction,
+    PopulatedTransaction,
+} from "ethers";
 import { getAddress, keccak256 } from "ethers/lib/utils";
 import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -190,6 +198,12 @@ export const setupDeployProxy =
     >(
         contractName: string,
         proxyName: string,
+        // Due to this function not first deploying the proxy with a mock
+        // implementation, the address of the proxy depends on the
+        // implementation first used when deploying the proxy. To avoid the
+        // proxy address changing on new networks, we first deploy the original
+        // version.
+        originalContractName: string,
         options: {
             initializer: keyof C["callStatic"];
             constructorArgs: unknown[];
@@ -209,7 +223,6 @@ export const setupDeployProxy =
         const waitForTimelockedTx = setupWaitForTimelockedTx(hre, renTimelock, logger);
 
         const existingProxyDeployment = await setupGetExistingDeployment(hre)<TransparentUpgradeableProxy>(proxyName);
-        let proxy: TransparentUpgradeableProxy;
 
         // openzeppelin-upgrades checks ////////////////////////////////////////
         const { provider } = hre.network;
@@ -237,6 +250,16 @@ export const setupDeployProxy =
             create2SaltOverrideAlt
         )) as unknown as C;
 
+        let originalImplementation: { address: string } | undefined;
+        if (originalContractName !== contractName) {
+            originalImplementation = (await create2<F>(
+                originalContractName,
+                [] as any,
+                undefined,
+                create2SaltOverrideAlt
+            )) as unknown as C;
+        }
+
         // openzeppelin-upgrades manifest //////////////////////////////////////
         await manifest.lockedRun(async () => {
             const data = await manifest.read();
@@ -256,26 +279,14 @@ export const setupDeployProxy =
             await waitForTx(implementation[initializer](...constructorArgs));
         }
 
+        let proxy: TransparentUpgradeableProxy;
         if (existingProxyDeployment) {
             logger.log(`Reusing ${proxyName} at ${existingProxyDeployment.address}`);
-
             proxy = existingProxyDeployment;
-            const currentImplementation = await proxyAdmin.getProxyImplementation(proxy.address);
-            logger.log(proxyName, "points to", currentImplementation);
-            if (currentImplementation.toLowerCase() !== implementation.address.toLowerCase()) {
-                logger.log(
-                    `Updating ${proxyName} to point to ${implementation.address} instead of ${currentImplementation}`
-                );
-
-                // Check if the proxyAdmin is owned by the timelock.
-                await waitForTimelockedTx(
-                    proxyAdmin.populateTransaction.upgrade(proxy.address, implementation.address)
-                );
-            }
         } else {
             proxy = await create2<TransparentUpgradeableProxy__factory>(
                 proxyName,
-                [implementation.address, proxyAdmin.address, []],
+                [originalImplementation?.address || implementation.address, proxyAdmin.address, []],
                 undefined,
                 create2SaltOverrideAlt
             );
@@ -284,6 +295,18 @@ export const setupDeployProxy =
             await manifest.addProxy({ ...proxy, kind: "transparent" });
             ////////////////////////////////////////////////////////////////////
         }
+
+        const currentImplementation = await proxyAdmin.getProxyImplementation(proxy.address);
+        logger.log(proxyName, "points to", currentImplementation);
+        if (currentImplementation.toLowerCase() !== implementation.address.toLowerCase()) {
+            logger.log(
+                `Updating ${proxyName} to point to ${implementation.address} instead of ${currentImplementation}`
+            );
+
+            // Check if the proxyAdmin is owned by the timelock.
+            await waitForTimelockedTx(proxyAdmin.populateTransaction.upgrade(proxy.address, implementation.address));
+        }
+
         const final = await ethers.getContractAt<C>(contractName, proxy.address, deployer);
 
         if (!(await isInitialized(final))) {

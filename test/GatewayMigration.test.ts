@@ -1,6 +1,5 @@
 import BigNumber from "bignumber.js";
 import { expect } from "chai";
-import { BaseContract } from "ethers";
 import hre from "hardhat";
 
 import {
@@ -43,6 +42,7 @@ describe("Gateway Migration", () => {
         const gateway_1 = await deployProxy<MintGatewayV3__factory>(
             "MintGatewayV3",
             "TransparentUpgradeableProxy",
+            "MintGatewayV3",
             {
                 initializer: "__MintGateway_init",
                 constructorArgs: ["BTC", signatureVerifier, renBTC.address] as Parameters<
@@ -94,6 +94,7 @@ describe("Gateway Migration", () => {
         const gateway_2 = await deployProxy<MintGatewayV3__factory>(
             "MintGatewayV3",
             "TransparentUpgradeableProxy",
+            "MintGatewayV3",
             {
                 initializer: "__MintGateway_init",
                 constructorArgs: ["BTC", signatureVerifier, renBTC.address] as Parameters<

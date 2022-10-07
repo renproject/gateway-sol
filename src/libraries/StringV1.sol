@@ -3,15 +3,17 @@
 // solhint-disable-next-line
 pragma solidity ^0.8.0;
 
-/// Library with common String checks.
-library String {
-    /// Check that the string only contains alphanumeric characters, to avoid
-    /// UTF-8 characters that are indistinguishable from alphanumeric
-    /// characters.
+/// Updates String.isAlphanumeric to allow underscores.
+library StringV1 {
+    /// Check that the string only contains alphanumeric characters (and
+    /// underscores), to avoid UTF-8 characters that are indistinguishable from
+    /// alphanumeric characters.
     function isAlphanumeric(string memory str) internal pure returns (bool) {
         for (uint256 i = 0; i < bytes(str).length; i++) {
             uint8 char = uint8(bytes(str)[i]);
-            if (!((char >= 65 && char <= 90) || (char >= 97 && char <= 122) || (char >= 48 && char <= 57))) {
+            if (
+                !((char >= 65 && char <= 90) || (char >= 97 && char <= 122) || (char >= 48 && char <= 57) || char == 95)
+            ) {
                 return false;
             }
         }

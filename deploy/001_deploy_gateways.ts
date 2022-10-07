@@ -177,8 +177,9 @@ export const deployGatewaySol = async function (
 
     logger.log(chalk.yellow("Signature Verifier"));
     const signatureVerifier = await deployProxy<RenVMSignatureVerifierV1__factory>(
-        "RenVMSignatureVerifierV1",
+        "RenVMSignatureVerifierV1", // should be changed if there's a new version
         "RenVMSignatureVerifierProxy",
+        "RenVMSignatureVerifierV1", // shouldn't be changed when there's a new version
         {
             initializer: "__RenVMSignatureVerifier_init",
             constructorArgs: [chainName, mintAuthority, governanceAddress] as Parameters<
@@ -204,8 +205,9 @@ export const deployGatewaySol = async function (
     // Deploy GatewayRegistry ////////////////////////////////////////////////////
     logger.log(chalk.yellow("GatewayRegistry"));
     const gatewayRegistry = await deployProxy<GatewayRegistryV2__factory>(
-        "GatewayRegistryV2",
+        "GatewayRegistryV3", // should be changed if there's a new version
         "GatewayRegistryProxy",
+        "GatewayRegistryV2", // shouldn't be changed if there's a new version
         {
             initializer: "__GatewayRegistry_init",
             constructorArgs: [

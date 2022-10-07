@@ -61,6 +61,7 @@ contract ProxyBeacon is Context, UpgradeableBeacon {
         Address.functionCall(address(proxy), encodedParameters);
 
         return proxy;
+
     }
 }
 

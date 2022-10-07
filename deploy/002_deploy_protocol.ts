@@ -10,7 +10,13 @@ import {
     RenProxyAdmin__factory,
     RenTimelock__factory,
 } from "../typechain";
-import { ConsoleInterface, setupCreate2, setupDeployProxy, setupWaitForTimelockedTx, setupWaitForTx } from "./deploymentUtils";
+import {
+    ConsoleInterface,
+    setupCreate2,
+    setupDeployProxy,
+    setupWaitForTimelockedTx,
+    setupWaitForTx,
+} from "./deploymentUtils";
 import { NetworkConfig, networks } from "./networks";
 
 export const deployProtocol = async function (
@@ -25,7 +31,11 @@ export const deployProtocol = async function (
 
     logger.log(`Deploying to ${network.name}...`);
 
-    if (!network.name.match(/^ethereumMainnet/) && !network.name.match(/^goerliTestnet/) && !network.name.match("hardhat")) {
+    if (
+        !network.name.match(/^ethereumMainnet/) &&
+        !network.name.match(/^goerliTestnet/) &&
+        !network.name.match("hardhat")
+    ) {
         return;
     }
 
@@ -38,7 +48,7 @@ export const deployProtocol = async function (
     const { deployer } = await getNamedAccounts();
 
     const create2 = setupCreate2(hre, create2SaltOverride, logger);
-    
+
     // Deploy RenTimelock ////////////////////////////////////////////////
     logger.log(chalk.yellow("RenTimelock"));
     const renTimelock = await create2<RenTimelock__factory>("RenTimelock", [0, [deployer], [deployer]]);
@@ -65,8 +75,9 @@ export const deployProtocol = async function (
     // Deploy ClaimRewards ////////////////////////////////////////////////////
     logger.log(chalk.yellow("ClaimRewards"));
     const claimRewards = await deployProxy<ClaimRewardsV1__factory>(
-        "ClaimRewardsV1",
+        "ClaimRewardsV1", // should be changed if there's a new version
         "ClaimRewardsProxy",
+        "ClaimRewardsV1", // shouldn't be changed if there's a new version
         {
             initializer: "__ClaimRewards_init",
             constructorArgs: [] as Parameters<ClaimRewardsV1["__ClaimRewards_init"]>,
@@ -81,7 +92,7 @@ export const deployProtocol = async function (
 
     logger.log(chalk.yellow("Protocol"));
     const protocol = await create2<Protocol__factory>("Protocol", [renTimelock.address, [deployer]]);
-    
+
     await waitForTimelockedTx(
         protocol.populateTransaction.updateContract("DarknodeRegistry", darknodeRegistry),
         `Updating DarknodeRegistry in protocol to ${darknodeRegistry}`

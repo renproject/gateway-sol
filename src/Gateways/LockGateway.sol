@@ -8,6 +8,7 @@ import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Cont
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
+import {IERC721ReceiverUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import {SafeTransferWithFeesUpgradeable} from "./common/SafeTransferWithFees.sol";
@@ -21,7 +22,14 @@ import {String} from "../libraries/String.sol";
 /// approves assets being released by providing a digital signature.
 /// The balance of assets is assumed not to change without a transfer, so
 /// rebasing assets and assets with a demurrage fee are not supported.
-contract LockGatewayV4 is Initializable, ContextUpgradeable, GatewayStateV4, GatewayStateManagerV4, ILockGateway {
+contract LockGatewayV4 is
+    Initializable,
+    ContextUpgradeable,
+    GatewayStateV4,
+    GatewayStateManagerV4,
+    ILockGateway,
+    IERC721ReceiverUpgradeable
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeTransferWithFeesUpgradeable for IERC20Upgradeable;
 
@@ -50,7 +58,7 @@ contract LockGatewayV4 is Initializable, ContextUpgradeable, GatewayStateV4, Gat
     ///        moved to.
     /// @param recipientPayload An optional payload to be passed to the
     ///        recipient chain along with the address.
-    /// @param amountOrTokenId The amount of the token being locked, in the 
+    /// @param amountOrTokenId The amount of the token being locked, in the
     ///        asset's smallest unit or tokenId if it is an NFT. (e.g. satoshis 
     ///        for BTC)
     function lock(
@@ -105,7 +113,7 @@ contract LockGatewayV4 is Initializable, ContextUpgradeable, GatewayStateV4, Gat
     ///
     /// @param pHash (payload hash) The hash of the payload associated with the
     ///        release.
-    /// @param amountOrTokenId The amount of the token being released, in its 
+    /// @param amountOrTokenId The amount of the token being released, in its
     ///        smallest value or the token id of the NFT.
     /// @param nHash (nonce hash) The hash of the nonce, amount and pHash.
     /// @param sig The signature of the hash of the following values:
@@ -163,5 +171,14 @@ contract LockGatewayV4 is Initializable, ContextUpgradeable, GatewayStateV4, Gat
         emit LogRelease(recipient, amountOrTokenId, sigHash, nHash);
 
         return amountOrTokenId;
+    }
+
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

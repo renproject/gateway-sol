@@ -16,7 +16,7 @@ if (process.env.HARDHAT_FORK) {
     process.env["HARDHAT_DEPLOY_FORK"] = process.env.HARDHAT_FORK;
 }
 
-const MNEMONIC_DEVNET = process.env.MNEMONIC_DEVNET || process.env.MNEMONIC || "";
+// const MNEMONIC_DEVNET = process.env.MNEMONIC_DEVNET || process.env.MNEMONIC || "";
 const MNEMONIC_TESTNET = process.env.MNEMONIC_TESTNET || process.env.MNEMONIC || "";
 const MNEMONIC_MAINNET = process.env.MNEMONIC_MAINNET || process.env.MNEMONIC || "";
 const INFURA_KEY = process.env.INFURA_KEY || "";

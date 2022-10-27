@@ -29,11 +29,24 @@ export const MINUTE = 60;
 export const HOUR = MINUTE * 60;
 export const DAY = HOUR * 24;
 
+export const getTimelockDelay = async (renTimelock: RenTimelock) => {
+    const delay = new BigNumber((await renTimelock.getMinDelay()).toString());
+
+    const delayReadable = delay.gt(DAY)
+        ? `${delay.div(DAY).toFixed(2)} days`
+        : delay.gt(HOUR)
+        ? `${delay.div(HOUR).toFixed(2)} hours`
+        : delay.gt(MINUTE)
+        ? `${delay.div(MINUTE).toFixed(2)} minutes`
+        : `${delay.toFixed()} seconds`;
+    return delayReadable;
+};
+
 export const getTimelockConfig = async (
     hre: HardhatRuntimeEnvironment,
     renTimelock: RenTimelock,
     multisig: Multisig | undefined
-) => {
+): Promise<{ delay: string; roles: { [role: string]: string[] } }> => {
     const { getNamedAccounts, ethers } = hre;
     const { deployer } = await getNamedAccounts();
 
@@ -43,6 +56,15 @@ export const getTimelockConfig = async (
         timelock: Ox(renTimelock.address),
         deployer: Ox(deployer),
         create2: Ox(CREATE2_DEPLOYER),
+    };
+
+    const reverseKnownAccounts = {
+        ...(knownAccounts.multisig
+            ? { [knownAccounts.multisig]: `multisig (${knownAccounts.multisig.slice(0, 6)}...)` }
+            : {}),
+        [knownAccounts.timelock]: `timelock (${knownAccounts.timelock.slice(0, 6)}...)`,
+        [knownAccounts.deployer]: `deployer (${knownAccounts.deployer.slice(0, 6)}...)`,
+        [knownAccounts.create2]: `create2 (${knownAccounts.create2.slice(0, 6)}...)`,
     };
 
     const [DEFAULT_ADMIN_ROLE, TIMELOCK_ADMIN_ROLE, EXECUTOR_ROLE, PROPOSER_ROLE] = await Promise.all([
@@ -96,15 +118,37 @@ export const getTimelockConfig = async (
         }
     }
 
-    const [delayRaw, multisigRoles, timelockRoles, deployerRoles, create2Roles] = await Promise.all([
-        renTimelock.getMinDelay(),
-        knownAccounts.multisig ? getAddressRoles(renTimelock, roles, knownAccounts.multisig) : undefined,
-        getAddressRoles(renTimelock, roles, knownAccounts.timelock),
-        getAddressRoles(renTimelock, roles, knownAccounts.deployer),
-        getAddressRoles(renTimelock, roles, knownAccounts.create2),
-    ]);
+    // const [delayRaw, multisigRoles, timelockRoles, deployerRoles, create2Roles] = await Promise.all([
+    //     renTimelock.getMinDelay(),
+    //     knownAccounts.multisig ? getAddressRoles(renTimelock, roles, knownAccounts.multisig) : undefined,
+    //     getAddressRoles(renTimelock, roles, knownAccounts.timelock),
+    //     getAddressRoles(renTimelock, roles, knownAccounts.deployer),
+    //     getAddressRoles(renTimelock, roles, knownAccounts.create2),
+    // ]);
 
-    const delay = new BigNumber(delayRaw.toString());
+    const accountsToCheck = [...Object.keys(permissionedAccounts), ...Object.values(knownAccounts)];
+    const accountsWithRoles: { [role: string]: string[] } = {};
+
+    for (const role of Object.keys(roles)) {
+        const roleId = roles[role as keyof typeof roles];
+        const accounts: string[] = [];
+
+        const accountsHaveRole = await Promise.all(
+            accountsToCheck.map(
+                async (account) =>
+                    [account, account ? await renTimelock.hasRole(roleId, account) : false] as [string, boolean]
+            )
+        );
+
+        for (const [account, hasRole] of accountsHaveRole) {
+            if (hasRole) {
+                accounts.push(reverseKnownAccounts[account] || account);
+            }
+        }
+        accountsWithRoles[role] = accounts;
+    }
+
+    const delay = new BigNumber((await renTimelock.getMinDelay()).toString());
 
     const delayReadable = delay.gt(DAY)
         ? `${delay.div(DAY).toFixed(2)} days`
@@ -115,12 +159,7 @@ export const getTimelockConfig = async (
         : `${delay.toFixed()} seconds`;
 
     return {
-        roles: {
-            ...(multisigRoles && multisigRoles.length ? { multisig: multisigRoles } : {}),
-            ...(timelockRoles && timelockRoles.length ? { timelock: timelockRoles } : {}),
-            ...(deployerRoles && deployerRoles.length ? { deployer: deployerRoles } : {}),
-            ...(create2Roles && create2Roles.length ? { create2: create2Roles } : {}),
-        },
+        roles: accountsWithRoles,
         delay: delayReadable,
     };
 };

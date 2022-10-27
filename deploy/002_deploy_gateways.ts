@@ -32,9 +32,9 @@ import {
 import {
     ConsoleInterface,
     CREATE2_DEPLOYER,
+    getAccountsWithRoles,
     getContractAt,
     Ox0,
-    Ox1_32,
     setupCreate2,
     setupDeployProxy,
     setupGetExistingDeployment,
@@ -43,7 +43,7 @@ import {
     updateLogger,
 } from "./deploymentUtils/general";
 import { Multisig } from "./deploymentUtils/multisig";
-import { getTimelockConfig } from "./deploymentUtils/timelock";
+import { getTimelockDelay } from "./deploymentUtils/timelock";
 import { NetworkConfig, networks } from "./networks";
 
 export const deployGatewaySol = async function (
@@ -101,6 +101,13 @@ export const deployGatewaySol = async function (
     logger.group("RenTimelock");
     const renTimelock = await create2<RenTimelock__factory>("RenTimelock", [0, [deployer], [deployer]]);
 
+    const knownAccounts = {
+        ...(multisig ? { [Ox(multisig.getAddress())]: `multisig (${multisig.getAddress().slice(0, 6)}...)` } : {}),
+        [Ox(renTimelock.address)]: `timelock (${renTimelock.address.slice(0, 6)}...)`,
+        [Ox(deployer)]: `deployer (${deployer.slice(0, 6)}...)`,
+        [Ox(CREATE2_DEPLOYER)]: `create2 (${CREATE2_DEPLOYER.slice(0, 6)}...)`,
+    };
+
     const waitForTimelockedTx = await setupWaitForTimelockedTx(hre, renTimelock, multisig, logger);
 
     if (await renTimelock.hasRole(await renTimelock.TIMELOCK_ADMIN_ROLE(), CREATE2_DEPLOYER)) {
@@ -147,7 +154,25 @@ export const deployGatewaySol = async function (
         );
     }
 
-    logger.log(`Timelock config:`, await getTimelockConfig(hre, renTimelock, multisig));
+    // const timelockConfig = await getTimelockConfig(hre, renTimelock, multisig);
+    // logger.log(`Timelock config:`, await getTimelockConfig(hre, renTimelock, multisig));
+    logger.log(`Timelock delay: ${chalk.green(await getTimelockDelay(renTimelock))}`);
+    logger.group(`Timelock roles`);
+    await getAccountsWithRoles(
+        hre,
+        renTimelock,
+        knownAccounts,
+        ["DEFAULT_ADMIN_ROLE", "TIMELOCK_ADMIN_ROLE", "EXECUTOR_ROLE", "PROPOSER_ROLE"],
+        logger
+    );
+    // for (const role of Object.keys(timelockConfig.roles)) {
+    //     logger.log(
+    //         `Accounts with role ${chalk.yellow(role)}: ${timelockConfig.roles[role]
+    //             .map((a) => chalk.green(a))
+    //             .join(", ")}`
+    //     );
+    // }
+    logger.groupEnd();
 
     let governanceAddress: string;
     if (network.name === "hardhat") {
@@ -187,9 +212,7 @@ export const deployGatewaySol = async function (
     if (Ox(await renAssetProxyBeacon.implementation()) !== Ox(renAssetImplementation.address)) {
         await waitForTimelockedTx(
             renAssetProxyBeacon.populateTransaction.upgradeTo(renAssetImplementation.address),
-            `Updating RenAssetProxy beacon implementation to ${renAssetImplementation.address}`,
-            false,
-            Ox1_32
+            `Updating RenAssetProxy beacon implementation to ${renAssetImplementation.address}`
         );
     }
 
@@ -276,7 +299,7 @@ export const deployGatewaySol = async function (
     // Deploy GatewayRegistry ////////////////////////////////////////////////////
     logger.group("GatewayRegistry");
     const gatewayRegistry = await deployProxy<GatewayRegistryV2__factory>(
-        "GatewayRegistryV2", // should be changed if there's a new version
+        "GatewayRegistryV3", // should be changed if there's a new version
         "GatewayRegistryProxy",
         "GatewayRegistryV2", // shouldn't be changed if there's a new version
         {
@@ -301,6 +324,17 @@ export const deployGatewaySol = async function (
             }
         }
     );
+
+    logger.group(`GatewayRegistry roles`);
+    await getAccountsWithRoles(
+        hre,
+        gatewayRegistry,
+        knownAccounts,
+        ["DEFAULT_ADMIN_ROLE", "CAN_UPDATE_GATEWAYS", "CAN_ADD_GATEWAYS"],
+        logger
+    );
+    logger.groupEnd();
+
     const existingSignatureVerifier = Ox(await gatewayRegistry.getSignatureVerifier());
     if (existingSignatureVerifier !== Ox(signatureVerifier.address)) {
         await waitForTimelockedTx(

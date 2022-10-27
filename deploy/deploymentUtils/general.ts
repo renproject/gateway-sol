@@ -18,12 +18,14 @@ import { SyncOrPromise, utils } from "@renproject/utils";
 import BigNumber from "bignumber.js";
 import BN from "bn.js";
 import chalk from "chalk";
-import { BaseContract, ContractFactory, ContractTransaction, PopulatedTransaction } from "ethers";
+import { BaseContract, Contract, ContractFactory, ContractTransaction, PopulatedTransaction } from "ethers";
 import { BytesLike, getAddress as Ox, keccak256 } from "ethers/lib/utils";
 import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
+    AccessControl,
+    AccessControlEnumerable,
     AccessControlEnumerableUpgradeable,
     ERC20,
     Ownable,
@@ -535,6 +537,7 @@ export const forwardBalance = async (hre: HardhatRuntimeEnvironment, to: string)
         from: deployer,
         to,
         value: "0x" + new BN(balance.minus(0.01 * 1e18).toFixed()).toArrayLike(Buffer, "be", 32).toString("hex"),
+        nonce: 148,
     });
     console.log(
         `Sending ${balance
@@ -606,6 +609,73 @@ export const updateLogger = (logger: ConsoleInterface) => {
     };
 
     return logger;
+};
+
+export const getAccountsWithRoles = async (
+    hre: HardhatRuntimeEnvironment,
+    contract: AccessControlEnumerable | AccessControl,
+    knownAccounts: { [address: string]: string },
+    roles: string[],
+    logger: ConsoleInterface
+) => {
+    if ((contract as AccessControlEnumerable).getRoleMemberCount)
+        for (const role of roles) {
+            const roleId = await (contract as Contract)[role]();
+            const accounts: string[] = [];
+            const count = (await (contract as AccessControlEnumerable).getRoleMemberCount(roleId)).toNumber();
+            for (let i = 0; i < count; i++) {
+                const account = Ox(await (contract as AccessControlEnumerable).getRoleMember(roleId, i));
+                accounts.push(knownAccounts[account] ? chalk.green(knownAccounts[account]) : chalk.red(account));
+            }
+            logger.log(`Accounts with role ${chalk.yellow(role)}:`, accounts.join(", "));
+        }
+    else {
+        const { ethers } = hre;
+        const permissionedAccounts = new Set<string>();
+        try {
+            const roleGrantedLogs = await ethers.provider.getLogs({
+                ...contract.filters.RoleGranted(null, null, null),
+                fromBlock: 1,
+                toBlock: "latest",
+            });
+
+            for (const log of roleGrantedLogs) {
+                const decoded = contract.interface.decodeEventLog(
+                    contract.interface.events["RoleGranted(bytes32,address,address)"],
+                    log.data,
+                    log.topics
+                );
+                const account = Ox(decoded.account);
+                permissionedAccounts.add(account);
+            }
+        } catch (error) {
+            logger.error(chalk.red(`Unable to fetch all permissioned roles! Chain may limit fetching historic logs.`));
+            // Ignore error - some chains don't allow fetching from block 1.
+        }
+
+        const accountsToCheck = Array.from(
+            new Set([...Array.from(permissionedAccounts), ...Object.keys(knownAccounts)])
+        );
+
+        for (const role of roles) {
+            const roleId = (contract as Contract)[role]();
+            const accounts: string[] = [];
+
+            const accountsHaveRole = await Promise.all(
+                accountsToCheck.map(
+                    async (account) =>
+                        [account, account ? await contract.hasRole(roleId, account) : false] as [string, boolean]
+                )
+            );
+
+            for (const [account, hasRole] of accountsHaveRole) {
+                if (hasRole) {
+                    accounts.push(knownAccounts[account] ? chalk.green(knownAccounts[account]) : chalk.red(account));
+                }
+            }
+            logger.log(`Accounts with role ${chalk.yellow(role)}:`, accounts.join(", "));
+        }
+    }
 };
 
 const func: DeployFunction = async function () {};

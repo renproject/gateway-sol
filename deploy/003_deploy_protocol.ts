@@ -13,6 +13,8 @@ import {
 } from "../typechain";
 import {
     ConsoleInterface,
+    CREATE2_DEPLOYER,
+    getAccountsWithRoles,
     setupCreate2,
     setupDeployProxy,
     setupWaitForTimelockedTx,
@@ -118,6 +120,24 @@ export const deployProtocol = async function (
             `Updating ClaimRewards in protocol to ${claimRewards.address}`
         );
     }
+
+    const knownAccounts = {
+        ...(multisig ? { [Ox(multisig.getAddress())]: `multisig (${multisig.getAddress().slice(0, 6)}...)` } : {}),
+        [Ox(renTimelock.address)]: `timelock (${renTimelock.address.slice(0, 6)}...)`,
+        [Ox(deployer)]: `deployer (${deployer.slice(0, 6)}...)`,
+        [Ox(CREATE2_DEPLOYER)]: `create2 (${CREATE2_DEPLOYER.slice(0, 6)}...)`,
+    };
+
+    logger.group(`Protocol roles`);
+    await getAccountsWithRoles(
+        hre,
+        protocol,
+        knownAccounts,
+        ["DEFAULT_ADMIN_ROLE", "CAN_UPDATE_GATEWAYS", "CAN_ADD_GATEWAYS"],
+        logger
+    );
+    logger.groupEnd();
+
     logger.groupEnd();
 
     return {

@@ -137,7 +137,6 @@ const config: HardhatUserConfig = {
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },
-            gasPrice: 2000000000,
         },
 
         moonbeamTestnet: {

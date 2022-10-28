@@ -28,9 +28,6 @@ export const deployProtocol = async function (
     config?: NetworkConfig,
     logger: ConsoleInterface = console
 ) {
-    if (true as any) {
-        return {} as any;
-    }
     // if (true as boolean) {
     //     return;
     // }
@@ -133,7 +130,7 @@ export const deployProtocol = async function (
         hre,
         protocol,
         knownAccounts,
-        ["DEFAULT_ADMIN_ROLE", "CAN_UPDATE_GATEWAYS", "CAN_ADD_GATEWAYS"],
+        ["DEFAULT_ADMIN_ROLE", "CAN_UPDATE_CONTRACTS", "CAN_ADD_CONTRACTS"],
         logger
     );
     logger.groupEnd();

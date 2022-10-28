@@ -343,7 +343,7 @@ export const setupWaitForTx =
             logger.log(msg);
         }
         const tx = await txOrPromise;
-        process.stdout.write(chalk.blue(`Waiting for ${tx.hash}...`));
+        process.stdout.write(chalk.blue(`Waiting for ${tx.hash} ...`));
         await tx.wait();
         // Clear the line
         process.stdout.write(`\x1B[2K\r`);
@@ -422,7 +422,7 @@ export const setupWaitForTimelockedTx = async (
 ) => {
     const waitForTx = setupWaitForTx(logger);
 
-    const { ethers, getNamedAccounts } = hre;
+    const { ethers, getNamedAccounts, network } = hre;
     const { deployer } = await getNamedAccounts();
     const signer = await ethers.getSigner(deployer);
 
@@ -482,7 +482,7 @@ export const setupWaitForTimelockedTx = async (
 
             // Check if the timelocked call is ready to be called.
             const readyTimestamp = (await renTimelock.getTimestamp(hash)).toNumber() - Date.now() / 1000 + 20;
-            if (readyTimestamp <= 80) {
+            if (readyTimestamp <= 120) {
                 if (readyTimestamp > 0) {
                     logger.log(`Sleeping ${chalk.yellow(readyTimestamp.toFixed(2))} seconds for timelock.`);
                     await utils.sleep(readyTimestamp * utils.sleep.SECONDS);
@@ -496,11 +496,17 @@ export const setupWaitForTimelockedTx = async (
                         salt || Ox0_32
                     ),
                     `Executing timelock call`,
-                    skipMultisig
+                    skipMultisig || network.name === "ethereumMainnet"
                 );
             } else {
                 const hoursRemaining = readyTimestamp / 60 / 60;
-                logger.log(`WARNING: Timelock not ready for another ${hoursRemaining.toFixed(2)} hours.`);
+                logger.log(
+                    chalk.red(
+                        `WARNING: Timelock not ready for another ${hoursRemaining.toFixed(
+                            2
+                        )} hours. Continuing without calling.`
+                    )
+                );
                 // Continue without calling `execute`. If there's any calls in
                 // the rest of the migration that depend on the execution, they
                 // will fail.

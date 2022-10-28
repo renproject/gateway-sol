@@ -56,6 +56,9 @@ export const deployGatewaySol = async function (
     signatureVerifier: RenVMSignatureVerifierV1;
     renTimelock: RenTimelock;
 }> {
+    // if (true as boolean) {
+    //     return;
+    // }
     logger = updateLogger(logger);
 
     const { getNamedAccounts, ethers, network } = hre;
@@ -80,6 +83,18 @@ export const deployGatewaySol = async function (
     const create2 = setupCreate2(hre, create2SaltOverride, logger);
     const getExistingDeployment = setupGetExistingDeployment(hre);
     const waitForTx = setupWaitForTx(logger);
+
+    // await waitForTx(
+    //     (
+    //         await ethers.getSigner(deployer)
+    //     ).sendTransaction({
+    //         to: deployer,
+    //         from: deployer,
+    //         value: 0,
+    //         nonce: 77,
+    //         gasPrice: 100 * 1e9,
+    //     })
+    // );
 
     // const signer = await ethers.getSigner(deployer);
     // const gatewayRegistry2 = GatewayRegistryV2__factory.connect("0x5076a1F237531fa4dC8ad99bb68024aB6e1Ff701", signer);
@@ -118,7 +133,7 @@ export const deployGatewaySol = async function (
         );
     }
 
-    if (multisig) {
+    if (multisig && (await multisig.getAddress())) {
         // Give Multisig EXECUTOR role in timelock.
         if (!(await renTimelock.hasRole(await renTimelock.EXECUTOR_ROLE(), multisig.getAddress()))) {
             await waitForTimelockedTx(
@@ -137,12 +152,12 @@ export const deployGatewaySol = async function (
             );
         }
 
-        // Revoke EXECUTOR role from deployer in timelock.
+        // Revoke EXECUTOR role from deployer in timelock. Revoke it through the multisig
+        // to ensure that we can still execute transactions.
         if (await renTimelock.hasRole(await renTimelock.EXECUTOR_ROLE(), deployer)) {
             await waitForTimelockedTx(
                 renTimelock.populateTransaction.revokeRole(await renTimelock.EXECUTOR_ROLE(), deployer),
-                "Revoking EXECUTOR role from contract deployer in RenTimelock contract.",
-                true
+                "Revoking EXECUTOR role from contract deployer in RenTimelock contract."
             );
         }
     }

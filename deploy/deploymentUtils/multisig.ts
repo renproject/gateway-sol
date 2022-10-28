@@ -287,7 +287,38 @@ export class Multisig {
         await writeFile(configPath, JSON.stringify(filledConfig, null, "    "));
     };
 
-    safeClientUrl = (): string => `https://safe-client.gnosis.io/v1/chains/${this.chainId}`;
+    safeClientUrl = (): string => {
+        if (this.chainId === 250) {
+            // Fantom
+            return `https://safe.fantom.network/v1/chains/${this.chainId}`;
+        } else {
+            return `https://safe-client.gnosis.io/v1/chains/${this.chainId}`;
+        }
+    };
+
+    safeAppUrl = (): string | undefined => {
+        const networkKey: { [network: string]: string } = {
+            ethereumMainnet: "eth",
+            polygonMainnet: "matic",
+            bscMainnet: "bnb",
+            arbitrumMainnet: "arb1",
+            avalancheMainnet: "avax",
+            optimismMainnet: "oeth",
+            goerliTestnet: "gor",
+            fantomMainnet: "ftm",
+        };
+
+        if (!networkKey[this.network]) {
+            return undefined;
+        }
+
+        if (this.chainId === 250) {
+            // Fantom
+            return `https://safe.fantom.network/${networkKey[this.network]}:${this.getAddress()}`;
+        } else {
+            return `https://gnosis-safe.io/app/${networkKey[this.network]}:${this.getAddress()}`;
+        }
+    };
 
     // Check that the chain is supported by the API.
     chainIsSupportedByAPI = async (): Promise<boolean> => {
@@ -558,21 +589,11 @@ export class Multisig {
     };
 
     getTransactionLink = async (transaction?: SafeTransaction): Promise<string | undefined> => {
-        const networkKey: { [network: string]: string } = {
-            ethereumMainnet: "eth",
-            polygonMainnet: "matic",
-            bscMainnet: "bnb",
-            arbitrumMainnet: "arb1",
-            avalancheMainnet: "avax",
-            optimismMainnet: "oeth",
-            goerliTestnet: "gor",
-        };
+        const baseLink = this.safeAppUrl();
 
-        if (!networkKey[this.network]) {
+        if (!baseLink) {
             return undefined;
         }
-
-        const baseLink = `https://gnosis-safe.io/app/${networkKey[this.network]}:${this.getAddress()}`;
 
         if (!transaction) {
             return baseLink;

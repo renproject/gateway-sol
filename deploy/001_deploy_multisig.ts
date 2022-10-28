@@ -30,16 +30,21 @@ export const deployProtocol = async function (
     logger.group("MultiSig");
     let multisig: Multisig = new Multisig(hre, network.name, chainId, logger);
 
-    try {
-        await multisig.load();
-        if (multisig.safeSdk) {
-            logger.log(`Loaded Multisig at address ${multisig.getAddress()}`);
-        }
-    } catch (error) {
-        logger.log(`Deploying Multisig...`);
-        await multisig.deploy([deployer, ...config.multisigSigners], 1);
-        if (multisig.safeSdk) {
-            logger.log(`Deployed Multisig at address ${multisig.getAddress()}`);
+    const result = await multisig.load();
+    if (multisig.safeSdk) {
+        logger.log(`Loaded Multisig at address ${multisig.getAddress()}`);
+    }
+
+    if (!result) {
+        try {
+            logger.log(`Deploying Multisig...`);
+            await multisig.deploy([deployer, ...config.multisigSigners], 1);
+            if (multisig.safeSdk) {
+                logger.log(`Deployed Multisig at address ${multisig.getAddress()}`);
+            }
+        } catch (error) {
+            console.error(error);
+            logger.log(`Unable to load Multisig.`);
         }
     }
 

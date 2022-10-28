@@ -38,6 +38,7 @@ abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, Ga
     event LogTokenUpdated(address indexed token);
     event LogSignatureVerifierUpdated(address indexed oldSignatureVerifier, address indexed newSignatureVerifier);
     event LogPreviousGatewayUpdated(address indexed oldPreviousGateway, address indexed newPreviousGateway);
+    event LogEventNonceOverriden(uint256 oldEventNonce, uint256 newEventNonce);
 
     function __GatewayStateManager_init(
         string calldata asset_,
@@ -152,6 +153,17 @@ abstract contract GatewayStateManagerV3 is Initializable, ContextUpgradeable, Ga
         }
 
         return false;
+    }
+
+    /// @notice Allow the owner to update the previous gateway used for
+    /// backwards compatibility.
+    ///
+    /// @param newEventNonce The new gateway contract's address.
+    function overrideEventNonce(uint256 newEventNonce) external onlySignatureVerifierOwner {
+        uint256 oldEventNonce = _eventNonce;
+        require(newEventNonce > oldEventNonce, "Gateway: overriden nonce must be greater than old nonce");
+        _eventNonce = newEventNonce;
+        emit LogEventNonceOverriden(oldEventNonce, newEventNonce);
     }
 
     // INTERNAL ////////////////////////////////////////////////////////////////

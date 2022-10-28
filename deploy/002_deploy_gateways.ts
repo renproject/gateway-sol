@@ -1,10 +1,11 @@
 import BigNumber from "bignumber.js";
 import chalk from "chalk";
-import { keccak256 } from "ethers/lib/utils";
+import { getAddress as Ox, keccak256 } from "ethers/lib/utils";
 import { deployments } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
+    BasicBridge,
     BasicBridge__factory,
     BeaconProxy__factory,
     ERC20,
@@ -22,6 +23,7 @@ import {
     RenAssetV2__factory,
     RenProxyAdmin,
     RenProxyAdmin__factory,
+    RenTimelock,
     RenTimelock__factory,
     RenVMSignatureVerifierV1,
     RenVMSignatureVerifierV1__factory,
@@ -32,25 +34,31 @@ import {
     CREATE2_DEPLOYER,
     getContractAt,
     Ox0,
+    Ox1_32,
     setupCreate2,
     setupDeployProxy,
     setupGetExistingDeployment,
     setupWaitForTimelockedTx,
     setupWaitForTx,
-} from "./deploymentUtils";
+    updateLogger,
+} from "./deploymentUtils/general";
+import { Multisig } from "./deploymentUtils/multisig";
+import { getTimelockConfig } from "./deploymentUtils/timelock";
 import { NetworkConfig, networks } from "./networks";
 
 export const deployGatewaySol = async function (
     hre: HardhatRuntimeEnvironment,
     config?: NetworkConfig,
     logger: ConsoleInterface = console
-) {
-    // if (true as boolean) {
-    //     return;
-    // }
-    const { getNamedAccounts, ethers, network } = hre;
+): Promise<{
+    gatewayRegistry: GatewayRegistryV2;
+    basicBridge: BasicBridge;
+    signatureVerifier: RenVMSignatureVerifierV1;
+    renTimelock: RenTimelock;
+}> {
+    logger = updateLogger(logger);
 
-    const Ox = ethers.utils.getAddress;
+    const { getNamedAccounts, ethers, network } = hre;
 
     config = config || networks[network.name as "hardhat"];
     if (!config) {
@@ -61,7 +69,9 @@ export const deployGatewaySol = async function (
     const chainId: number = (await ethers.provider.getNetwork()).chainId;
     const { deployer } = await getNamedAccounts();
 
-    logger.log(`Deploying to ${network.name} from ${deployer}...`);
+    const multisig = await new Multisig(hre, network.name, chainId, logger).load();
+
+    logger.log(chalk.green(`\n\nRunning deployment 002 (Gateways) on ${network.name} from ${deployer}...`));
 
     if (Ox(mintAuthority) === Ox0) {
         throw new Error(`Invalid empty mintAuthority`);
@@ -71,13 +81,13 @@ export const deployGatewaySol = async function (
     const getExistingDeployment = setupGetExistingDeployment(hre);
     const waitForTx = setupWaitForTx(logger);
 
-    // const provider = await ethers.getSigner(deployer);
-    // const gatewayRegistry2 = GatewayRegistryV2__factory.connect("0x5076a1F237531fa4dC8ad99bb68024aB6e1Ff701", provider);
+    // const signer = await ethers.getSigner(deployer);
+    // const gatewayRegistry2 = GatewayRegistryV2__factory.connect("0x5076a1F237531fa4dC8ad99bb68024aB6e1Ff701", signer);
     // console.log("gatewayRegistry2", await gatewayRegistry2!.getMintGatewaySymbols(0, 100));
     // const ibbtc = await gatewayRegistry2?.getMintGatewayBySymbol("ibBTC");
     // console.log(ibbtc);
     // // console.log("renLuna", renLuna);
-    // // const forceSend = await ForceSend__factory.connect(renLuna, provider);
+    // // const forceSend = await ForceSend__factory.connect(renLuna, signer);
     // // console.log(
     // //     await forceSend.send(deployer, {
     // //         gasLimit: 1000000,
@@ -88,10 +98,56 @@ export const deployGatewaySol = async function (
     // }
 
     // Deploy RenTimelock ////////////////////////////////////////////////
-    logger.log(chalk.yellow("RenTimelock"));
+    logger.group("RenTimelock");
     const renTimelock = await create2<RenTimelock__factory>("RenTimelock", [0, [deployer], [deployer]]);
 
-    const waitForTimelockedTx = setupWaitForTimelockedTx(hre, renTimelock, logger);
+    const waitForTimelockedTx = await setupWaitForTimelockedTx(hre, renTimelock, multisig, logger);
+
+    if (await renTimelock.hasRole(await renTimelock.TIMELOCK_ADMIN_ROLE(), CREATE2_DEPLOYER)) {
+        await waitForTimelockedTx(
+            renTimelock.populateTransaction.revokeRole(await renTimelock.TIMELOCK_ADMIN_ROLE(), CREATE2_DEPLOYER),
+            "Revoking ADMIN role from CREATE2 deployer in RenTimelock contract.",
+            true
+        );
+    }
+
+    if (multisig) {
+        // Give Multisig EXECUTOR role in timelock.
+        if (!(await renTimelock.hasRole(await renTimelock.EXECUTOR_ROLE(), multisig.getAddress()))) {
+            await waitForTimelockedTx(
+                renTimelock.populateTransaction.grantRole(await renTimelock.EXECUTOR_ROLE(), multisig.getAddress()),
+                "Granting EXECUTOR role to Multisig in RenTimelock contract.",
+                true
+            );
+        }
+
+        // Give Multisig PROPOSER role in timelock.
+        if (!(await renTimelock.hasRole(await renTimelock.PROPOSER_ROLE(), multisig.getAddress()))) {
+            await waitForTimelockedTx(
+                renTimelock.populateTransaction.grantRole(await renTimelock.PROPOSER_ROLE(), multisig.getAddress()),
+                "Granting PROPOSER role to Multisig in RenTimelock contract.",
+                true
+            );
+        }
+
+        // Revoke EXECUTOR role from deployer in timelock.
+        if (await renTimelock.hasRole(await renTimelock.EXECUTOR_ROLE(), deployer)) {
+            await waitForTimelockedTx(
+                renTimelock.populateTransaction.revokeRole(await renTimelock.EXECUTOR_ROLE(), deployer),
+                "Revoking EXECUTOR role from contract deployer in RenTimelock contract.",
+                true
+            );
+        }
+    }
+
+    if ((await renTimelock.getMinDelay()).toNumber() !== config.timelockDelay) {
+        await waitForTimelockedTx(
+            renTimelock.populateTransaction.updateDelay(config.timelockDelay),
+            `Updating Timelock delay to ${config.timelockDelay}`
+        );
+    }
+
+    logger.log(`Timelock config:`, await getTimelockConfig(hre, renTimelock, multisig));
 
     let governanceAddress: string;
     if (network.name === "hardhat") {
@@ -100,19 +156,23 @@ export const deployGatewaySol = async function (
         governanceAddress = renTimelock.address;
     }
 
+    logger.groupEnd();
+
     // Deploy RenProxyAdmin ////////////////////////////////////////////////
-    logger.log(chalk.yellow("RenProxyAdmin"));
+    logger.group("RenProxyAdmin");
 
     const renProxyAdmin =
         (await getExistingDeployment<RenProxyAdmin>("RenProxyAdmin")) ||
         (await create2<RenProxyAdmin__factory>("RenProxyAdmin", [governanceAddress]));
-    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, renTimelock, logger);
+    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, renTimelock, multisig, logger);
 
     // This should only be false on hardhat.
     const create2IsContract = (await ethers.provider.getCode(CREATE2_DEPLOYER)).replace(/^0x/, "").length > 0;
 
+    logger.groupEnd();
+
     // Deploy RenAssetProxyBeacon ////////////////////////////////////////////////
-    logger.log(chalk.yellow("RenAsset beacon"));
+    logger.group("RenAsset beacon");
     const renAssetImplementation = await create2<RenAssetV2__factory>("RenAssetV2", []);
     const existingRenAssetProxyBeacon = await getExistingDeployment<RenAssetProxyBeacon>("RenAssetProxyBeacon");
     const renAssetProxyBeacon =
@@ -127,12 +187,16 @@ export const deployGatewaySol = async function (
     if (Ox(await renAssetProxyBeacon.implementation()) !== Ox(renAssetImplementation.address)) {
         await waitForTimelockedTx(
             renAssetProxyBeacon.populateTransaction.upgradeTo(renAssetImplementation.address),
-            `Updating RenAssetProxy beacon implementation to ${renAssetImplementation.address}`
+            `Updating RenAssetProxy beacon implementation to ${renAssetImplementation.address}`,
+            false,
+            Ox1_32
         );
     }
 
+    logger.groupEnd();
+
     // Deploy MintGatewayProxyBeacon /////////////////////////////////////////////
-    logger.log(chalk.yellow("MintGateway beacon"));
+    logger.group("MintGateway beacon");
     const mintGatewayImplementation = await create2("MintGatewayV3", []);
     const existingMintGatewayProxyBeacon = await getExistingDeployment<MintGatewayProxyBeacon>(
         "MintGatewayProxyBeacon"
@@ -153,8 +217,10 @@ export const deployGatewaySol = async function (
         );
     }
 
+    logger.groupEnd();
+
     // Deploy LockGatewayProxyBeacon /////////////////////////////////////////////
-    logger.log(chalk.yellow("LockGateway beacon"));
+    logger.group("LockGateway beacon");
     const lockGatewayImplementation = await create2("LockGatewayV3", []);
     const existingLockGatewayProxyBeacon = await getExistingDeployment<LockGatewayProxyBeacon>(
         "LockGatewayProxyBeacon"
@@ -175,7 +241,10 @@ export const deployGatewaySol = async function (
         );
     }
 
-    logger.log(chalk.yellow("Signature Verifier"));
+    logger.groupEnd();
+
+    // Deploy SignatureVerifier ////////////////////////////////////////////////
+    logger.group("Signature Verifier");
     const signatureVerifier = await deployProxy<RenVMSignatureVerifierV1__factory>(
         "RenVMSignatureVerifierV1", // should be changed if there's a new version
         "RenVMSignatureVerifierProxy",
@@ -198,14 +267,16 @@ export const deployGatewaySol = async function (
             )}) Deployer: ${deployer}`
         );
     }
+    logger.groupEnd();
 
-    logger.log(chalk.yellow("TransferWithLog"));
+    logger.group("TransferWithLog");
     const transferWithLog = await create2("TransferWithLog", []);
+    logger.groupEnd();
 
     // Deploy GatewayRegistry ////////////////////////////////////////////////////
-    logger.log(chalk.yellow("GatewayRegistry"));
+    logger.group("GatewayRegistry");
     const gatewayRegistry = await deployProxy<GatewayRegistryV2__factory>(
-        "GatewayRegistryV3", // should be changed if there's a new version
+        "GatewayRegistryV2", // should be changed if there's a new version
         "GatewayRegistryProxy",
         "GatewayRegistryV2", // shouldn't be changed if there's a new version
         {
@@ -225,7 +296,7 @@ export const deployGatewaySol = async function (
             try {
                 await gatewayRegistry.getSignatureVerifier();
                 return true;
-            } catch (error: any) {
+            } catch (error: unknown) {
                 return false;
             }
         }
@@ -290,8 +361,9 @@ export const deployGatewaySol = async function (
         logger.log(`Transferring lockGatewayProxyBeacon ownership to timelock.`);
         await waitForTimelockedTx(lockGatewayProxyBeacon.populateTransaction.transferOwnership(governanceAddress));
     }
+    logger.groupEnd();
 
-    logger.log(`Deploying contract verification helper contract.`);
+    logger.group(`Contract verification helper`);
     const beaconProxy = await create2<BeaconProxy__factory>("BeaconProxy", [renAssetProxyBeacon!.address, []]);
     const renAssetProxy = await getContractAt(hre)<RenAssetV2>("RenAssetV2", beaconProxy.address);
     if ((await renAssetProxy.symbol()) === "") {
@@ -299,11 +371,12 @@ export const deployGatewaySol = async function (
         await waitForTx(renAssetProxy.__RenAsset_init(0, "1", "TESTDEPLOYMENT", "TESTDEPLOYMENT", 0, deployer));
     }
     const beaconDeployment = await deployments.get("BeaconProxy");
+    logger.groupEnd();
 
     logger.log(`Handling ${(config.mintGateways || []).length} mint assets.`);
     const prefix = config.tokenPrefix;
     for (const { symbol, gateway, token, decimals, version, legacy } of config.mintGateways) {
-        logger.log(chalk.yellow(`Mint asset: ${symbol}`));
+        logger.group(`Mint asset: ${symbol}`);
         const existingGateway = Ox(await gatewayRegistry.getMintGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getRenAssetBySymbol(symbol));
         if ((await gatewayRegistry.getGatewayBySymbol(symbol)) === Ox0) {
@@ -386,13 +459,15 @@ export const deployGatewaySol = async function (
                 throw error;
             }
         }
+
+        logger.groupEnd();
     }
 
     // Test Tokens are deployed when a particular lock-asset doesn't exist on a
     // testnet.
     logger.log(`Handling ${(config.lockGateways || []).length} lock assets.`);
     for (const { symbol, gateway, token, decimals, version } of config.lockGateways || []) {
-        logger.log(chalk.yellow(`Lock asset: ${symbol}`));
+        logger.group(`Lock asset: ${symbol}`);
         const existingGateway = Ox(await gatewayRegistry.getLockGatewayBySymbol(symbol));
         const existingToken = Ox(await gatewayRegistry.getLockAssetBySymbol(symbol));
         const totalSupply = typeof token === "object" ? token.totalSupply : undefined;
@@ -475,6 +550,8 @@ export const deployGatewaySol = async function (
         } catch (error) {
             console.error(error);
         }
+
+        logger.groupEnd();
     }
 
     // await gatewayRegistry.deployMintGatewayAndRenAsset(
@@ -574,6 +651,7 @@ export const deployGatewaySol = async function (
         gatewayRegistry,
         basicBridge,
         signatureVerifier,
+        renTimelock,
     };
 };
 

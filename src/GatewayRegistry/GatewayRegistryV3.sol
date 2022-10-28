@@ -18,11 +18,11 @@ import {RenAssetFactory} from "./RenAssetFactory.sol";
 import {StringSet} from "../libraries/StringSet.sol";
 import {GatewayRegistryStateV2, GatewayRegistryGettersV2, GatewayRegistryV2} from "./GatewayRegistry.sol";
 
-contract GatewayRegistryStateV3 is GatewayRegistryStateV2 {}
+/// @dev if any new values are being added, GatewayRegistryStateV3 should
+/// be updated to have all the values from GatewayRegistryStateV2 instead of
+/// inheriting from it, to that values can be added before the __gap.
+contract GatewayRegistryStateV3 is GatewayRegistryStateV2 {
 
-contract GatewayRegistryStateGapV3 {
-    // See GatewayRegistryStateGapV2
-    uint256[39] private __gap;
 }
 
 contract GatewayRegistryGettersV3 is GatewayRegistryGettersV2, GatewayRegistryStateV3 {}
@@ -34,8 +34,7 @@ contract GatewayRegistryV3 is
     AccessControlEnumerableUpgradeable,
     RenAssetFactory,
     GatewayRegistryStateV3,
-    GatewayRegistryGettersV3,
-    GatewayRegistryStateGapV3
+    GatewayRegistryGettersV3
 {
     using StringSet for StringSet.Set;
 

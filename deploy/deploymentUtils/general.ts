@@ -1,9 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { randomBytes } from "crypto";
 
-import {
-    readValidations,
-    withDefaults,
-} from "@openzeppelin/hardhat-upgrades/dist/utils";
+import { SafeTransactionDataPartial } from "@gnosis.pm/safe-core-sdk-types";
+import { readValidations, withDefaults } from "@openzeppelin/hardhat-upgrades/dist/utils";
 import {
     assertStorageUpgradeSafe,
     assertUpgradeSafe,
@@ -19,17 +18,14 @@ import { SyncOrPromise, utils } from "@renproject/utils";
 import BigNumber from "bignumber.js";
 import BN from "bn.js";
 import chalk from "chalk";
-import {
-    BaseContract,
-    ContractFactory,
-    ContractTransaction,
-    PopulatedTransaction,
-} from "ethers";
-import { getAddress, keccak256 } from "ethers/lib/utils";
+import { BaseContract, Contract, ContractFactory, ContractTransaction, PopulatedTransaction } from "ethers";
+import { BytesLike, getAddress as Ox, keccak256 } from "ethers/lib/utils";
 import { CallOptions, DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
+    AccessControl,
+    AccessControlEnumerable,
     AccessControlEnumerableUpgradeable,
     ERC20,
     Ownable,
@@ -38,18 +34,24 @@ import {
     RenTimelock,
     TransparentUpgradeableProxy,
     TransparentUpgradeableProxy__factory,
-} from "../typechain";
-import { NetworkConfig, networks } from "./networks";
+} from "../../typechain";
+import { NetworkConfig, networks } from "../networks";
+import { Multisig } from "./multisig";
 
 export const Ox0 = "0x0000000000000000000000000000000000000000";
 export const Ox0_32 = "0x" + "00".repeat(32);
+export const Ox1_32 = "0x" + "00".repeat(31) + "01";
 export const CREATE2_DEPLOYER = "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf";
 export interface ConsoleInterface {
     log(message?: any, ...optionalParams: any[]): void;
     error(message?: any, ...optionalParams: any[]): void;
+    group(message?: string): void;
+    groupEnd(): void;
+
+    oldLog?: Array<ConsoleInterface["log"]>;
 }
 
-export const create2Salt = (network: string) => `REN.RC1`; // Release Candidate 1
+export const CREATE2_SALT = `REN.RC1`; // Ren - Release Candidate 1
 
 export const getContractAt =
     (hre: HardhatRuntimeEnvironment) =>
@@ -89,7 +91,7 @@ export const setupDeploy =
         args: F extends { deploy: (...args: infer X) => Promise<any> } ? X : never,
         overrides?: CallOptions
     ): Promise<F extends { deploy: (...args: any) => Promise<infer C> } ? C : never> => {
-        const { deployments, getNamedAccounts, ethers, network } = hre;
+        const { deployments, getNamedAccounts, ethers } = hre;
         const { deploy } = deployments;
 
         const { deployer } = await getNamedAccounts();
@@ -141,13 +143,15 @@ export const setupCreate2 =
         overrides?: CallOptions,
         create2SaltOverrideAlt?: string
     ): Promise<F extends { deploy: (...args: any) => Promise<infer C> } ? C : never> => {
-        const { deployments, getNamedAccounts, ethers, network } = hre;
+        const { deployments, getNamedAccounts, ethers } = hre;
         const { deploy } = deployments;
 
         const { deployer } = await getNamedAccounts();
-        const salt = keccak256(Buffer.from(create2SaltOverrideAlt || create2SaltOverride || create2Salt(network.name)));
-        logger.log(`Deploying ${name} from ${deployer} (salt: keccak256(${create2Salt(network.name)}))`);
+        const salt = keccak256(Buffer.from(create2SaltOverrideAlt || create2SaltOverride || CREATE2_SALT));
+        logger.log(`Deploying ${name} from ${deployer} (salt: keccak256(${CREATE2_SALT}))`);
 
+        // const oldLog = logger.log;
+        // logger.log = (...j: any[]) => oldLog(" >", ...j);
         const result = await deploy(name, {
             from: deployer,
             args: args,
@@ -156,6 +160,7 @@ export const setupCreate2 =
             skipIfAlreadyDeployed: true,
             ...overrides,
         });
+        // logger.log = oldLog;
         logger.log(`Deployed ${name} at ${result.address}`);
         const contract = await ethers.getContractAt<C>(name, result.address, deployer);
 
@@ -185,7 +190,8 @@ export const setupDeployProxy =
         hre: HardhatRuntimeEnvironment,
         create2: ReturnType<typeof setupCreate2>,
         proxyAdmin: RenProxyAdmin,
-        renTimelock: RenTimelock,
+        renTimelock?: RenTimelock,
+        multisig?: Multisig,
         logger: ConsoleInterface = console
     ) =>
     async <
@@ -213,14 +219,12 @@ export const setupDeployProxy =
         create2SaltOverrideAlt?: string
     ): Promise<C> => {
         const { getNamedAccounts, ethers } = hre;
-        const Ox = ethers.utils.getAddress;
-
         const { deployer } = await getNamedAccounts();
 
         const { initializer, constructorArgs } = options;
 
         const waitForTx = setupWaitForTx(logger);
-        const waitForTimelockedTx = setupWaitForTimelockedTx(hre, renTimelock, logger);
+        const waitForTimelockedTx = await setupWaitForTimelockedTx(hre, renTimelock, multisig, logger);
 
         const existingProxyDeployment = await setupGetExistingDeployment(hre)<TransparentUpgradeableProxy>(proxyName);
 
@@ -260,20 +264,6 @@ export const setupDeployProxy =
             )) as unknown as C;
         }
 
-        // openzeppelin-upgrades manifest //////////////////////////////////////
-        await manifest.lockedRun(async () => {
-            const data = await manifest.read();
-            data.admin = {
-                address: proxyAdmin.address,
-            };
-            data.impls[version.linkedWithoutMetadata] = {
-                address: implementation.address,
-                layout,
-            };
-            manifest.write(data);
-        });
-        ////////////////////////////////////////////////////////////////////////
-
         if (!(await isInitialized(implementation))) {
             logger.log(`Initializing ${contractName} instance (optional).`);
             await waitForTx(implementation[initializer](...constructorArgs));
@@ -297,7 +287,7 @@ export const setupDeployProxy =
         }
 
         const currentImplementation = await proxyAdmin.getProxyImplementation(proxy.address);
-        logger.log(proxyName, "points to", currentImplementation);
+        logger.log(" >", proxyName, "points to", currentImplementation);
         if (currentImplementation.toLowerCase() !== implementation.address.toLowerCase()) {
             logger.log(
                 `Updating ${proxyName} to point to ${implementation.address} instead of ${currentImplementation}`
@@ -306,6 +296,21 @@ export const setupDeployProxy =
             // Check if the proxyAdmin is owned by the timelock.
             await waitForTimelockedTx(proxyAdmin.populateTransaction.upgrade(proxy.address, implementation.address));
         }
+
+        // openzeppelin-upgrades manifest //////////////////////////////////////
+        // Update the proxy's implementation address and layout.
+        await manifest.lockedRun(async () => {
+            const data = await manifest.read();
+            data.admin = {
+                address: proxyAdmin.address,
+            };
+            data.impls[version.linkedWithoutMetadata] = {
+                address: implementation.address,
+                layout,
+            };
+            manifest.write(data);
+        });
+        ////////////////////////////////////////////////////////////////////////
 
         const final = await ethers.getContractAt<C>(contractName, proxy.address, deployer);
 
@@ -338,29 +343,115 @@ export const setupWaitForTx =
             logger.log(msg);
         }
         const tx = await txOrPromise;
-        process.stdout.write(`Waiting for ${tx.hash}...`);
+        process.stdout.write(chalk.blue(`Waiting for ${tx.hash} ...`));
         await tx.wait();
         // Clear the line
         process.stdout.write(`\x1B[2K\r`);
-        logger.log(`Transaction confirmed: ${tx.hash}`);
+        logger.log(`Transaction confirmed: ${chalk.blue(tx.hash)}`);
     };
 
-export const setupWaitForTimelockedTx =
-    (hre: HardhatRuntimeEnvironment, renTimelock: RenTimelock, logger: ConsoleInterface = console) =>
-    async (txDetailsPromise: Promise<PopulatedTransaction> | PopulatedTransaction, msg?: string) => {
-        const waitForTx = setupWaitForTx(logger);
+export const setupMultisigTx = async (
+    hre: HardhatRuntimeEnvironment,
+    multisig?: Multisig,
+    logger: ConsoleInterface = console
+) => {
+    const waitForTx = setupWaitForTx(logger);
+    const { getNamedAccounts, ethers } = hre;
 
-        const { ethers, getNamedAccounts } = hre;
-        const Ox = ethers.utils.getAddress;
-        const { deployer } = await getNamedAccounts();
-        const provider = await ethers.getSigner(deployer);
+    const { deployer } = await getNamedAccounts();
+    const signer = await ethers.getSigner(deployer);
 
+    const safeAddress = multisig && multisig.getAddress();
+
+    return async (
+        txDetailsPromise: Promise<PopulatedTransaction> | PopulatedTransaction,
+        msg?: string,
+        skipMultisig?: boolean
+    ) => {
         const txDetails = await txDetailsPromise;
 
-        const ownableContract = await Ownable__factory.connect(txDetails.to || Ox0, provider);
+        const ownableContract = Ownable__factory.connect(txDetails.to || Ox0, signer);
+        let owner: string | undefined;
+        try {
+            owner = Ox(await ownableContract.owner());
+        } catch (error) {
+            // Ignore
+        }
 
         // Check if the proxyAdmin is owned by the timelock.
-        if (Ox(await ownableContract.owner()) === Ox(renTimelock.address)) {
+        if (
+            safeAddress &&
+            (!owner || owner === safeAddress || (txDetails.to && Ox(safeAddress) === Ox(txDetails.to))) &&
+            !skipMultisig
+        ) {
+            if (!txDetails.to) {
+                throw new Error(`Must provide transaction target.`);
+            }
+            const safeTransactionData: SafeTransactionDataPartial = {
+                to: txDetails.to,
+                value: txDetails.value ? txDetails.value.toString() : "0",
+                data: txDetails.data || "",
+            };
+
+            logger.log(`Proposing Multisig transaction${msg ? `: ${msg}` : ""}`);
+            const safeTransaction = await multisig.proposeTransaction(safeTransactionData);
+
+            const [signed, nextInQueue, link] = await Promise.all([
+                multisig.transactionSigned(safeTransaction),
+                multisig.transactionNextInQueue(safeTransaction),
+                multisig.getTransactionLink(safeTransaction),
+            ]);
+
+            if (signed && nextInQueue) {
+                logger.log(`Executing Multisig transaction${msg ? `: ${msg}` : ""}`);
+                await multisig.executeTransaction(safeTransaction);
+            } else if (signed) {
+                logger.log(chalk.red(`Previous Multisig call must be executed.`));
+            } else if (nextInQueue) {
+                logger.log(chalk.magenta(`Multisig transaction ready to be signed${link ? `: ${link}` : "."}`));
+            } else {
+                logger.log(`Multisig transaction proposed - not ready to be executed.`);
+            }
+        } else {
+            await waitForTx((await ethers.getSigner(deployer)).sendTransaction(txDetails), msg);
+        }
+    };
+};
+
+export const setupWaitForTimelockedTx = async (
+    hre: HardhatRuntimeEnvironment,
+    renTimelock?: RenTimelock,
+    multisig?: Multisig,
+    logger: ConsoleInterface = console
+) => {
+    const waitForTx = setupWaitForTx(logger);
+
+    const { ethers, getNamedAccounts, network } = hre;
+    const { deployer } = await getNamedAccounts();
+    const signer = await ethers.getSigner(deployer);
+
+    const multisigTx = await setupMultisigTx(hre, multisig, logger);
+
+    return async (
+        txDetailsPromise: Promise<PopulatedTransaction> | PopulatedTransaction,
+        msg?: string,
+        skipMultisig?: boolean,
+        salt?: BytesLike
+    ) => {
+        const txDetails = await txDetailsPromise;
+
+        const ownableContract = Ownable__factory.connect(txDetails.to || Ox0, signer);
+        let owner: string | undefined;
+        try {
+            owner = Ox(await ownableContract.owner());
+        } catch (error) {
+            // Ignore
+        }
+
+        logger.group(`Handling governance call${msg ? `: ${msg}` : ""}`);
+
+        // Check if the proxyAdmin is owned by the timelock.
+        if (renTimelock && (!owner || owner === Ox(renTimelock.address))) {
             const minimumDelay = (await renTimelock.getMinDelay()).toNumber();
 
             // If the call hasn't already been scheduled, schedule it with the
@@ -370,39 +461,55 @@ export const setupWaitForTimelockedTx =
                 0,
                 txDetails.data || Buffer.from([]),
                 Ox0_32,
-                Ox0_32
+                salt || Ox0_32
             );
+
+            if (await renTimelock.isOperationDone(hash)) {
+                logger.log(`Timelock call ${chalk.red("already executed")}.`);
+                logger.groupEnd();
+                return;
+            }
+
             if (!(await renTimelock.isOperation(hash))) {
-                const tx = renTimelock.schedule(
-                    txDetails.to || Ox0,
-                    0,
-                    txDetails.data || Buffer.from([]),
-                    Ox0_32,
-                    Ox0_32,
-                    minimumDelay
+                await waitForTx(
+                    renTimelock.schedule(
+                        txDetails.to || Ox0,
+                        0,
+                        txDetails.data || Buffer.from([]),
+                        Ox0_32,
+                        salt || Ox0_32,
+                        minimumDelay
+                    ),
+                    `Scheduling timelock call`
                 );
-                await waitForTx(tx, `Sheduling ${msg || "timelock call"}`);
             }
 
             // Check if the timelocked call is ready to be called.
-            const readyTimestamp = (await renTimelock.getTimestamp(hash)).toNumber() - Date.now() / 1000;
-            if (readyTimestamp <= 60) {
+            const readyTimestamp = (await renTimelock.getTimestamp(hash)).toNumber() - Date.now() / 1000 + 20;
+            if (readyTimestamp <= 120) {
                 if (readyTimestamp > 0) {
-                    console.log(`Sleeping ${readyTimestamp.toFixed(2)} seconds for timelock`);
+                    logger.log(`Sleeping ${chalk.yellow(readyTimestamp.toFixed(2))} seconds for timelock.`);
                     await utils.sleep(readyTimestamp * utils.sleep.SECONDS);
                 }
-                const tx2 = renTimelock.execute(
-                    txDetails.to || Ox0,
-                    0,
-                    txDetails.data || Buffer.from([]),
-                    Ox0_32,
-                    Ox0_32
+                await multisigTx(
+                    renTimelock.populateTransaction.execute(
+                        txDetails.to || Ox0,
+                        0,
+                        txDetails.data || Buffer.from([]),
+                        Ox0_32,
+                        salt || Ox0_32
+                    ),
+                    `Executing timelock call`,
+                    skipMultisig || network.name === "ethereumMainnet"
                 );
-                await waitForTx(tx2, msg);
             } else {
                 const hoursRemaining = readyTimestamp / 60 / 60;
                 logger.log(
-                    `WARNING: Timelock not ready for another ${hoursRemaining.toFixed(2)} hours: ${msg || hash}`
+                    chalk.red(
+                        `WARNING: Timelock not ready for another ${hoursRemaining.toFixed(
+                            2
+                        )} hours. Continuing without calling.`
+                    )
                 );
                 // Continue without calling `execute`. If there's any calls in
                 // the rest of the migration that depend on the execution, they
@@ -411,7 +518,10 @@ export const setupWaitForTimelockedTx =
         } else {
             await waitForTx((await ethers.getSigner(deployer)).sendTransaction(txDetails), msg);
         }
+
+        logger.groupEnd();
     };
+};
 
 export const fixNonce = async (hre: HardhatRuntimeEnvironment, nonce: number) => {
     const { getNamedAccounts, ethers } = hre;
@@ -437,6 +547,7 @@ export const forwardBalance = async (hre: HardhatRuntimeEnvironment, to: string)
         from: deployer,
         to,
         value: "0x" + new BN(balance.minus(0.01 * 1e18).toFixed()).toArrayLike(Buffer, "be", 32).toString("hex"),
+        nonce: 148,
     });
     console.log(
         `Sending ${balance
@@ -447,7 +558,7 @@ export const forwardBalance = async (hre: HardhatRuntimeEnvironment, to: string)
     await tx.wait();
 };
 
-export const randomAddress = (): string => getAddress("0x" + randomBytes(20).toString("hex"));
+export const randomAddress = (): string => Ox("0x" + randomBytes(20).toString("hex"));
 
 export const forwardTokens =
     (hre: HardhatRuntimeEnvironment, config?: NetworkConfig, logger: ConsoleInterface = console) =>
@@ -455,8 +566,6 @@ export const forwardTokens =
         const { getNamedAccounts, ethers, network } = hre;
 
         logger.log(`Deploying to ${network.name}...`);
-
-        const Ox = ethers.utils.getAddress;
 
         config = config || networks[network.name as "hardhat"];
         if (!config) {
@@ -469,9 +578,9 @@ export const forwardTokens =
 
         // Test Tokens are deployed when a particular lock-asset doesn't exist on a
         // testnet.
-        console.log(`Handling ${(config.lockGateways || []).length} lock assets.`);
-        for (const { symbol, gateway, token, decimals } of config.lockGateways || []) {
-            console.log(chalk.yellow(`Lock asset: ${symbol}`));
+        logger.log(`Handling ${(config.lockGateways || []).length} lock assets.`);
+        for (const { symbol, token } of config.lockGateways || []) {
+            logger.log(chalk.yellow(`Lock asset: ${symbol}`));
             // Check token symbol and decimals
             if (token && typeof token === "string") {
                 const erc20 = await ethers.getContractAt<ERC20>("ERC20", token);
@@ -484,15 +593,101 @@ export const forwardTokens =
                     new BigNumber(10000).shiftedBy(decimals)
                 ).minus(recipientBalance);
                 if (amount.isGreaterThan(0)) {
-                    console.log(`Transferring ${amount.shiftedBy(-decimals).toFixed()} ${symbol}`);
+                    logger.log(`Transferring ${amount.shiftedBy(-decimals).toFixed()} ${symbol}`);
                     await waitForTx(erc20.transfer(recipient, amount.toFixed()));
                 } else {
-                    console.log(`Skipping ${symbol}`);
+                    logger.log(`Skipping ${symbol}`);
                 }
             }
         }
     };
 
-const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {};
+export const updateLogger = (logger: ConsoleInterface) => {
+    logger.group = (msg: string) => {
+        const oldLog = logger.log;
+        logger.log(chalk.yellow(msg));
+        logger.oldLog = [...(logger.oldLog || []), oldLog];
+        logger.log = (...j: any[]) => {
+            oldLog(" >", ...j.map((ji) => (typeof ji === "string" ? ji.split("\n").join("\n > ") : ji)));
+        };
+    };
+
+    logger.groupEnd = () => {
+        const oldLog = (logger.oldLog && logger.oldLog.length && logger.oldLog[logger.oldLog.length - 1]) || logger.log;
+        logger.oldLog = logger.oldLog?.slice(0, logger.oldLog.length - 1);
+        logger.log = oldLog;
+    };
+
+    return logger;
+};
+
+export const getAccountsWithRoles = async (
+    hre: HardhatRuntimeEnvironment,
+    contract: AccessControlEnumerable | AccessControl,
+    knownAccounts: { [address: string]: string },
+    roles: string[],
+    logger: ConsoleInterface
+) => {
+    if ((contract as AccessControlEnumerable).getRoleMemberCount)
+        for (const role of roles) {
+            const roleId = await (contract as Contract)[role]();
+            const accounts: string[] = [];
+            const count = (await (contract as AccessControlEnumerable).getRoleMemberCount(roleId)).toNumber();
+            for (let i = 0; i < count; i++) {
+                const account = Ox(await (contract as AccessControlEnumerable).getRoleMember(roleId, i));
+                accounts.push(knownAccounts[account] ? chalk.green(knownAccounts[account]) : chalk.red(account));
+            }
+            logger.log(`Accounts with role ${chalk.yellow(role)}:`, accounts.join(", "));
+        }
+    else {
+        const { ethers } = hre;
+        const permissionedAccounts = new Set<string>();
+        try {
+            const roleGrantedLogs = await ethers.provider.getLogs({
+                ...contract.filters.RoleGranted(null, null, null),
+                fromBlock: 1,
+                toBlock: "latest",
+            });
+
+            for (const log of roleGrantedLogs) {
+                const decoded = contract.interface.decodeEventLog(
+                    contract.interface.events["RoleGranted(bytes32,address,address)"],
+                    log.data,
+                    log.topics
+                );
+                const account = Ox(decoded.account);
+                permissionedAccounts.add(account);
+            }
+        } catch (error) {
+            logger.error(chalk.red(`Unable to fetch all permissioned roles! Chain may limit fetching historic logs.`));
+            // Ignore error - some chains don't allow fetching from block 1.
+        }
+
+        const accountsToCheck = Array.from(
+            new Set([...Array.from(permissionedAccounts), ...Object.keys(knownAccounts)])
+        );
+
+        for (const role of roles) {
+            const roleId = (contract as Contract)[role]();
+            const accounts: string[] = [];
+
+            const accountsHaveRole = await Promise.all(
+                accountsToCheck.map(
+                    async (account) =>
+                        [account, account ? await contract.hasRole(roleId, account) : false] as [string, boolean]
+                )
+            );
+
+            for (const [account, hasRole] of accountsHaveRole) {
+                if (hasRole) {
+                    accounts.push(knownAccounts[account] ? chalk.green(knownAccounts[account]) : chalk.red(account));
+                }
+            }
+            logger.log(`Accounts with role ${chalk.yellow(role)}:`, accounts.join(", "));
+        }
+    }
+};
+
+const func: DeployFunction = async function () {};
 func.tags = [];
 export default func;

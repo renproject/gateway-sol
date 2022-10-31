@@ -178,6 +178,11 @@ export class Multisig {
 
         this.safeSdk = await Safe.create({ ethAdapter, safeAddress: multisigConfig.address });
 
+        const queue = await this.fetchQueue();
+        if (queue.length) {
+            this.logger.log(`${queue.length} pending multisig transactions.`);
+        }
+
         return this;
     };
 

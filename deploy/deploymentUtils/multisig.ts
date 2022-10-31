@@ -9,6 +9,7 @@ import EthersAdapter from "@gnosis.pm/safe-ethers-lib";
 import { utils } from "@renproject/utils";
 import Axios from "axios";
 import chalk from "chalk";
+import { getAddress as Ox } from "ethers/lib/utils";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -591,6 +592,19 @@ export class Multisig {
         }
 
         return this.safeSdk.getAddress();
+    };
+
+    getMultisigRules = async (): Promise<{ signers: string[]; threshold: number }> => {
+        if (!this.safeSdk) {
+            throw new Error(`Must call .deployOrLoad()`);
+        }
+        const signers = (await this.safeSdk.getOwners()).map((a) => Ox(a)).sort();
+        const threshold = await this.safeSdk.getThreshold();
+
+        return {
+            signers,
+            threshold,
+        };
     };
 
     getTransactionLink = async (transaction?: SafeTransaction): Promise<string | undefined> => {

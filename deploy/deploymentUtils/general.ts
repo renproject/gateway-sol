@@ -379,7 +379,11 @@ export const setupMultisigTx = async (
         }
 
         // Check if the proxyAdmin is owned by the timelock.
-        if (safeAddress && (!owner || owner === safeAddress) && !skipMultisig) {
+        if (
+            safeAddress &&
+            (!owner || owner === safeAddress || (txDetails.to && Ox(safeAddress) === Ox(txDetails.to))) &&
+            !skipMultisig
+        ) {
             if (!txDetails.to) {
                 throw new Error(`Must provide transaction target.`);
             }

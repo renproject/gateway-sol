@@ -1,5 +1,26 @@
 {
     "network": "arbitrumMainnet",
     "address": "0xe28498b41Ff672E4913F44ef3cC11bcaBbE30a69",
-    "queuedTransactions": []
+    "queuedTransactions": [
+        {
+            "data": {
+                "to": "0xe28498b41Ff672E4913F44ef3cC11bcaBbE30a69",
+                "value": "0",
+                "data": "0x0d582f13000000000000000000000000e7990b43ea1b5e60b7a3fae582d865b13dd23f840000000000000000000000000000000000000000000000000000000000000001",
+                "operation": 0,
+                "baseGas": 0,
+                "gasPrice": 0,
+                "gasToken": "0x0000000000000000000000000000000000000000",
+                "refundReceiver": "0x0000000000000000000000000000000000000000",
+                "nonce": 6,
+                "safeTxGas": 0
+            },
+            "signatures": [
+                {
+                    "signer": "0x000091178c828a9788f83Ab733Ff48fC1DA5Ba15",
+                    "data": "0x000000000000000000000000000091178c828a9788f83ab733ff48fc1da5ba15000000000000000000000000000000000000000000000000000000000000000001"
+                }
+            ]
+        }
+    ]
 }

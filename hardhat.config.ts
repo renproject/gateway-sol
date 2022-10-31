@@ -172,7 +172,8 @@ const config: HardhatUserConfig = {
             },
         },
         optimismMainnet: {
-            url: `https://mainnet.optimism.io`,
+            // url: `https://mainnet.optimism.io`,
+            url: "https://hidden-responsive-morning.optimism.discover.quiknode.pro/ceccc2c92ec9c0d026e5de817eca3eaa52577443/",
             accounts: {
                 mnemonic: MNEMONIC_MAINNET,
             },

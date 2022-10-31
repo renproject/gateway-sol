@@ -14,6 +14,7 @@ export interface NetworkConfig {
     create2SaltOverride?: string;
     timelockDelay: number;
     multisigSigners: string[];
+    multisigThreshold: number;
 
     mintGateways: Array<{
         symbol: string;
@@ -38,7 +39,8 @@ const renvmMainnetConfig = {
     mintAuthority: "0x7f64e4e4b2d7589eb0ac8439c0e639856aeceee7",
     tokenPrefix: "ren" as const,
     timelockDelay: 24 * HOUR, // TODO: Update to 1 day
-    multisigSigners: [],
+    multisigSigners: ["0xE7990b43ea1B5e60b7a3Fae582d865B13Dd23f84"],
+    multisigThreshold: 1,
 };
 
 const renvmTestnetConfig = {
@@ -47,6 +49,7 @@ const renvmTestnetConfig = {
     tokenPrefix: "test" as const,
     timelockDelay: 60 * SECONDS,
     multisigSigners: [],
+    multisigThreshold: 1,
 };
 
 export enum Chain {
@@ -382,6 +385,7 @@ export const networks: { [network: string]: NetworkConfig } = {
         chainName: Chain.Hardhat,
         timelockDelay: 0,
         multisigSigners: [],
+        multisigThreshold: 1,
 
         mintGateways: [
             {

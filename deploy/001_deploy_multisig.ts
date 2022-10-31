@@ -1,7 +1,9 @@
+import { utils } from "@renproject/utils";
 import chalk from "chalk";
+import { getAddress as Ox } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-import { ConsoleInterface, updateLogger } from "./deploymentUtils/general";
+import { ConsoleInterface, setupMultisigTx, updateLogger } from "./deploymentUtils/general";
 import { Multisig } from "./deploymentUtils/multisig";
 import { NetworkConfig, networks } from "./networks";
 
@@ -46,6 +48,54 @@ export const deployProtocol = async function (
             console.error(error);
             logger.log(`Unable to load Multisig.`);
         }
+    }
+
+    const multisigTx = await setupMultisigTx(hre, multisig, logger);
+
+    // Check multisig signers and threshold.
+    if (multisig && multisig.safeSdk && multisig.getAddress()) {
+        const expectedSigners = Array.from<string>(new Set([Ox(deployer), ...config.multisigSigners]).values())
+            .map((a) => Ox(a))
+            .sort();
+        const { signers, threshold } = await multisig.getMultisigRules();
+
+        // Add signers
+        for (const expectedSigner of expectedSigners) {
+            if (!signers.includes(expectedSigner)) {
+                const { to, data } = (
+                    await multisig.safeSdk.createAddOwnerTx({
+                        ownerAddress: expectedSigner,
+                        threshold: config.multisigThreshold,
+                    })
+                ).data;
+                await multisigTx({ to, data }, `Adding signer ${expectedSigner}`);
+            }
+            await utils.sleep(1 * utils.sleep.SECONDS);
+        }
+
+        // Remove signers
+        for (const signer of signers) {
+            if (!expectedSigners.includes(signer)) {
+                const { to, data } = (
+                    await multisig.safeSdk.createAddOwnerTx({
+                        ownerAddress: signer,
+                        threshold: config.multisigThreshold,
+                    })
+                ).data;
+                await multisigTx({ to, data }, `Removing signer ${signer}`);
+            }
+            await utils.sleep(1 * utils.sleep.SECONDS);
+        }
+
+        // Update threshold
+        if (config.multisigThreshold !== threshold) {
+            const { to, data } = (await multisig.safeSdk.createChangeThresholdTx(config.multisigThreshold)).data;
+            await multisigTx({ to, data }, `Updating threshold from ${threshold} to ${config.multisigThreshold}.`);
+            await utils.sleep(1 * utils.sleep.SECONDS);
+        }
+
+        logger.log(`Signers: ${signers.map((a) => chalk.green(a)).join(", ")}`);
+        logger.log(`Threshold: ${chalk.green(threshold)}`);
     }
 
     logger.groupEnd();

@@ -4,33 +4,33 @@
 
 Ren has two repositories for its Solidity contract:
 
--   [`darknode-sol`](https://github.com/renproject/darknode-sol) - contracts on Ethereum for managing darknode registrations.
--   `gateway-sol` (this repository) - contracts on multiple EVM chains for minting and burning of ren-assets.
+- [`darknode-sol`](https://github.com/renproject/darknode-sol) - contracts on Ethereum for managing darknode registrations.
+- `gateway-sol` (this repository) - contracts on multiple EVM chains for minting and burning of ren-assets.
 
 ## ~ [Documentation](https://renproject.github.io/ren-client-docs/contracts/) ~
 
--   For the latest contract addresses, see the [contract addresses](https://renproject.github.io/ren-client-docs/contracts/deployments) page.
--   For a summary of each contract, see the [summary of contracts](https://renproject.github.io/ren-client-docs/contracts/summary) page.
+- For the latest contract addresses, see the [contract addresses](https://renproject.github.io/ren-client-docs/contracts/deployments) page.
+- For a summary of each contract, see the [summary of contracts](https://renproject.github.io/ren-client-docs/contracts/summary) page.
 
 ## Contract summary
 
 There are three core layers in the gateway-sol contracts:
 
--   **GatewayRegistry** - responsible for deploying and tracking gateway and asset instances
--   **RenAsset** - ERC20s backed 1:1 by a corresponding asset on another chain. e.g. renDAI on Fantom is backed by DAI on Ethereum
--   **Gateways** - responsible for minting and burning (_MintGateway_) and locking and releasing (_LockGateway_) Ren assets.
+- **GatewayRegistry** - responsible for deploying and tracking gateway and asset instances
+- **RenAsset** - ERC20s backed 1:1 by a corresponding asset on another chain. e.g. renDAI on Fantom is backed by DAI on Ethereum
+- **Gateways** - responsible for minting and burning (_MintGateway_) and locking and releasing (_LockGateway_) Ren assets.
 
 ![gateway-sol diagram](https://user-images.githubusercontent.com/2221955/137038758-bbdba875-d73d-445b-8c81-76eec038a02d.png)
 
 For example, minting renDAI on Fantom backed by DAI on Ethereum involves the following contracts:
 
--   On Ethereum:
-    -   The Ethereum GatewayRegistry
-    -   A DAI LockGateway
--   On Fantom:
-    -   The Fantom GatewayRegistry
-    -   A DAI MintGateway
-    -   A renDAI RenAsset
+- On Ethereum:
+  - The Ethereum GatewayRegistry
+  - A DAI LockGateway
+- On Fantom:
+  - The Fantom GatewayRegistry
+  - A DAI MintGateway
+  - A renDAI RenAsset
 
 <details>
 

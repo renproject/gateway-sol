@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import chai, { expect } from "chai";
 import ChaiAsPromised from "chai-as-promised";
 import hre from "hardhat";
 import log from "loglevel";
 
-import { Ox0, randomAddress, setupCreate2, setupDeployProxy } from "../deploy/deploymentUtils";
+import { Ox0, randomAddress, setupCreate2 } from "../deploy/deploymentUtils/general";
 import {
     GatewayRegistryV2,
     GatewayRegistryV2__factory,
@@ -13,20 +14,19 @@ import {
     MintGatewayV3__factory,
     RenAssetV2,
     RenAssetV2__factory,
-    RenProxyAdmin,
     TestToken,
 } from "../typechain";
-import { deployToken, getFixture } from "./utils";
+import { deployToken } from "./utils";
 
 chai.use(ChaiAsPromised);
 
 const setup = hre.deployments.createFixture(async () => {
-    const { deployments, ethers, getNamedAccounts, getUnnamedAccounts } = hre;
+    const { deployments, ethers, getUnnamedAccounts } = hre;
 
     log.setLevel("ERROR");
-    const create2 = setupCreate2(hre, undefined, log);
+    const create2 = setupCreate2(hre, undefined, log as any);
 
-    const [_, gatewayAdder, gatewayUpdater] = await getUnnamedAccounts();
+    const [, gatewayAdder, gatewayUpdater] = await getUnnamedAccounts();
 
     await deployments.fixture("GatewayRegistryV2");
     const gatewayRegistryV2 = await ethers.getContractAt<GatewayRegistryV2>(
@@ -95,8 +95,7 @@ describe("GatewayRegistry", function () {
 
     describe("gateway adder and updater", () => {
         it("gateway adder", async () => {
-            const { ethers, getNamedAccounts } = hre;
-            const { deployer } = await getNamedAccounts();
+            const { ethers } = hre;
 
             let { create2, gatewayRegistryV2, gatewayAdder } = await setup();
             gatewayRegistryV2 = gatewayRegistryV2.connect(await ethers.getSigner(gatewayAdder));
@@ -224,8 +223,7 @@ describe("GatewayRegistry", function () {
         });
 
         it("gateway adder and updater", async () => {
-            const { ethers, getNamedAccounts } = hre;
-            const { deployer } = await getNamedAccounts();
+            const { ethers } = hre;
 
             let { create2, gatewayRegistryV2, gatewayUpdater } = await setup();
             gatewayRegistryV2 = gatewayRegistryV2.connect(await ethers.getSigner(gatewayUpdater));

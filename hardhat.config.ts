@@ -16,20 +16,33 @@ if (process.env.HARDHAT_FORK) {
     process.env["HARDHAT_DEPLOY_FORK"] = process.env.HARDHAT_FORK;
 }
 
-const MNEMONIC_DEVNET = process.env.MNEMONIC_DEVNET || process.env.MNEMONIC || "";
+// const MNEMONIC_DEVNET = process.env.MNEMONIC_DEVNET || process.env.MNEMONIC || "";
 const MNEMONIC_TESTNET = process.env.MNEMONIC_TESTNET || process.env.MNEMONIC || "";
 const MNEMONIC_MAINNET = process.env.MNEMONIC_MAINNET || process.env.MNEMONIC || "";
 const INFURA_KEY = process.env.INFURA_KEY || "";
 
 const config: HardhatUserConfig = {
     solidity: {
-        version: "0.8.7",
-        settings: {
-            optimizer: {
-                enabled: true,
-                runs: 200,
+        compilers: [
+            {
+                version: "0.8.7",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 200,
+                    },
+                },
             },
-        },
+            {
+                version: "0.5.17",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 200,
+                    },
+                },
+            },
+        ],
     },
     namedAccounts: {
         deployer: 0,
@@ -137,7 +150,6 @@ const config: HardhatUserConfig = {
             accounts: {
                 mnemonic: MNEMONIC_TESTNET,
             },
-            gasPrice: 2000000000,
         },
 
         moonbeamTestnet: {
@@ -173,7 +185,8 @@ const config: HardhatUserConfig = {
             },
         },
         optimismMainnet: {
-            url: `https://mainnet.optimism.io`,
+            // url: `https://mainnet.optimism.io`,
+            url: "https://hidden-responsive-morning.optimism.discover.quiknode.pro/ceccc2c92ec9c0d026e5de817eca3eaa52577443/",
             accounts: {
                 mnemonic: MNEMONIC_MAINNET,
             },

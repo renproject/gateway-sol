@@ -1,24 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { BinanceSmartChain, Ethereum, EVMNetworkConfig } from "@renproject/chains-ethereum";
+import { MockChain, MockProvider } from "@renproject/mock-provider";
+import { RenVMProvider } from "@renproject/provider";
+import RenJS, { Gateway, GatewayTransaction } from "@renproject/ren";
+import { utils } from "@renproject/utils";
 import BigNumber from "bignumber.js";
 import { BaseContract } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import log from "loglevel";
 
-import { BinanceSmartChain, Ethereum, EvmNetworkConfig } from "@renproject/chains-ethereum";
-import { MockChain, MockProvider } from "@renproject/mock-provider";
-import { RenVMProvider } from "@renproject/provider";
-import RenJS, { Gateway, GatewayTransaction } from "@renproject/ren";
-import { utils } from "@renproject/utils";
-
-import { deployGatewaySol } from "../../deploy/001_deploy_gateways";
-import {
-    setupCreate2,
-    setupDeployProxy,
-    setupGetExistingDeployment,
-    setupWaitForTx,
-} from "../../deploy/deploymentUtils";
+import { deployGatewaySol } from "../../deploy/002_deploy_gateways";
+import { setupCreate2, setupDeployProxy } from "../../deploy/deploymentUtils/general";
 import {
     ERC20PresetMinterPauserUpgradeable__factory,
-    RenProxyAdmin,
     RenProxyAdmin__factory,
     TestToken,
     TestToken__factory,
@@ -30,7 +24,7 @@ export const LocalEthereumNetwork = (
     networkID: number,
     gatewayRegistry: string,
     basicBridge: string
-): EvmNetworkConfig => ({
+): EVMNetworkConfig => ({
     selector: selector,
     nativeAsset: {
         name: symbol,
@@ -40,7 +34,7 @@ export const LocalEthereumNetwork = (
     averageConfirmationTime: 1,
     isTestnet: true,
 
-    network: {
+    config: {
         chainId: utils.Ox(networkID),
         chainName: "Hardhat",
         nativeCurrency: { name: "Hardhat Ether", symbol: symbol, decimals: 18 },
@@ -79,7 +73,7 @@ export const completeGateway = async (gateway: Gateway<any, any>, amount?: BigNu
         await gateway.in.wait(1);
     }
 
-    await new Promise<void>((resolve, reject) => {
+    return await new Promise<any>((resolve, reject) => {
         const depositCallback = async (deposit: GatewayTransaction) => {
             try {
                 await deposit.in.wait();
@@ -87,12 +81,14 @@ export const completeGateway = async (gateway: Gateway<any, any>, amount?: BigNu
                 await deposit.renVM.submit();
                 await deposit.renVM.wait();
 
+                const exported = deposit.out.export ? await deposit.out.export() : undefined;
+
                 if (deposit.out.submit) {
                     await deposit.out.submit();
                 }
                 await deposit.out.wait();
 
-                resolve();
+                resolve(exported);
             } catch (error) {
                 console.error(error);
                 gateway.eventEmitter.removeAllListeners();
@@ -115,7 +111,11 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
     const mintAuthority = mockRenVMProvider.mintAuthority();
 
     log.setLevel("ERROR");
-    const { gatewayRegistry: ethGatewayRegistry, basicBridge: ethBasicBridge } = await deployGatewaySol(
+    const {
+        gatewayRegistry: ethGatewayRegistry,
+        basicBridge: ethBasicBridge,
+        // renTimelock: ethRenTimelock,
+    } = await deployGatewaySol(
         hre,
         {
             mintAuthority,
@@ -124,10 +124,17 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
             chainName: "Ethereum",
             mintGateways: [],
             create2SaltOverride: "eth",
+            timelockDelay: 0,
+            multisigSigners: [],
+            multisigThreshold: 1,
         },
-        log
+        log as any
     );
-    const { gatewayRegistry: bscGatewayRegistry, basicBridge: bscBasicBridge } = await deployGatewaySol(
+    const {
+        gatewayRegistry: bscGatewayRegistry,
+        basicBridge: bscBasicBridge,
+        // renTimelock: bscRenTimelock,
+    } = await deployGatewaySol(
         hre,
         {
             mintAuthority,
@@ -136,27 +143,34 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
             chainName: "BinanceSmartChain",
             mintGateways: [],
             create2SaltOverride: "bsc",
+            timelockDelay: 0,
+            multisigSigners: [],
+            multisigThreshold: 1,
         },
-        log
+        log as any
     );
 
     await ethGatewayRegistry.deployMintGatewayAndRenAsset("BTC", "renBTC", "renBTC", 8, "1");
     await bscGatewayRegistry.deployMintGatewayAndRenAsset("BTC", "renBTC", "renBTC", 8, "1");
 
-    await bscGatewayRegistry.deployMintGatewayAndRenAsset("ETH", "renETH", "renETH", 18, "1");
+    await bscGatewayRegistry.deployMintGatewayAndRenAsset("gETH", "rengETH", "rengETH", 18, "1");
 
-    const create2 = setupCreate2(hre, undefined, log);
-    const getExistingDeployment = setupGetExistingDeployment(hre);
-    const waitForTx = setupWaitForTx(log);
+    const create2 = setupCreate2(hre, undefined, log as any);
     const renProxyAdmin = await create2<RenProxyAdmin__factory>("RenProxyAdmin", [deployer]);
-    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, log);
+    const deployProxy = setupDeployProxy(hre, create2, renProxyAdmin, undefined, undefined, log as any);
 
     const usdc = await create2<ERC20PresetMinterPauserUpgradeable__factory>("ERC20PresetMinterPauserUpgradeable", []);
     await usdc.initialize("USDC", "USDC");
     const usdcDecimals = await usdc.decimals();
     await usdc.mint(user, new BigNumber(100).shiftedBy(usdcDecimals).toFixed());
-    await ethGatewayRegistry.deployLockGateway("USDC", usdc.address, "1");
-    await bscGatewayRegistry.deployMintGatewayAndRenAsset("USDC", "renUSDC", "renUSDC", usdcDecimals, "1");
+    await ethGatewayRegistry.deployLockGateway("USDC_Goerli", usdc.address, "1");
+    await bscGatewayRegistry.deployMintGatewayAndRenAsset(
+        "USDC_Goerli",
+        "renUSDC_Goerli",
+        "renUSDC_Goerli",
+        usdcDecimals,
+        "1"
+    );
 
     // Set up mock Bitcoin chain.
     const bitcoin = new MockChain({
@@ -173,7 +187,7 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
 
     const ethereumNetwork = LocalEthereumNetwork(
         "Ethereum",
-        "ETH",
+        "gETH",
         networkID,
         ethGatewayRegistry.address,
         ethBasicBridge.address
@@ -182,6 +196,7 @@ export const setupNetworks = async (hre: HardhatRuntimeEnvironment) => {
         network: ethereumNetwork,
         provider: signer.provider as any,
         signer: (await ethers.getSigner(user)) as any,
+        defaultTestnet: "goerli",
     });
     mockRenVMProvider.registerChain(ethereum, ["USDC"]);
 
@@ -219,12 +234,12 @@ export const deployToken = async (hre: HardhatRuntimeEnvironment, symbol: string
     const { deployer } = await getNamedAccounts();
 
     log.setLevel("ERROR");
-    const create2 = setupCreate2(hre, String(Math.random()), log);
+    const create2 = setupCreate2(hre, String(Math.random()), log as any);
 
     const decimals = 18;
-    const supply = new BigNumber(1000000).shiftedBy(18);
+    const supply = new BigNumber(1000000).shiftedBy(decimals);
 
-    return await create2<TestToken__factory>("TestToken", [symbol, symbol, 18, supply.toFixed(), deployer]);
+    return await create2<TestToken__factory>("TestToken", [symbol, symbol, decimals, supply.toFixed(), deployer]);
 };
 
 export const getFixture = async <C extends BaseContract>(hre: HardhatRuntimeEnvironment, name: string): Promise<C> => {

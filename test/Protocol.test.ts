@@ -20,6 +20,7 @@ describe("Protocol", () => {
         this.timeout(1000 * 1000);
 
         const { protocol } = await setup();
+
         expect(new BigNumber(await protocol.getContract("DarknodeRegistry")).isZero()).to.be.false;
         expect(new BigNumber(await protocol.getContract("GetOperatorDarknodes")).isZero()).to.be.false;
         expect(new BigNumber(await protocol.getContract("ClaimRewards")).isZero()).to.be.false;

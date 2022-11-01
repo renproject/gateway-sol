@@ -15,6 +15,10 @@ import {IMintGateway} from "./interfaces/IMintGateway.sol";
 import {StringV1} from "../libraries/StringV1.sol";
 import {CORRECT_SIGNATURE_RETURN_VALUE_} from "./RenVMSignatureVerifier.sol";
 
+interface Claimable {
+    function claimOwnership() external;
+}
+
 /// MintGateway handles verifying mint and burn requests. A mintAuthority
 /// approves new assets to be minted by providing a digital signature. An owner
 /// of an asset can request for it to be burnt.
@@ -44,6 +48,13 @@ contract MintGatewayV3 is Initializable, ContextUpgradeable, GatewayStateV3, Gat
         RenAssetV2(token_).transferOwnership(address(nextTokenOwner));
 
         emit TokenOwnershipTransferred(token_, nextTokenOwner);
+    }
+
+    /// @notice Claims ownership of the token passed in to the constructor.
+    /// `transferStoreOwnership` must have previously been called.
+    /// Anyone can call this function.
+    function claimTokenOwnership() public {
+        Claimable(getToken()).claimOwnership();
     }
 
     // PUBLIC FUNCTIONS ////////////////////////////////////////////////////////

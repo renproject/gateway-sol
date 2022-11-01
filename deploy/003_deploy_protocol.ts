@@ -118,6 +118,14 @@ export const deployProtocol = async function (
         );
     }
 
+    const existingGetOperatorDarknodes = await protocol.getContract("GetOperatorDarknodes");
+    if (Ox(existingGetOperatorDarknodes) !== Ox(getOperatorDarknodes.address)) {
+        await waitForTimelockedTx(
+            protocol.populateTransaction.updateContract("GetOperatorDarknodes", getOperatorDarknodes.address),
+            `Updating GetOperatorDarknodes in protocol to ${getOperatorDarknodes.address}`
+        );
+    }
+
     const knownAccounts = {
         ...(multisig ? { [Ox(multisig.getAddress())]: `multisig (${multisig.getAddress().slice(0, 6)}...)` } : {}),
         [Ox(renTimelock.address)]: `timelock (${renTimelock.address.slice(0, 6)}...)`,

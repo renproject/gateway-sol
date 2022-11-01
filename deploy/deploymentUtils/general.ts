@@ -27,7 +27,7 @@ import {
     AccessControl,
     AccessControlEnumerable,
     AccessControlEnumerableUpgradeable,
-    ERC20,
+    ERC20Detailed,
     Ownable,
     Ownable__factory,
     RenProxyAdmin,
@@ -38,7 +38,8 @@ import {
 import { NetworkConfig, networks } from "../networks";
 import { Multisig } from "./multisig";
 
-export const Ox0 = "0x0000000000000000000000000000000000000000";
+export const Ox0 = "0x" + "00".repeat(20);
+export const Ox1 = "0x" + "00".repeat(19) + "01";
 export const Ox0_32 = "0x" + "00".repeat(32);
 export const Ox1_32 = "0x" + "00".repeat(31) + "01";
 export const CREATE2_DEPLOYER = "0x2222229fb3318a6375fa78fd299a9a42ac6a8fbf";
@@ -361,7 +362,7 @@ export const setupMultisigTx = async (
     const { deployer } = await getNamedAccounts();
     const signer = await ethers.getSigner(deployer);
 
-    const safeAddress = multisig && multisig.getAddress();
+    const safeAddress = multisig && multisig.safeSdk && multisig.getAddress();
 
     return async (
         txDetailsPromise: Promise<PopulatedTransaction> | PopulatedTransaction,
@@ -487,7 +488,7 @@ export const setupWaitForTimelockedTx = async (
             // Check if the timelocked call is ready to be called.
             const readyTimestamp = (await renTimelock.getTimestamp(hash)).toNumber() - Date.now() / 1000 + 20;
             if (readyTimestamp <= 120) {
-                if (readyTimestamp > 0) {
+                if (readyTimestamp > 0 && network.name !== "hardhat") {
                     logger.log(`Sleeping ${chalk.yellow(readyTimestamp.toFixed(2))} seconds for timelock.`);
                     await utils.sleep(readyTimestamp * utils.sleep.SECONDS);
                 }
@@ -583,7 +584,7 @@ export const forwardTokens =
             logger.log(chalk.yellow(`Lock asset: ${symbol}`));
             // Check token symbol and decimals
             if (token && typeof token === "string") {
-                const erc20 = await ethers.getContractAt<ERC20>("ERC20", token);
+                const erc20 = await ethers.getContractAt<ERC20Detailed>("ERC20Detailed", token);
                 const recipient = Ox(to);
                 const deployerBalance = new BigNumber((await erc20.balanceOf(deployer)).toString());
                 const recipientBalance = new BigNumber((await erc20.balanceOf(recipient)).toString());

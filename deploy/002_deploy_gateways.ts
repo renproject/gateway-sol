@@ -8,7 +8,7 @@ import {
     BasicBridge,
     BasicBridge__factory,
     BeaconProxy__factory,
-    ERC20,
+    ERC20Detailed,
     GatewayRegistryV2,
     GatewayRegistryV2__factory,
     LockGatewayProxyBeacon,
@@ -525,7 +525,7 @@ export const deployGatewaySol = async function (
         if (existingGateway === Ox0) {
             // Check token symbol and decimals
             if (token && typeof token === "string") {
-                const erc20 = await ethers.getContractAt<ERC20>("ERC20", token);
+                const erc20 = await ethers.getContractAt<ERC20Detailed>("ERC20Detailed", token);
                 const erc20Symbol = await erc20.symbol();
                 if (erc20Symbol !== symbol && symbol !== "FTT") {
                     console.error(`Expected ${token.slice(0, 10)}...'s symbol to be ${symbol}, got ${erc20Symbol}`);

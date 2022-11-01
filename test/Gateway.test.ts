@@ -1,6 +1,5 @@
 import BigNumber from "bignumber.js";
 import { expect } from "chai";
-import { BaseContract } from "ethers";
 import hre from "hardhat";
 
 import { completeGateway, setupNetworks } from "./utils";
